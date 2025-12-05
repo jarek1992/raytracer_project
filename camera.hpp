@@ -1,10 +1,14 @@
+#define STB_IMAGE_WRITE_IMPLEMENTATION
+
 #include "color.hpp"
 #include "hittable.hpp"
 #include "material.hpp"
 #include "ray.hpp"
 #include "vec3.hpp"
+#include "stb_image_write.h"
 #include <iostream>
 #include <limits>
+#include <algorithm>
 
 class camera {
 public:
@@ -28,21 +32,37 @@ public:
   void render(const hittable &world) {
     initialize();
 
-    std::cout << "P3\n" << image_width << ' ' << image_height << "\n255\n";
+    std::vector<unsigned char> image(image_width * image_height * 3);
 
     for (int j = 0; j < image_height; j++) {
-      std::clog << "\rScanlines remaining: " << (image_height - j) << ' ' << std::flush;
-      for (int i = 0; i < image_width; i++) {
-        color pixel_color(0, 0, 0);
-        for (int sample = 0; sample < samples_per_pixel; sample++) {
-          ray r = get_ray(i, j);
-          pixel_color += ray_color(r, world, max_depth);
+        std::clog << "\rScanlines remaining: " << (image_height - j) << ' ' << std::flush;
+        for (int i = 0; i < image_width; i++) {
+            color pixel_color(0, 0, 0);
+            for (int sample = 0; sample < samples_per_pixel; sample++) {
+                ray r = get_ray(i, j);
+                pixel_color += ray_color(r, world, max_depth);
+            }
+
+            //float color conversion [0,1] -> unsigned char [0,255] with gamma correction
+            auto scale = 1.0 / samples_per_pixel;
+            auto r_col = std::sqrt(scale * pixel_color.x());
+            auto g_col = std::sqrt(scale * pixel_color.y());
+            auto b_col = std::sqrt(scale * pixel_color.z());
+
+            int idx = (j * image_width + i) * 3;
+
+            image[idx + 0] = static_cast<unsigned char>(256 * std::clamp(r_col, 0.0, 0.999));
+            image[idx + 1] = static_cast<unsigned char>(256 * std::clamp(g_col, 0.0, 0.999));
+            image[idx + 2] = static_cast<unsigned char>(256 * std::clamp(b_col, 0.0, 0.999));
         }
-        write_color(std::cout, pixel_samples_scale * pixel_color);
-      }
     }
 
     std::clog << "\rDone.                 \n";
+
+    //save to PNG file
+    stbi_write_png("image.png", image_width, image_height, 3, image.data(), image_width * 3);
+    
+    std::clog << "Image saved to image.png\n";
   }
 
 private:

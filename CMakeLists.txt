@@ -11,7 +11,10 @@ include_directories(${VULKAN_SDK}/include)
 link_directories(${VULKAN_SDK}/lib)
 
 # vcpkg integration
-set(CMAKE_TOOLCHAIN_FILE "C:/Users/micha/Desktop/vcpkg/vcpkg/scripts/buildsystems/vcpkg.cmake" CACHE STRING "vcpkg toolchain file")
+set(CMAKE_TOOLCHAIN_FILE 
+    "C:/Users/Jarek/Desktop/raytracer_project/vcpkg/scripts/buildsystems/vcpkg.cmake"
+    CACHE STRING "vcpkg toolchain file"
+)
 
 # Path to ImGui files
 set(IMGUI_DIR "${CMAKE_SOURCE_DIR}/libs/imgui") # Change for ImGui destination
@@ -19,14 +22,13 @@ include_directories(${IMGUI_DIR})
 include_directories(${IMGUI_DIR}/backends)
 include_directories(${IMGUI_DIR}/misc/stb)
 
+# Path to stb_image_write
+include_directories("${CMAKE_SOURCE_DIR}/libs/stb")
+
 # Find and link Vulkan and GLFW libraries
 find_package(Vulkan REQUIRED)
-set(glfw3_DIR "C:/Users/micha/Desktop/vcpkg/vcpkg/installed/x64-windows/share/glfw3")
 find_package(glfw3 CONFIG REQUIRED)
 
-# Dependencies for GLFW using vcpkg
-include_directories("C:/Users/micha/Desktop/vcpkg/vcpkg/installed/x64-windows/include")
-link_directories("C:/Users/micha/Desktop/vcpkg/vcpkg/installed/x64-windows/lib")
 
 # Add sources
 add_executable(ray_tracer main.cpp

@@ -95,8 +95,8 @@ int main() {
   //image aspects ratio
   cam.aspect_ratio = 16.0 / 9.0;
   cam.image_width = 600;
-  cam.samples_per_pixel = 150;
-  cam.max_depth = 50;
+  cam.samples_per_pixel = 10;
+  cam.max_depth = 10;
 
   //camera settings
   cam.vfov = 30; //vertical field of the view
