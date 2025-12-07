@@ -27,7 +27,10 @@ int main() {
 	point3 min_corner(2.0, 0.0, 2.0);
 	point3 max_corner(4.0, 2.0, 4.0);
 
-	world.add(make_shared<cube>(min_corner, max_corner, cube_material));
+	double angle_deg = 0.0;
+	double angle_rad = degrees_to_radians(angle_deg);
+
+	world.add(make_shared<cube>(min_corner, max_corner, cube_material, angle_rad));
 
 	//metal material sphere into scene
 	auto material_metal = make_shared<metal>(color(0.2, 0.2, 0.2), 0.2);

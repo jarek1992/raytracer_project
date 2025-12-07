@@ -9,6 +9,8 @@
 #include <iostream>
 #include <limits>
 #include <algorithm>
+#include <thread>
+#include <functional>
 
 class camera {
 public:
@@ -33,28 +35,51 @@ public:
 		initialize();
 
 		std::vector<unsigned char> image(image_width * image_height * 3);
+		//number of threads = number of cores
+		int num_threads = std::thread::hardware_concurrency();
+		if (num_threads == 0) {
+			num_threads = 4; //fallback
+		}
 
-		for (int j = 0; j < image_height; j++) {
-			std::clog << "\rScanlines remaining: " << (image_height - j) << ' ' << std::flush;
-			for (int i = 0; i < image_width; i++) {
-				color pixel_color(0, 0, 0);
-				for (int sample = 0; sample < samples_per_pixel; sample++) {
-					ray r = get_ray(i, j);
-					pixel_color += ray_color(r, world, max_depth);
+		auto render_rows = [&](int start_row, int end_row) {
+			for (int j = start_row; j < end_row; j++) {
+				std::clog << "\rScanlines remaining: " << (image_height - j) << ' ' << std::flush;
+				for (int i = 0; i < image_width; i++) {
+					color pixel_color(0, 0, 0);
+					for (int sample = 0; sample < samples_per_pixel; sample++) {
+						ray r = get_ray(i, j);
+						pixel_color += ray_color(r, world, max_depth);
+					}
+
+					//float color conversion [0,1] -> unsigned char [0,255] with gamma correction
+					auto scale = 1.0 / samples_per_pixel;
+					auto r_col = std::sqrt(scale * pixel_color.x());
+					auto g_col = std::sqrt(scale * pixel_color.y());
+					auto b_col = std::sqrt(scale * pixel_color.z());
+
+					int idx = (j * image_width + i) * 3;
+					image[idx + 0] = static_cast<unsigned char>(256 * std::clamp(r_col, 0.0, 0.999));
+					image[idx + 1] = static_cast<unsigned char>(256 * std::clamp(g_col, 0.0, 0.999));
+					image[idx + 2] = static_cast<unsigned char>(256 * std::clamp(b_col, 0.0, 0.999));
 				}
-
-				//float color conversion [0,1] -> unsigned char [0,255] with gamma correction
-				auto scale = 1.0 / samples_per_pixel;
-				auto r_col = std::sqrt(scale * pixel_color.x());
-				auto g_col = std::sqrt(scale * pixel_color.y());
-				auto b_col = std::sqrt(scale * pixel_color.z());
-
-				int idx = (j * image_width + i) * 3;
-
-				image[idx + 0] = static_cast<unsigned char>(256 * std::clamp(r_col, 0.0, 0.999));
-				image[idx + 1] = static_cast<unsigned char>(256 * std::clamp(g_col, 0.0, 0.999));
-				image[idx + 2] = static_cast<unsigned char>(256 * std::clamp(b_col, 0.0, 0.999));
 			}
+		};
+
+		//split workflow on threads
+		std::vector<std::thread> threads;
+		int rows_per_thread = image_height / num_threads;
+		int extra_rows = image_height % num_threads;
+
+		int start_row = 0;
+		for (int t = 0; t < num_threads; t++) {
+			int end_row = start_row + rows_per_thread + (t < extra_rows ? 1 : 0);
+			threads.emplace_back(render_rows, start_row, end_row);
+			start_row = end_row;
+		}
+
+		//wait for threads to end
+		for (auto& th : threads) {
+			th.join();
 		}
 
 		std::clog << "\rDone.                 \n";
