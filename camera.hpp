@@ -72,11 +72,22 @@ public:
 		//progress bar
 		while (lines_done < image_height) {
 			int done = lines_done.load();
-			double percent = 100 * done / image_height;
+			double percent = double(done) / image_height;
 
-			std::cerr << "\rProgress: "
-				<< std::fixed << std::setprecision(1)
-				<< percent << "% (" << done << "/" << image_height << " lines)"
+			int barWidth = 40;
+			int filled = int(percent * barWidth);
+
+			std::cerr << "\r[";
+			for (int i = 0; i < filled; i++) {
+				std::cerr << "#"; //fill of the bar
+			}
+			for (int i = filled; i < barWidth; i++) {
+				std::cerr << "."; //empty space of the bar
+			}
+			std::cerr << "] ";
+
+			std::cerr << std::fixed << std::setprecision(1)
+				<< (percent * 100.0) << "% (" << done << "/" << image_height << " lines)"
 				<< std::flush;
 
 			std::this_thread::sleep_for(std::chrono::milliseconds(200));
@@ -87,8 +98,8 @@ public:
 		for (auto& th : threads)
 			th.join();
 
-		std::cerr << "\rProgress: 100% (" << image_height << "/" << image_height << " lines)\n";
-
+		std::cerr << "\r[########################################] 100% (" << image_height << "/" << image_height << " lines)\n";
+						 
 		//conversion framebuffer → RGB
 		std::vector<unsigned char> image(image_width * image_height * 3);
 
