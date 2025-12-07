@@ -1,4 +1,4 @@
-#define STB_IMAGE_WRITE_IMPLEMENTATION
+﻿#define STB_IMAGE_WRITE_IMPLEMENTATION
 
 #include "color.hpp"
 #include "hittable.hpp"
@@ -11,6 +11,7 @@
 #include <algorithm>
 #include <thread>
 #include <functional>
+#include <iomanip>
 
 class camera {
 public:
@@ -34,60 +35,85 @@ public:
 	void render(const hittable& world) {
 		initialize();
 
-		std::vector<unsigned char> image(image_width * image_height * 3);
-		//number of threads = number of cores
-		int num_threads = std::thread::hardware_concurrency();
-		if (num_threads == 0) {
-			num_threads = 4; //fallback
-		}
+		std::vector<color> framebuffer(image_width * image_height);
+		std::atomic<int> lines_done = 0;
 
-		auto render_rows = [&](int start_row, int end_row) {
-			for (int j = start_row; j < end_row; j++) {
-				std::clog << "\rScanlines remaining: " << (image_height - j) << ' ' << std::flush;
-				for (int i = 0; i < image_width; i++) {
+		//number of threads = number of cores
+		int num_threads = std::max(1u, std::thread::hardware_concurrency());
+		std::vector<std::thread> threads;
+
+		auto render_rows = [&](int start_y, int end_y) {
+			for (int j = start_y; j < end_y; ++j) {
+				for (int i = 0; i < image_width; ++i) {
 					color pixel_color(0, 0, 0);
-					for (int sample = 0; sample < samples_per_pixel; sample++) {
+					for (int s = 0; s < samples_per_pixel; s++) {
 						ray r = get_ray(i, j);
 						pixel_color += ray_color(r, world, max_depth);
 					}
 
-					//float color conversion [0,1] -> unsigned char [0,255] with gamma correction
-					auto scale = 1.0 / samples_per_pixel;
-					auto r_col = std::sqrt(scale * pixel_color.x());
-					auto g_col = std::sqrt(scale * pixel_color.y());
-					auto b_col = std::sqrt(scale * pixel_color.z());
-
-					int idx = (j * image_width + i) * 3;
-					image[idx + 0] = static_cast<unsigned char>(256 * std::clamp(r_col, 0.0, 0.999));
-					image[idx + 1] = static_cast<unsigned char>(256 * std::clamp(g_col, 0.0, 0.999));
-					image[idx + 2] = static_cast<unsigned char>(256 * std::clamp(b_col, 0.0, 0.999));
+					framebuffer[j * image_width + i] = pixel_color;
 				}
+
+				lines_done++;
 			}
-		};
+			};
 
-		//split workflow on threads
-		std::vector<std::thread> threads;
+		//split lines between threads
 		int rows_per_thread = image_height / num_threads;
-		int extra_rows = image_height % num_threads;
+		int extra = image_height % num_threads;
+		int start = 0;
 
-		int start_row = 0;
 		for (int t = 0; t < num_threads; t++) {
-			int end_row = start_row + rows_per_thread + (t < extra_rows ? 1 : 0);
-			threads.emplace_back(render_rows, start_row, end_row);
-			start_row = end_row;
+			int end = start + rows_per_thread + (t < extra ? 1 : 0);
+			threads.emplace_back(render_rows, start, end);
+			start = end;
 		}
 
-		//wait for threads to end
-		for (auto& th : threads) {
+		//progress bar
+		while (lines_done < image_height) {
+			int done = lines_done.load();
+			double percent = 100 * done / image_height;
+
+			std::cerr << "\rProgress: "
+				<< std::fixed << std::setprecision(1)
+				<< percent << "% (" << done << "/" << image_height << " lines)"
+				<< std::flush;
+
+			std::this_thread::sleep_for(std::chrono::milliseconds(200));
+		}
+		std::cerr << "\rProgress : 100% (" << image_height << "/" << image_height << " lines)\n";
+
+		//join threads
+		for (auto& th : threads)
 			th.join();
+
+		std::cerr << "\rProgress: 100% (" << image_height << "/" << image_height << " lines)\n";
+
+		//conversion framebuffer → RGB
+		std::vector<unsigned char> image(image_width * image_height * 3);
+
+		for (int j = 0; j < image_height; j++) {
+			for (int i = 0; i < image_width; i++) {
+
+				color pixel = framebuffer[j * image_width + i];
+
+				//gamma-correction
+				double r = std::sqrt(pixel.x() * pixel_samples_scale);
+				double g = std::sqrt(pixel.y() * pixel_samples_scale);
+				double b = std::sqrt(pixel.z() * pixel_samples_scale);
+
+				int idx = (j * image_width + i) * 3;
+
+				image[idx + 0] = static_cast<unsigned char>(256 * std::clamp(r, 0.0, 0.999));
+				image[idx + 1] = static_cast<unsigned char>(256 * std::clamp(g, 0.0, 0.999));
+				image[idx + 2] = static_cast<unsigned char>(256 * std::clamp(b, 0.0, 0.999));
+			}
 		}
 
-		std::clog << "\rDone.                 \n";
-
-		//save to PNG file
+		//save to .png
 		stbi_write_png("image.png", image_width, image_height, 3, image.data(), image_width * 3);
 
-		std::clog << "Image saved to image.png\n";
+		std::cerr << "Image saved to image.png\n";
 	}
 
 private:
