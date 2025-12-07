@@ -26,6 +26,7 @@ int main() {
 	auto cube_material = make_shared<lambertian>(color(0.2, 0.5, 0.5));
 	point3 min_corner(2.0, 0.0, 2.0);
 	point3 max_corner(4.0, 2.0, 4.0);
+
 	world.add(make_shared<cube>(min_corner, max_corner, cube_material));
 
 	//metal material sphere into scene
@@ -54,7 +55,11 @@ int main() {
 						//create cube
 						point3 min_corner(center.x() - 0.2, center.y() - 0.2, center.z() - 0.2);
 						point3 max_corner(center.x() + 0.2, center.y() + 0.2, center.z() + 0.2);
-						world.add(make_shared<cube>(min_corner, max_corner, object_material));
+
+						double angle_deg = random_double(0.0, 360.0);
+						double angle_rad = degrees_to_radians(angle_deg);
+
+						world.add(make_shared<cube>(min_corner, max_corner, object_material, angle_rad));
 					}
 				}
 				else if (choose_material < 0.95) {
@@ -71,7 +76,11 @@ int main() {
 						//create cube
 						point3 min_corner(center.x() - 0.2, center.y() - 0.2, center.z() - 0.2);
 						point3 max_corner(center.x() + 0.2, center.y() + 0.2, center.z() + 0.2);
-						world.add(make_shared<cube>(min_corner, max_corner, object_material));
+
+						double angle_deg = random_double(0.0, 360.0);
+						double angle_rad = degrees_to_radians(angle_deg);
+
+						world.add(make_shared<cube>(min_corner, max_corner, object_material, angle_rad));
 					}
 				}
 				else {
@@ -86,7 +95,11 @@ int main() {
 						//create cube
 						point3 min_corner(center.x() - 0.2, center.y() - 0.2, center.z() - 0.2);
 						point3 max_corner(center.x() + 0.2, center.y() + 0.2, center.z() + 0.2);
-						world.add(make_shared<cube>(min_corner, max_corner, object_material));
+
+						double angle_deg = random_double(0.0, 360.0);
+						double angle_rad = degrees_to_radians(angle_deg);
+
+						world.add(make_shared<cube>(min_corner, max_corner, object_material, angle_rad));
 					}
 				}
 			}
@@ -98,8 +111,8 @@ int main() {
 
 	//image aspects ratio
 	cam.aspect_ratio = 16.0 / 9.0;
-	cam.image_width = 600;
-	cam.samples_per_pixel = 10;
+	cam.image_width = 400;
+	cam.samples_per_pixel = 50;
 	cam.max_depth = 10;
 
 	//camera settings
@@ -109,8 +122,8 @@ int main() {
 	cam.vup = vec3(0, 1, 0); //up vector set to Y
 
 	//defocus blur settings
-	cam.defocus_angle = 1.0; //higher values more blur on objects outside defocus point
-	cam.focus_dist = 8; //higher values defocus point more far from camera
+	cam.defocus_angle = 0.0; //higher values more blur on objects outside defocus point
+	cam.focus_dist = 10; //higher values defocus point more far from camera
 
 	//render the scene
 	cam.render(world);
