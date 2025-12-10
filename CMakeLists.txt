@@ -29,9 +29,14 @@ include_directories("${CMAKE_SOURCE_DIR}/libs/stb")
 find_package(Vulkan REQUIRED)
 find_package(glfw3 CONFIG REQUIRED)
 
+# HDR map
+# file(COPY assets DESTINATION ${CMAKE_BINARY_DIR})
+
 
 # Add sources
-add_executable(ray_tracer main.cpp
+add_executable(ray_tracer 
+    main.cpp
+    stb_impl.cpp
     libs/imgui/imgui.cpp
     libs/imgui/imgui_draw.cpp
     libs/imgui/imgui_tables.cpp

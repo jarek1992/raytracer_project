@@ -38,7 +38,7 @@ public:
 			tmax = std::fmin(t1, tmax);
 
 			//no interesection
-			if (tmax <= tmin) {
+			if (tmax < tmin) {
 				return false;
 			}
 		}
@@ -48,7 +48,7 @@ public:
 		point3 p_local = r_local.at(rec.t);
 		vec3 normal_local = compute_normal(p_local);
 		rec.p = rotate_Z(p_local, rotation_Z); //calculate interection point using r.at(tmin) function
-		rec.normal = rotate_Z(normal_local, rotation_Z); //determine normal
+		rec.normal = unit_vector(rotate_Z(normal_local, rotation_Z)); //determine normal
 		rec.mat = mat; //assign cube material
 		rec.set_face_normal(r, rec.normal);
 
@@ -62,25 +62,15 @@ private:
 
 	//function to determine normal vector in intersection
 	vec3 compute_normal(const point3& p) const {
-		const double EPS = 1e-4;
+		const double EPS = 1e-3;
 
-		if (std::fabs(p.x() - min_corner.x()) < EPS) {
-			return vec3(-1, 0, 0);
-		}
-		if (std::fabs(p.x() - max_corner.x()) < EPS) {
-			return vec3(1, 0, 0);
-		}
+		if (std::fabs(p.x() - min_corner.x()) < EPS) return vec3(-1, 0, 0);
+		if (std::fabs(p.x() - max_corner.x()) < EPS) return vec3(1, 0, 0);
 
-		if (std::fabs(p.y() - min_corner.y()) < EPS) {
-			return vec3(0, -1, 0);
-		}
-		if (std::fabs(p.y() - max_corner.y()) < EPS) {
-			return vec3(0, 1, 0);
-		}
+		if (std::fabs(p.y() - min_corner.y()) < EPS) return vec3(0, -1, 0);
+		if (std::fabs(p.y() - max_corner.y()) < EPS) return vec3(0, 1, 0);
 
-		if (std::fabs(p.z() - min_corner.z()) < EPS) {
-			return vec3(0, 0, -1);
-		}
+		if (std::fabs(p.z() - min_corner.z()) < EPS) return vec3(0, 0, -1);
 		return vec3(0, 0, 1);
 	}
 

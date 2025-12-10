@@ -1,3 +1,5 @@
+#include "stb_image.h"
+#include "stb_image_write.h"
 #include "rtweekend.hpp"
 #include "camera.hpp"
 #include "hittable.hpp"
@@ -5,6 +7,7 @@
 #include "material.hpp"
 #include "sphere.hpp"
 #include "cube.hpp"
+#include "hdr_image.hpp"
 
 int main() {
 	//set up a sphere into world
@@ -127,6 +130,13 @@ int main() {
 	//defocus blur settings
 	cam.defocus_angle = 0.0; //higher values more blur on objects outside defocus point
 	cam.focus_dist = 10; //higher values defocus point more far from camera
+
+
+	if (!hdri_image.load("assets/sunny_rose_garden_2k.hdr")) {
+		std::cerr << "Failed to load HDRI, continuing with black sky\n";
+	}
+
+	HDRI_ROTATION = degrees_to_radians(90);
 
 	//render the scene
 	cam.render(world);

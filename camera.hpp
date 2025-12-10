@@ -1,11 +1,10 @@
-﻿#define STB_IMAGE_WRITE_IMPLEMENTATION
-
-#include "color.hpp"
+﻿#include "color.hpp"
 #include "hittable.hpp"
 #include "material.hpp"
 #include "ray.hpp"
 #include "vec3.hpp"
 #include "stb_image_write.h"
+#include "hdr_image.hpp"
 #include <iostream>
 #include <limits>
 #include <algorithm>
@@ -99,7 +98,7 @@ public:
 			th.join();
 
 		std::cerr << "\r[########################################] 100% (" << image_height << "/" << image_height << " lines)\n";
-						 
+
 		//conversion framebuffer → RGB
 		std::vector<unsigned char> image(image_width * image_height * 3);
 
@@ -138,8 +137,8 @@ private:
 	vec3 defocus_disk_u; //defocus disk horizntal radius
 	vec3 defocus_disk_v; //defocus disk vertical radius
 
-	constexpr static double t_min = 0.001; //min distance (avoid selfcovering)
-	constexpr static double t_max = std::numeric_limits<double>::infinity(); //max distance
+	constexpr static double tmin = 0.001; //min distance (avoid selfcovering)
+	constexpr static double tmax = std::numeric_limits<double>::infinity(); //max distance
 
 	void initialize() {
 		//calculate the image height , and ensure that it's at least 1
@@ -205,28 +204,19 @@ private:
 
 	//intersection radius with sphere
 	color ray_color(const ray& r, const hittable& world, int depth) const {
-		//if we exceeded the ray bounce limit, no more light is gathered
-		if (depth <= 0) {
-			return color(0, 0, 0); //black color, when reached max depth
-		}
+		if (depth <= 0) return color(0, 0, 0);
 
 		hit_record rec;
-
-		//check if object hit 
-		if (world.hit(r, interval(t_min, t_max), rec)) {
-			//Ray color with scattered reflectance
+		if (world.hit(r, interval(tmin, tmax), rec)) {
 			ray scattered;
-			color attentuation;
-			if (rec.mat->scatter(r, rec, attentuation, scattered)) {
-				return attentuation * ray_color(scattered, world, depth - 1);
+			color atten;
+			if (rec.mat->scatter(r, rec, atten, scattered)) {
+				return atten * ray_color(scattered, world, depth - 1);
 			}
 			return color(0, 0, 0);
 		}
 
-		//default blue backfround
-		vec3 unit_direction = unit_vector(r.direction());
-		auto t = 0.5 * (unit_direction.y() + 1.0);
-		//background gradient
-		return (1.0 - t) * color(1.0, 1.0, 1.0) + t * color(0.5, 0.7, 1.0);
+		// correct HDR environment
+		return hdri_image.environment(r.direction());
 	}
 };
