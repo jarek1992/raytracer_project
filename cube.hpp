@@ -11,13 +11,17 @@ public:
 		, max_corner(max_corner)
 		, mat(mat)
 		, rotation_Z(angle)
-	{}
+	{
+	}
 
 	//cube
 	virtual bool hit(const ray& r, interval ray_t, hit_record& rec) const override {
 
-		//rotate the radius locally
-		vec3 ro = rotate_Z_inv(r.origin(), rotation_Z);
+		//cube center point
+		point3 C = center();
+
+		//World -> LOCAL (translate to cube center, rotate)
+		vec3 ro = rotate_Z_inv(r.origin() - C, rotation_Z);
 		vec3 rd = rotate_Z_inv(r.direction(), rotation_Z);
 		ray r_local(ro, rd);
 
@@ -47,7 +51,7 @@ public:
 		rec.t = tmin; //set distance from starting point of the radius to the place of intersection
 		point3 p_local = r_local.at(rec.t);
 		vec3 normal_local = compute_normal(p_local);
-		rec.p = rotate_Z(p_local, rotation_Z); //calculate interection point using r.at(tmin) function
+		rec.p = rotate_Z(p_local, rotation_Z) + C;
 		rec.normal = unit_vector(rotate_Z(normal_local, rotation_Z)); //determine normal
 		rec.mat = mat; //assign cube material
 		rec.set_face_normal(r, rec.normal);
@@ -59,6 +63,11 @@ private:
 	point3 min_corner, max_corner; //bottom-left-back and top-rigt-front cube corners
 	shared_ptr<material> mat;
 	double rotation_Z;
+
+	//calculate center point of cube
+	point3 center() const {
+		return 0.5 * (min_corner + max_corner);
+	}
 
 	//function to determine normal vector in intersection
 	vec3 compute_normal(const point3& p) const {
@@ -80,7 +89,7 @@ private:
 		double s = std::sin(angle);
 		return vec3(
 			c * v.x() - s * v.y(),
-			s * v.x() - c * v.y(),
+			s * v.x() + c * v.y(),
 			v.z()
 		);
 	}

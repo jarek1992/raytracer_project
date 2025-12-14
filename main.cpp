@@ -30,7 +30,7 @@ int main() {
 	point3 min_corner(2.0, 0.0, 2.0);
 	point3 max_corner(4.0, 2.0, 4.0);
 
-	double angle_deg = 0.0;
+	double angle_deg = 30.0;
 	double angle_rad = degrees_to_radians(angle_deg);
 
 	world.add(make_shared<cube>(min_corner, max_corner, cube_material, angle_rad));
@@ -118,7 +118,7 @@ int main() {
 	//image aspects ratio
 	cam.aspect_ratio = 16.0 / 9.0;
 	cam.image_width = 400;
-	cam.samples_per_pixel = 50;
+	cam.samples_per_pixel = 20;
 	cam.max_depth = 10;
 
 	//camera settings
@@ -136,7 +136,9 @@ int main() {
 		std::cerr << "Failed to load HDRI, continuing with black sky\n";
 	}
 
-	HDRI_ROTATION = degrees_to_radians(90);
+	//rotate HDRI Yaw and tilt
+	HDRI_ROTATION = degrees_to_radians(15.0);
+	HDRI_TILT = degrees_to_radians(-2.0);
 
 	//render the scene
 	cam.render(world);
