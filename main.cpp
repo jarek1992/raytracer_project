@@ -62,7 +62,7 @@ int main() {
 						point3 min_corner(center.x() - 0.2, center.y() - 0.2, center.z() - 0.2);
 						point3 max_corner(center.x() + 0.2, center.y() + 0.2, center.z() + 0.2);
 
-						double angle_deg = random_double(0.0, 360.0);
+						double angle_deg = random_double(0.0, 45.0);
 						double angle_rad = degrees_to_radians(angle_deg);
 
 						world.add(make_shared<cube>(min_corner, max_corner, object_material, angle_rad));
@@ -83,7 +83,7 @@ int main() {
 						point3 min_corner(center.x() - 0.2, center.y() - 0.2, center.z() - 0.2);
 						point3 max_corner(center.x() + 0.2, center.y() + 0.2, center.z() + 0.2);
 
-						double angle_deg = random_double(0.0, 360.0);
+						double angle_deg = random_double(0.0, 45.0);
 						double angle_rad = degrees_to_radians(angle_deg);
 
 						world.add(make_shared<cube>(min_corner, max_corner, object_material, angle_rad));
@@ -102,7 +102,7 @@ int main() {
 						point3 min_corner(center.x() - 0.2, center.y() - 0.2, center.z() - 0.2);
 						point3 max_corner(center.x() + 0.2, center.y() + 0.2, center.z() + 0.2);
 
-						double angle_deg = random_double(0.0, 360.0);
+						double angle_deg = random_double(0.0, 45.0);
 						double angle_rad = degrees_to_radians(angle_deg);
 
 						world.add(make_shared<cube>(min_corner, max_corner, object_material, angle_rad));
