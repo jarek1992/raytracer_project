@@ -13,7 +13,8 @@ public:
 	//parametric constructor, creates the object with initial values
 	ray(const point3& origin, const vec3& direction)
 		: orig(origin)
-		, dir(direction) {}
+		, dir(direction) 
+	{}
 
 	//getters
 	const point3& origin() const { return orig; }

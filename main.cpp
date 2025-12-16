@@ -8,6 +8,8 @@
 #include "sphere.hpp"
 #include "cube.hpp"
 #include "hdr_image.hpp"
+#include "rotate_y.hpp"
+#include "translate.hpp"
 
 int main() {
 	//set up a sphere into world
@@ -27,13 +29,12 @@ int main() {
 
 	//cube 
 	auto cube_material = make_shared<lambertian>(color(0.2, 0.5, 0.5));
-	point3 min_corner(2.0, 0.0, 2.0);
-	point3 max_corner(4.0, 2.0, 4.0);
 
-	double angle_deg = 30.0;
-	double angle_rad = degrees_to_radians(angle_deg);
+	auto c = make_shared<cube>(point3(0.0, 0.0, 0.0), cube_material);
+	auto rotated = make_shared<rotate_y>(c, 30.0);
+	auto final_pos = make_shared<translate>(rotated, point3(3.0, 1.0, 3.0));
 
-	world.add(make_shared<cube>(min_corner, max_corner, cube_material, angle_rad));
+	world.add(final_pos);
 
 	//metal material sphere into scene
 	auto material_metal = make_shared<metal>(color(0.2, 0.2, 0.2), 0.2);
@@ -58,14 +59,19 @@ int main() {
 						world.add(make_shared<sphere>(center, 0.2, object_material));
 					}
 					else {
-						//create cube
-						point3 min_corner(center.x() - 0.2, center.y() - 0.2, center.z() - 0.2);
-						point3 max_corner(center.x() + 0.2, center.y() + 0.2, center.z() + 0.2);
-
-						double angle_deg = random_double(0.0, 45.0);
+						//create cube centered at center with side 0.4
+						auto c = make_shared<cube>(
+							point3(-0.2, -0.2, -0.2),
+							point3(0.2, 0.2, 0.2),
+							object_material
+						);
+						double angle_deg = random_double(0.0, 90.0);
 						double angle_rad = degrees_to_radians(angle_deg);
+						auto rotated = make_shared<rotate_y>(c, angle_rad); //random rotation
+						vec3 displacement = center;
+						auto final_obj = make_shared<translate>(rotated, displacement); //move cube to center position
 
-						world.add(make_shared<cube>(min_corner, max_corner, object_material, angle_rad));
+						world.add(final_obj);
 					}
 				}
 				else if (choose_material < 0.95) {
@@ -79,14 +85,19 @@ int main() {
 						world.add(make_shared<sphere>(center, 0.2, object_material));
 					}
 					else {
-						//create cube
-						point3 min_corner(center.x() - 0.2, center.y() - 0.2, center.z() - 0.2);
-						point3 max_corner(center.x() + 0.2, center.y() + 0.2, center.z() + 0.2);
-
-						double angle_deg = random_double(0.0, 45.0);
+						//create cube centered at center with side 0.4
+						auto c = make_shared<cube>(
+							point3(-0.2, -0.2, -0.2),
+							point3(0.2, 0.2, 0.2),
+							object_material
+						);
+						double angle_deg = random_double(0.0, 90.0);
 						double angle_rad = degrees_to_radians(angle_deg);
+						auto rotated = make_shared<rotate_y>(c, angle_rad); //random rotation
+						vec3 displacement = center;
+						auto final_obj = make_shared<translate>(rotated, displacement); //move cube to center position
 
-						world.add(make_shared<cube>(min_corner, max_corner, object_material, angle_rad));
+						world.add(final_obj);
 					}
 				}
 				else {
@@ -98,14 +109,19 @@ int main() {
 						world.add(make_shared<sphere>(center, 0.2, object_material));
 					}
 					else {
-						//create cube
-						point3 min_corner(center.x() - 0.2, center.y() - 0.2, center.z() - 0.2);
-						point3 max_corner(center.x() + 0.2, center.y() + 0.2, center.z() + 0.2);
-
-						double angle_deg = random_double(0.0, 45.0);
+						//create cube centered at center with side 0.4
+						auto c = make_shared<cube>(
+							point3(-0.2, -0.2, -0.2),
+							point3(0.2, 0.2, 0.2),
+							object_material
+						);
+						double angle_deg = random_double(0.0, 90.0);
 						double angle_rad = degrees_to_radians(angle_deg);
+						auto rotated = make_shared<rotate_y>(c, angle_rad); //random rotation
+						vec3 displacement = center;
+						auto final_obj = make_shared<translate>(rotated, displacement); //move cube to center position
 
-						world.add(make_shared<cube>(min_corner, max_corner, object_material, angle_rad));
+						world.add(final_obj);
 					}
 				}
 			}
@@ -117,8 +133,8 @@ int main() {
 
 	//image aspects ratio
 	cam.aspect_ratio = 16.0 / 9.0;
-	cam.image_width = 400;
-	cam.samples_per_pixel = 20;
+	cam.image_width = 300;
+	cam.samples_per_pixel = 10;
 	cam.max_depth = 10;
 
 	//camera settings
@@ -128,7 +144,7 @@ int main() {
 	cam.vup = vec3(0, 1, 0); //up vector set to Y
 
 	//defocus blur settings
-	cam.defocus_angle = 0.0; //higher values more blur on objects outside defocus point
+	cam.defocus_angle = 0.3; //higher values more blur on objects outside defocus point
 	cam.focus_dist = 10; //higher values defocus point more far from camera
 
 
@@ -137,8 +153,8 @@ int main() {
 	}
 
 	//rotate HDRI Yaw and tilt
-	HDRI_ROTATION = degrees_to_radians(15.0);
-	HDRI_TILT = degrees_to_radians(-2.0);
+	HDRI_ROTATION = degrees_to_radians(60.0);
+	HDRI_TILT = degrees_to_radians(-3.0);
 
 	//render the scene
 	cam.render(world);
