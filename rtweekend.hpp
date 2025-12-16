@@ -13,6 +13,7 @@ using std::shared_ptr;
 //constants
 constexpr double infinity = std::numeric_limits<double>::infinity();
 constexpr double pi = 3.14159265358979323846;
+const double ray_epsilon = 0.0001;
 
 //utility functions
 
