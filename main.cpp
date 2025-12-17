@@ -10,6 +10,7 @@
 #include "hdr_image.hpp"
 #include "rotate_y.hpp"
 #include "translate.hpp"
+#include "triangle.hpp"
 
 int main() {
 	//set up a sphere into world
@@ -17,6 +18,7 @@ int main() {
 
 	//base material and plane
 	auto material_ground = make_shared<metal>(color(0.2, 0.2, 0.2), 0.3);
+	
 	world.add(make_shared<sphere>(point3(0.0, -1000.0, 0.0), 1000.0, material_ground));
 
 	//glass sphere into scene
@@ -25,19 +27,31 @@ int main() {
 
 	//bubble sphere into scene
 	auto material_bubble = make_shared<dielectric>(1.0 / 1.5);
+	
 	world.add(make_shared<sphere>(point3(0.0, 1.0, 0.0), 0.9, material_bubble));
 
 	//cube 
 	auto cube_material = make_shared<lambertian>(color(0.2, 0.5, 0.5));
-
-	auto c = make_shared<cube>(point3(0.0, 0.0, 0.0), cube_material);
-	auto rotated = make_shared<rotate_y>(c, 30.0);
+	auto cube1 = make_shared<cube>(point3(0.0, 0.0, 0.0), cube_material);
+	auto rotated = make_shared<rotate_y>(cube1, 30.0);
 	auto final_pos = make_shared<translate>(rotated, point3(3.0, 1.0, 3.0));
-
+	
 	world.add(final_pos);
+
+	//triangle
+	auto triangle_material = make_shared<lambertian>(color(0.8, 0.3, 0.3));
+	point3 v0(-1.0, 0.0, 0.0);
+	point3 v1(1.0, 0.0, 0.0);
+	point3 v2(0.0, 2.0, 0.0);
+	auto triangle1 = make_shared<triangle>(v0, v1, v2, triangle_material);
+	auto triangle_rotated = make_shared<rotate_y>(triangle1, 45.0);
+	auto triangle_final_pos = make_shared<translate>(triangle_rotated, point3(-2.0, 0.0, 1.0));
+
+	world.add(triangle_final_pos);
 
 	//metal material sphere into scene
 	auto material_metal = make_shared<metal>(color(0.2, 0.2, 0.2), 0.2);
+	
 	world.add(make_shared<sphere>(point3(6.0, 1.0, -2.0), 1.0, material_metal));
 
 	//randomize location of small spheres and cubes

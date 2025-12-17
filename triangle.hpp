@@ -1,0 +1,77 @@
+#pragma once
+
+#include "hittable.hpp"
+
+class triangle : public hittable {
+public:
+	triangle(const point3& a, const point3& b, const point3& c, shared_ptr<material>m)
+		: v0(a)
+		, v1(b)
+		, v2(c)
+		, mat_ptr(m)
+	{
+	}
+
+	virtual bool hit(const ray& r, interval ray_t, hit_record& rec) const {
+		//edges
+		vec3 edge1 = v1 - v0;
+		vec3 edge2 = v2 - v0;
+		//normal 
+		vec3 normal = cross(edge1, edge2);
+		double normal_length = normal.length();
+
+		if (normal_length < 1e-8) {
+			return false; // Degenerate triangle
+		}
+		vec3 unit_normal = normal / normal_length;
+
+		//check if cut the plane
+		double NdotD = dot(unit_normal, r.direction());
+		//if the ray is parallel or points away from the triangle
+		if (std::abs(NdotD) < 1e-8) {
+			return false;
+		}
+
+		double D = dot(unit_normal, v0); // D from plane equation N*P = D
+		double t = (D - dot(unit_normal, r.origin())) / NdotD;
+
+		if (!ray_t.contains(t)) {
+			return false;
+		}
+		//find the intersection point and check if it's inside the triangle
+		point3 p = r.at(t);
+
+		//point P tests with respect to edges(outside-in test)
+		//checking if P-point is located on the internal vector side for each edge
+
+		//edge V0 -> V1
+		vec3 edge_v0v1 = v1 - v0;
+		vec3 C0 = cross(edge_v0v1, p - v0); //parrallel vector to the plane
+		if (dot(normal, C0) < 0) {
+			return false;
+		}
+		//edge V1 -> V2
+		vec3 edge_v1v2 = v2 - v1;
+		vec3 C1 = cross(edge_v1v2, p - v1);
+		if (dot(normal, C1) < 0) {
+			return false;
+		}
+		//edge V2 -> V0
+		vec3 edge_v2v0 = v0 - v2;
+		vec3 C2 = cross(edge_v2v0, p - v2);
+		if (dot(normal, C2) < 0) {
+			return false;
+		}
+		//if we reach this point, the ray hits the triangle
+		rec.t = t;
+		rec.p = p;
+		rec.mat = mat_ptr;
+		rec.set_face_normal(r, unit_normal);
+
+		return true;
+	}
+
+private:
+	point3 v0, v1, v2;
+	shared_ptr<material> mat_ptr;
+};
