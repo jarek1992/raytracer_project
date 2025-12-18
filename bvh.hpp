@@ -1,0 +1,87 @@
+#pragma once
+
+#include <algorithm>
+
+#include "rtweekend.hpp"
+#include "hittable.hpp"
+#include "hittable_list.hpp"
+
+class bvh_node : public hittable {
+public:
+	bvh_node(hittable_list list)
+		: bvh_node(list.objects, 0, list.objects.size()) {
+	}
+
+	bvh_node(std::vector<shared_ptr<hittable>>& objects, size_t start, size_t end) {
+		// Randomly choose axis (0,1 or 2) to split on
+		int axis = random_int(0, 2);
+
+		auto comparator = (axis == 0) ? box_x_compare
+			: (axis == 1) ? box_y_compare
+			: box_z_compare;
+
+		size_t object_span = end - start;
+
+		if (object_span == 1) {
+			left = right = objects[start];
+		}
+		else if (object_span == 2) {
+			if (comparator(objects[start], objects[start + 1])) {
+				left = objects[start];
+				right = objects[start + 1];
+			}
+			else {
+				left = objects[start + 1];
+				right = objects[start];
+			}
+		}
+		else {
+			//sort objects and split in half
+			std::sort(objects.begin() + start, objects.begin() + end, comparator);
+
+			auto mid = start + object_span / 2;
+			left = make_shared<bvh_node>(objects, start, mid);
+			right = make_shared<bvh_node>(objects, mid, end);
+		}
+		bbox = aabb(left->bounding_box(), right->bounding_box());
+	}
+
+	bool hit(const ray& r, interval ray_t, hit_record& rec) const override {
+		//if the ray doesn't hit the bounding box, return false
+		if (!bbox.hit(r, ray_t)) {
+			return false;
+		}
+		//check left and right children
+		bool hit_left = left->hit(r, ray_t, rec);
+		//if we hit left, update t_max to the hit t
+		bool hit_right = right->hit(r, interval(ray_t.min, hit_left ? rec.t : ray_t.max), rec);
+		return hit_left || hit_right;
+	}
+
+	aabb bounding_box() const override {
+		return bbox;
+	}
+
+private:
+	shared_ptr<hittable> left;
+	shared_ptr<hittable> right;
+	aabb bbox;
+
+	//comparison functions for sorting
+	static bool box_compare(
+		const shared_ptr<hittable> a, const shared_ptr<hittable> b, int axis_index
+	) {
+		auto a_axis_range = a->bounding_box().axis(axis_index);
+		auto b_axis_range = b->bounding_box().axis(axis_index);
+		return a_axis_range.min < b_axis_range.min;
+	}
+	static bool box_x_compare(const shared_ptr<hittable> a, const shared_ptr<hittable> b) {
+		return box_compare(a, b, 0);
+	}
+	static bool box_y_compare(const shared_ptr<hittable> a, const shared_ptr<hittable> b) {
+		return box_compare(a, b, 1);
+	}
+	static bool box_z_compare(const shared_ptr<hittable> a, const shared_ptr<hittable> b) {
+		return box_compare(a, b, 2);
+	}
+};

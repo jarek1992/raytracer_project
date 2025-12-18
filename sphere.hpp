@@ -8,7 +8,11 @@ public:
 		: center(center)
 		, radius(std::fmax(0, radius)) //prevent from negative radius
 		, mat(mat)
-	{}
+	{
+		//calculate aabb box in constructor
+		vec3 r_vec(radius, radius, radius);
+		bbox = aabb(center - r_vec, center + r_vec);
+	}
 
 	//sphere
 	bool hit(const ray& r, interval ray_t, hit_record& rec) const override {
@@ -42,8 +46,14 @@ public:
 
 		return true;
 	}
+	
+	aabb bounding_box() const override {
+		return bbox;
+	}
+
 private:
 	point3 center; //sphere center
 	double radius; //sphere radius
 	shared_ptr<material> mat; //material pointer
+	aabb bbox; //bounding box
 };

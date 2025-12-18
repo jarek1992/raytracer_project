@@ -9,6 +9,7 @@ public:
 		: ptr(p)
 		, offset(displacement)
 	{
+		bbox = ptr->bounding_box() + offset;
 	}
 
 	virtual bool hit(const ray& r, interval ray_t, hit_record& rec) const override {
@@ -29,8 +30,13 @@ public:
 		return true;
 	}
 
+	aabb bounding_box() const override { 
+		return bbox; 
+	}
+
 private:
 	shared_ptr<hittable> ptr;
-	vec3 offset;	
+	vec3 offset;
+	aabb bbox;
 
 };

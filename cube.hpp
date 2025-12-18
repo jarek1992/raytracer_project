@@ -1,7 +1,7 @@
 #pragma once	
 
 #include "hittable.hpp"
-#include "vec3.hpp"
+#include "material.hpp"
 
 //class cube
 class cube : public hittable {
@@ -23,6 +23,10 @@ public:
 	{
 		//set constant size (e.g., half-size 1.0 in each axis)
 		half_extents = vec3(1.0, 1.0, 1.0);
+	}
+
+	aabb bounding_box() const override {
+		return aabb(min_p, max_p);
 	}
 
 	//cube
@@ -68,6 +72,8 @@ public:
 private:
 	vec3 half_extents; //half the size of the cube in each dimension
 	shared_ptr<material> mat;
+	point3 min_p;
+	point3 max_p;
 
 	//function to determine normal vector in intersection
 	vec3 compute_normal(const point3& p) const {

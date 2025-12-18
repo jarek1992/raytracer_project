@@ -11,12 +11,17 @@ public:
 	//default constructor
 	hittable_list() {}
 	//constructor with one argument added to the list 
-	hittable_list(std::shared_ptr<hittable> object) { add(object); }
+	hittable_list(std::shared_ptr<hittable> object) { 
+		add(object); 
+	}
 	//remove objects from the list
-	void clear() { objects.clear(); }
+	void clear() { 
+		objects.clear(); 
+	}
 	//add new object to the list
 	void add(std::shared_ptr<hittable> object) {
 		objects.push_back(object);
+		bbox = aabb(bbox, object->bounding_box());
 	}
 
 	//go through the objects on the list to check if any ray hits them(objects)
@@ -34,4 +39,9 @@ public:
 		}
 		return hit_anything;
 	}
+
+	aabb bounding_box() const override { return bbox; }
+
+private:
+	aabb bbox;
 };

@@ -71,6 +71,25 @@ public:
 		return true;
 	}
 
+	aabb bounding_box() const override {
+		//searching for min and max points for each axis
+		double min_x = fmin(v0.x(), fmin(v1.x(), v2.x()));
+		double min_y = fmin(v0.y(), fmin(v1.y(), v2.y()));
+		double min_z = fmin(v0.z(), fmin(v1.z(), v2.z()));
+
+		double max_x = fmax(v0.x(), fmax(v1.x(), v2.x()));
+		double max_y = fmax(v0.y(), fmax(v1.y(), v2.y()));
+		double max_z = fmax(v0.z(), fmax(v1.z(), v2.z()));
+
+		//adding small margin (padding) to avoid zero thickness
+		double delta = 0.0001;
+		if (max_x - min_x < delta) { min_x -= delta; max_x += delta; }
+		if (max_y - min_y < delta) { min_y -= delta; max_y += delta; }
+		if (max_z - min_z < delta) { min_z -= delta; max_z += delta; }
+
+		return aabb(point3(min_x, min_y, min_z), point3(max_x, max_y, max_z));
+	}
+
 private:
 	point3 v0, v1, v2;
 	shared_ptr<material> mat_ptr;

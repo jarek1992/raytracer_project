@@ -11,6 +11,7 @@
 #include "rotate_y.hpp"
 #include "translate.hpp"
 #include "triangle.hpp"
+#include "bvh.hpp"
 
 int main() {
 	//set up a sphere into world
@@ -147,9 +148,9 @@ int main() {
 
 	//image aspects ratio
 	cam.aspect_ratio = 16.0 / 9.0;
-	cam.image_width = 300;
-	cam.samples_per_pixel = 10;
-	cam.max_depth = 10;
+	cam.image_width = 600;
+	cam.samples_per_pixel = 50;
+	cam.max_depth = 50;
 
 	//camera settings
 	cam.vfov = 30; //vertical field of the view
@@ -171,7 +172,9 @@ int main() {
 	HDRI_TILT = degrees_to_radians(-3.0);
 
 	//render the scene
-	cam.render(world);
+	hittable_list bvh_world;
+	bvh_world.add(make_shared<bvh_node>(world));
+	cam.render(bvh_world);
 
 	return 0;
 }

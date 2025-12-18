@@ -1,11 +1,8 @@
 #pragma once
 
-#include "vec3.hpp"
-#include "interval.hpp"
-#include "ray.hpp"
+#include "aabb.hpp"
 
-class material;
-
+class material; //forward declaration to avoid circular dependency
 //holds information about the intersection between a ray and an object
 class hit_record {
 public:
@@ -27,4 +24,6 @@ public:
 	virtual ~hittable() = default;
 	//pure virtual method that must be implemented by derived classes
 	virtual bool hit(const ray& r, interval ray_t, hit_record& rec) const = 0;
+	//for bounding box computation to return aabb of the object
+	virtual aabb bounding_box() const = 0;
 };
