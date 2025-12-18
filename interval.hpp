@@ -26,6 +26,12 @@ public:
 		max = std::fmax(a.max, b.max);
 	}
 
+	//expand interval by delta(both sides)
+	interval expand(double delta) const {
+		auto padding = delta / 2;
+		return interval(min - padding, max + padding);
+	}
+
 	// return size of interval
 	double size() const { return max - min; }
 	// check if interval contains x

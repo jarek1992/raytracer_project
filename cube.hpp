@@ -6,31 +6,44 @@
 //class cube
 class cube : public hittable {
 public:
-	//constructor using min and max corners in world space (3 args)
+	//1. constructor using min and max corners in world space (3 args)
 	//converts boundaries to half extents
 	cube(const point3& min_corner_world, const point3& max_corner_world,
 		shared_ptr<material> mat)
 		: mat(mat)
+		, min_p(min_corner_world)
+		, max_p(max_corner_world)
 	{
 		//calculate half extents from min and max corners
 		half_extents = 0.5 * (max_corner_world - min_corner_world);
+		center = min_corner_world + half_extents; //calculate center position
 	}
 
-	//constructor using center position and fixed size (2 args)
+	//2. constructor using center position and fixed size (2 args)
 	//uses to define cube with constant size centered at given position(e.g., side length 2.0) and half extents = 1,1,1)
 	cube(const point3& center_pos, shared_ptr<material> mat)
 		: mat(mat)
+		, center(center_pos)
 	{
 		//set constant size (e.g., half-size 1.0 in each axis)
 		half_extents = vec3(1.0, 1.0, 1.0);
+		min_p = center_pos - half_extents; //calculate min corner
+		max_p = center_pos + half_extents; //calculate max corner
 	}
 
 	aabb bounding_box() const override {
-		return aabb(min_p, max_p);
+		double delta = 0.0001;
+		return aabb(
+			interval(min_p.x(), max_p.x()).expand(delta),
+			interval(min_p.y(), max_p.y()).expand(delta),
+			interval(min_p.z(), max_p.z()).expand(delta)
+		);
 	}
 
 	//cube
 	virtual bool hit(const ray& r, interval ray_t, hit_record& rec) const override {
+		point3 relative_origin = r.origin() - center; //translate ray origin to cube local space
+
 		double tmin = ray_t.min;
 		double tmax = ray_t.max;
 
@@ -61,7 +74,7 @@ public:
 		rec.p = r.at(rec.t);
 
 		//updated compute normal function
-		rec.normal = compute_normal(rec.p);
+		rec.normal = compute_normal(rec.p - center);
 
 		rec.mat = mat; //assign cube material
 		rec.set_face_normal(r, rec.normal);
@@ -71,6 +84,7 @@ public:
 
 private:
 	vec3 half_extents; //half the size of the cube in each dimension
+	point3 center; //center position of the cube
 	shared_ptr<material> mat;
 	point3 min_p;
 	point3 max_p;

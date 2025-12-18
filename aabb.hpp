@@ -6,14 +6,17 @@ class aabb {
 public:
 	interval x, y, z;
 
-	aabb() {} //empty constructor
+	aabb() 
+		: x(interval::empty)
+		, y(interval::empty)
+		, z(interval::empty) 
+	{}
 
 	aabb(const interval& ix, const interval& iy, const interval& iz)
 		: x(ix)
 		, y(iy)
 		, z(iz)
-	{
-	}
+	{}
 
 	aabb(const point3& a, const point3& b) {
 		//create AABB from two points
