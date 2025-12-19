@@ -8,6 +8,11 @@ class material {
 public:
 	virtual ~material() = default;
 
+	//no emission by default black color material
+	virtual color emitted(double u, double v, const point3& p) const {
+		return color(0, 0, 0); //default no emission
+	}
+
 	//   @brief Scatter the incoming ray according to the material's properties.
 	//   
 	//   @param r_in The incoming ray.
@@ -25,13 +30,15 @@ public:
 class lambertian : public material {
 public:
 	//constructor for solid color albedo
-	lambertian(const color& albedo) 
+	lambertian(const color& albedo)
 		: tex(make_shared<solid_color>(albedo))
-	{}
+	{
+	}
 	//constructor for texture albedo
 	lambertian(shared_ptr<texture>tex)
 		: tex(tex)
-	{}
+	{
+	}
 
 	bool scatter(const ray& r_in, const hit_record& rec, color& attenuation, ray& scattered) const override {
 		auto scatter_direction = rec.normal + random_unit_vector();
@@ -60,7 +67,8 @@ public:
 	metal(const color& albedo, double fuzz)
 		: albedo(albedo)
 		, fuzz(fuzz < 1 ? fuzz : 1) //condition for fuzziness 
-	{}
+	{
+	}
 
 	bool scatter(const ray& r_in, const hit_record& rec, color& attenuation, ray& scattered) const override {
 		vec3 reflected = reflect(r_in.direction(), rec.normal);
@@ -116,4 +124,27 @@ private:
 		r0 = r0 * r0;
 		return r0 + (1 - r0) * std::pow((1 - cosine), 5);
 	}
+};
+
+//class for diffuse light-emitting material
+class diffuse_light : public material {
+public:
+	diffuse_light(shared_ptr<texture> a) 
+		: emit(a) 
+	{}
+	diffuse_light(color c) 
+		: emit(make_shared<solid_color>(c)) 
+	{}
+
+	bool scatter(
+		const ray& r_in, const hit_record& rec, color& attenuation, ray& scattered
+	) const override {
+		return false; //no scattering for light-emitting materials
+	}
+	color emitted(double u, double v, const point3& p) const {
+		return emit->value(u, v, p);
+	}
+
+private:
+	shared_ptr<texture> emit;
 };

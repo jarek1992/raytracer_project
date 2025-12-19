@@ -55,12 +55,13 @@ int main() {
 	world.add(triangle_final_pos);
 
 	//metal material sphere into scene
-	/*auto material_metal = make_shared<metal>(color(0.2, 0.2, 0.2), 0.2);*/
-	
-	auto texture2 = make_shared<image_texture>("assets/textures/fine-wood.jpg");
-	auto textured_metal = make_shared<lambertian>(texture2);
 
-	world.add(make_shared<sphere>(point3(6.0, 1.0, -2.0), 1.0,textured_metal));
+	//emmissive material
+	auto emmissive_material = make_shared<diffuse_light>(color(15.0, 15.0, 15.0)); //bright white light
+
+	/*auto material_metal = make_shared<metal>(color(0.2, 0.2, 0.2), 0.2);*/
+
+	world.add(make_shared<sphere>(point3(6.0, 1.0, -2.0), 1.0, emmissive_material));
 
 	//randomize location of small spheres and cubes
 	for (int a = -20; a < 20; a++) {
@@ -155,9 +156,9 @@ int main() {
 
 	//image aspects ratio
 	cam.aspect_ratio = 16.0 / 9.0;
-	cam.image_width = 800;
-	cam.samples_per_pixel = 150;
-	cam.max_depth = 50;
+	cam.image_width = 600;
+	cam.samples_per_pixel = 10;
+	cam.max_depth = 10;
 
 	//camera settings
 	cam.vfov = 30; //vertical field of the view

@@ -204,19 +204,26 @@ private:
 
 	//intersection radius with sphere
 	color ray_color(const ray& r, const hittable& world, int depth) const {
-		if (depth <= 0) return color(0, 0, 0);
+		if (depth <= 0) {
+			return color(0, 0, 0);
+		}
 
 		hit_record rec;
 		if (world.hit(r, interval(tmin, tmax), rec)) {
 			ray scattered;
 			color atten;
-			if (rec.mat->scatter(r, rec, atten, scattered)) {
-				return atten * ray_color(scattered, world, depth - 1);
-			}
-			return color(0, 0, 0);
-		}
 
-		// correct HDR environment
+			//get emission color from material and pass u, v , p to emitted functions
+			color color_from_emission = rec.mat->emitted(rec.u, rec.v, rec.p);
+
+			//if material scatters light, return bounce ray color multiplied by attenuation
+			if (rec.mat->scatter(r, rec, atten, scattered)) {
+				return color_from_emission + atten * ray_color(scattered, world, depth - 1);
+			}
+			//if material doesn't scatter, return only emission color
+			return color_from_emission;
+		}
+		//if no hit, HDR background
 		return hdri_image.environment(r.direction());
 	}
 };
