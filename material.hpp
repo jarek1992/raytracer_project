@@ -1,6 +1,7 @@
 #pragma once
 
 #include "hittable.hpp"
+#include "texture.hpp"
 
 //abstract class material
 class material {
@@ -23,7 +24,14 @@ public:
 //class for lambertian material
 class lambertian : public material {
 public:
-	lambertian(const color& albedo) : albedo(albedo) {}
+	//constructor for solid color albedo
+	lambertian(const color& albedo) 
+		: tex(make_shared<solid_color>(albedo))
+	{}
+	//constructor for texture albedo
+	lambertian(shared_ptr<texture>tex)
+		: tex(tex)
+	{}
 
 	bool scatter(const ray& r_in, const hit_record& rec, color& attenuation, ray& scattered) const override {
 		auto scatter_direction = rec.normal + random_unit_vector();
@@ -36,12 +44,14 @@ public:
 		point3 origin_adjusted = rec.p + rec.normal * ray_epsilon;
 
 		scattered = ray(origin_adjusted, scatter_direction, r_in.time());
-		attenuation = albedo;
+		//get albedo from texture
+		attenuation = tex->value(rec.u, rec.v, rec.p);
+
 		return true;
 	}
 
 private:
-	color albedo;
+	shared_ptr<texture> tex;
 };
 
 //class for metal material with reflections

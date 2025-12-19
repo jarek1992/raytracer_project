@@ -42,6 +42,7 @@ public:
 		rec.p = r.at(rec.t);
 		vec3 outward_normal = (rec.p - center) / radius;
 		rec.set_face_normal(r, outward_normal);
+		get_sphere_uv(outward_normal, rec.u, rec.v);
 		rec.mat = mat;
 
 		return true;
@@ -49,6 +50,17 @@ public:
 	
 	aabb bounding_box() const override {
 		return bbox;
+	}
+
+	static void get_sphere_uv(const point3& p, double& u, double& v) {
+		//p: a given point on the sphere of radius one, centered at the origin
+		//u: returned value [0,1] of angle around the Y axis from X=-1
+		//v: returned value [0,1] of angle from Y=-1 to Y=+1
+		auto theta = acos(-p.y());
+		auto phi = atan2(-p.z(), p.x()) + pi;
+
+		u = phi / (2 * pi);
+		v = theta / pi;
 	}
 
 private:

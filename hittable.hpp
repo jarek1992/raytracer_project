@@ -11,6 +11,9 @@ public:
 	shared_ptr<material> mat; //shared_ptr on material
 	double t;         //distance along the ray to the intersection point
 	bool front_face;  //flag for front/back face hit;
+	double u;        //u texture coordinate
+	double v;        //v texture coordinate
+
 
 	//sets the hit record normal vector, 'outward_normal' is assumed to have unit length
 	void set_face_normal(const ray& r, const vec3& outward_normal) {

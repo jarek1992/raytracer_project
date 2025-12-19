@@ -32,8 +32,12 @@ int main() {
 	world.add(make_shared<sphere>(point3(0.0, 1.0, 0.0), 0.9, material_bubble));
 
 	//cube 
-	auto cube_material = make_shared<lambertian>(color(0.2, 0.5, 0.5));
-	auto cube1 = make_shared<cube>(point3(0.0, 0.0, 0.0), cube_material);
+	/*auto cube_material = make_shared<lambertian>(color(0.2, 0.5, 0.5));*/
+
+	auto texture = make_shared<image_texture>("assets/textures/fine-wood.jpg");
+	auto textured_lambertian = make_shared<lambertian>(texture);
+
+	auto cube1 = make_shared<cube>(point3(0.0, 0.0, 0.0), textured_lambertian);
 	auto rotated = make_shared<rotate_y>(cube1, 30.0);
 	auto final_pos = make_shared<translate>(rotated, point3(3.0, 1.0, 3.0));
 	
@@ -51,9 +55,12 @@ int main() {
 	world.add(triangle_final_pos);
 
 	//metal material sphere into scene
-	auto material_metal = make_shared<metal>(color(0.2, 0.2, 0.2), 0.2);
+	/*auto material_metal = make_shared<metal>(color(0.2, 0.2, 0.2), 0.2);*/
 	
-	world.add(make_shared<sphere>(point3(6.0, 1.0, -2.0), 1.0, material_metal));
+	auto texture2 = make_shared<image_texture>("assets/textures/fine-wood.jpg");
+	auto textured_metal = make_shared<lambertian>(texture2);
+
+	world.add(make_shared<sphere>(point3(6.0, 1.0, -2.0), 1.0,textured_metal));
 
 	//randomize location of small spheres and cubes
 	for (int a = -20; a < 20; a++) {
@@ -148,8 +155,8 @@ int main() {
 
 	//image aspects ratio
 	cam.aspect_ratio = 16.0 / 9.0;
-	cam.image_width = 600;
-	cam.samples_per_pixel = 50;
+	cam.image_width = 800;
+	cam.samples_per_pixel = 150;
 	cam.max_depth = 50;
 
 	//camera settings
@@ -159,7 +166,7 @@ int main() {
 	cam.vup = vec3(0, 1, 0); //up vector set to Y
 
 	//defocus blur settings
-	cam.defocus_angle = 0.3; //higher values more blur on objects outside defocus point
+	cam.defocus_angle = 0.6; //higher values more blur on objects outside defocus point
 	cam.focus_dist = 10; //higher values defocus point more far from camera
 
 
