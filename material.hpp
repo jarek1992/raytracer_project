@@ -32,13 +32,11 @@ public:
 	//constructor for solid color albedo
 	lambertian(const color& albedo)
 		: tex(make_shared<solid_color>(albedo))
-	{
-	}
+	{}
 	//constructor for texture albedo
 	lambertian(shared_ptr<texture>tex)
 		: tex(tex)
-	{
-	}
+	{}
 
 	bool scatter(const ray& r_in, const hit_record& rec, color& attenuation, ray& scattered) const override {
 		auto scatter_direction = rec.normal + random_unit_vector();
@@ -64,25 +62,27 @@ private:
 //class for metal material with reflections
 class metal : public material {
 public:
-	metal(const color& albedo, double fuzz)
-		: albedo(albedo)
+	//constructor for checker texture
+	metal(shared_ptr<texture> a, double f)
+		: albedo(a)
+		, fuzz(f < 1 ? f : 1) //condition for fuzziness 
+	{}
+	//constructor for solid color albedo(user friendly)
+	metal(const color& a, double f)
+		: albedo(make_shared<solid_color>(a))
 		, fuzz(fuzz < 1 ? fuzz : 1) //condition for fuzziness 
-	{
-	}
+	{}
 
 	bool scatter(const ray& r_in, const hit_record& rec, color& attenuation, ray& scattered) const override {
-		vec3 reflected = reflect(r_in.direction(), rec.normal);
-		reflected = unit_vector(reflected) + (fuzz * random_unit_vector());
-
-		point3 origin_adjusted = rec.p + ray_epsilon * rec.normal;
-
-		scattered = ray(rec.p, reflected, r_in.time());
-		attenuation = albedo;
+		vec3 reflected = reflect(unit_vector(r_in.direction()), rec.normal);
+		//use .value(u, v, p) from texture instead of solid color
+		attenuation = albedo->value(rec.u, rec.v, rec.p);
+		scattered = ray(rec.p, reflected + fuzz * random_unit_vector());
 		return (dot(scattered.direction(), rec.normal) > 0);
 	}
 
 private:
-	color albedo;
+	shared_ptr<texture> albedo;
 	double fuzz;
 };
 

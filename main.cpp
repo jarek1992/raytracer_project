@@ -30,8 +30,17 @@ int main() {
 	hittable_list world;
 
 	//0. BASE MATERIAL AND GROUND PLANE
-	auto material_ground = make_shared<metal>(color(0.2, 0.2, 0.2), 0.3);
-	world.add(make_shared<sphere>(point3(0.0, -1000.0, 0.0), 1000.0, material_ground));
+	//define ground color (dark grey and light grey)
+	auto dark_grey = color(0.1, 0.1, 0.1);
+	auto light_grey = color(0.9, 0.9, 0.9);
+	//checker texture for ground plane(0.5 scale determine size of squares)
+	auto checker = make_shared<checker_texture>(0.5, dark_grey, light_grey);
+	//combine texture with metal material
+	//fuzz 0.0 for perfect reflection
+	auto reflective_checker_mat = make_shared<metal>(checker, 0.02);
+
+	world.add(make_shared<sphere>(point3(0.0, -1000.0, 0.0), 1000.0, reflective_checker_mat));
+	
 
 	//1. GLASS SPHERE into scene
 	auto material_glass = make_shared<dielectric>(1.5);

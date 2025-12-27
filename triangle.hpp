@@ -9,8 +9,7 @@ public:
 		, v1(b)
 		, v2(c)
 		, mat_ptr(m)
-	{
-	}
+	{}
 
 	virtual bool hit(const ray& r, interval ray_t, hit_record& rec) const {
 		//edges
