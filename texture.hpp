@@ -84,3 +84,36 @@ private:
 	const int bytes_per_pixel = 3;
 
 };
+
+class checker_texture : public texture {
+public:
+	checker_texture(double scale, shared_ptr<texture> odd, shared_ptr<texture> even)
+		: inv_scale(1.0 / scale)
+		, odd(odd)
+		, even(even)
+	{}
+
+	checker_texture(double scale, color c1, color c2)
+		: inv_scale(1.0 / scale)
+		, odd(make_shared<solid_color>(c1))
+		, even(make_shared<solid_color>(c2))
+	{}
+
+	color value(double u, double v, const point3& p) const override {
+		auto xInteger = static_cast<int>(std::floor(inv_scale * p.x()));
+		auto yInteger = static_cast<int>(std::floor(inv_scale * p.y()));
+		auto zInteger = static_cast<int>(std::floor(inv_scale * p.z()));
+
+		bool isEven = (xInteger + yInteger + zInteger) % 2 == 0;
+
+		return isEven ? even->value(u, v, p) : odd->value(u, v, p);
+
+
+	}
+
+private:
+	double inv_scale;
+	shared_ptr<texture> odd;
+	shared_ptr<texture> even;
+
+};

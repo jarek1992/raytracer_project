@@ -19,6 +19,7 @@ public:
 	int image_width = 100;      //rendered image width in pixel count
 	int samples_per_pixel = 10; //count of random smaples for each pixel
 	int max_depth = 10;         //max recursion depth
+	double sky_intesity = 1.0;    //intensity multiplier for sky color default 1.0
 
 	//camera settings
 	double vfov = 90; //vertical view angle (field of view)
@@ -204,26 +205,42 @@ private:
 
 	//intersection radius with sphere
 	color ray_color(const ray& r, const hittable& world, int depth) const {
-		if (depth <= 0) {
-			return color(0, 0, 0);
-		}
+		ray cur_ray = r;
+		color accumulated_attenuation(1.0, 1.0, 1.0);
+		color accumulated_light(0.0, 0.0, 0.0);
 
-		hit_record rec;
-		if (world.hit(r, interval(tmin, tmax), rec)) {
+		for (int i = 0; i < depth; i++) {
+			hit_record rec;
+			if (!world.hit(cur_ray, interval(0.001, infinity), rec)) {
+				//multiply by sky_intensity to adjust brightness
+				color hdr_sample = hdri_image.environment(cur_ray.direction());
+				//hit onto background/HDR
+				accumulated_light += accumulated_attenuation * (hdr_sample * sky_intesity);
+				break;
+			}
+
 			ray scattered;
-			color atten;
-
+			color attenuation;
 			//get emission color from material and pass u, v , p to emitted functions
-			color color_from_emission = rec.mat->emitted(rec.u, rec.v, rec.p);
+			color emitted = rec.mat->emitted(rec.u, rec.v, rec.p);
+
+			accumulated_light += accumulated_attenuation * emitted;
 
 			//if material scatters light, return bounce ray color multiplied by attenuation
-			if (rec.mat->scatter(r, rec, atten, scattered)) {
-				return color_from_emission + atten * ray_color(scattered, world, depth - 1);
+			if (rec.mat->scatter(cur_ray, rec, attenuation, scattered)) {
+				accumulated_attenuation *= attenuation;
+				cur_ray = scattered;
 			}
-			//if material doesn't scatter, return only emission color
-			return color_from_emission;
+			else {
+				//material absorbed the ray, no more light is gathered
+				break;
+			}
+
+			//optimization "russian roulette" or termination of low-contribution rays
+			if (accumulated_attenuation.length() < 0.0001) {
+				break;
+			}
 		}
-		//if no hit, HDR background
-		return hdri_image.environment(r.direction());
+		return accumulated_light;
 	}
 };
