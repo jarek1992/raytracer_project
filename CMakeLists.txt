@@ -37,6 +37,8 @@ include_directories(${IMGUI_DIR}/misc/stb)
 # Path to stb_image_write
 include_directories("${CMAKE_SOURCE_DIR}/libs/stb")
 
+# Path to tinyobjloader
+include_directories("${CMAKE_SOURCE_DIR}/libs/TinyObjLoader")
 
 # Add sources
 add_executable(ray_tracer 
