@@ -143,8 +143,8 @@ int main() {
 	//image aspects ratio
 	cam.aspect_ratio = 16.0 / 9.0;
 	cam.image_width = 800;
-	cam.samples_per_pixel = 50;
-	cam.max_depth = 15;
+	cam.samples_per_pixel = 300;
+	cam.max_depth = 50;
 
 	//camera settings
 	cam.vfov = 30; //vertical field of the view
@@ -165,7 +165,7 @@ int main() {
 	}
 
 	//rotate HDRI Yaw and tilt
-	HDRI_ROTATION = degrees_to_radians(0.0);
+	HDRI_ROTATION = degrees_to_radians(-45.0);
 	HDRI_TILT = degrees_to_radians(-4.0);
 
 	//render the scene
