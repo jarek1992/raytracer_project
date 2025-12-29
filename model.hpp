@@ -43,6 +43,15 @@ public:
 
 		hittable_list triangles;
 
+		//get_v (lambda)
+		auto get_v = [&](tinyobj::index_t idx) {
+			return point3(
+				(attrib.vertices[3 * idx.vertex_index + 0] - center_offset.x()) * scale,
+				(attrib.vertices[3 * idx.vertex_index + 1] - center_offset.y()) * scale,
+				(attrib.vertices[3 * idx.vertex_index + 2] - center_offset.z()) * scale
+			);
+			};
+
 		//create triangles from loaded model using offset and scale
 		for (const auto& shape : shapes) {
 			size_t index_offset = 0;
@@ -52,15 +61,32 @@ public:
 				tinyobj::index_t idx1 = shape.mesh.indices[index_offset + 1];
 				tinyobj::index_t idx2 = shape.mesh.indices[index_offset + 2];
 
-				auto get_v = [&](tinyobj::index_t idx) {
-					return point3(
-						(attrib.vertices[3 * idx.vertex_index + 0] - center_offset.x()) * scale,
-						(attrib.vertices[3 * idx.vertex_index + 1] - center_offset.y()) * scale,
-						(attrib.vertices[3 * idx.vertex_index + 2] - center_offset.z()) * scale
-					);
-				};
+				//get vertex function with offset and scale applied
+				point3 v0 = get_v(idx0);
+				point3 v1 = get_v(idx1);
+				point3 v2 = get_v(idx2);
 
-				triangles.add(make_shared<triangle>(get_v(idx0), get_v(idx1), get_v(idx2), mat));
+				//get normals
+				vec3 n0, n1, n2;
+				if (idx0.normal_index >= 0) {
+					n0 = vec3(attrib.normals[3 * idx0.normal_index + 0],
+						attrib.normals[3 * idx0.normal_index + 1],
+						attrib.normals[3 * idx0.normal_index + 2]);
+					n1 = vec3(attrib.normals[3 * idx1.normal_index + 0],
+						attrib.normals[3 * idx1.normal_index + 1],
+						attrib.normals[3 * idx1.normal_index + 2]);
+					n2 = vec3(attrib.normals[3 * idx2.normal_index + 0],
+						attrib.normals[3 * idx2.normal_index + 1],
+						attrib.normals[3 * idx2.normal_index + 2]);
+				} else {
+					//if no normals, calculate face normal for flat shading
+					vec3 flat_normal = unit_vector(cross(v1 - v0, v2 - v0));
+					n0 = n1 = n2 = flat_normal;
+				}
+
+				//all 7 parameters triangle constructor
+				triangles.add(make_shared<triangle>(v0, v1, v2, n0, n1, n2, mat));
+
 				index_offset += 3;
 			}
 		}
