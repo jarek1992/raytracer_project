@@ -136,7 +136,9 @@ inline vec3 cross(const vec3& u, const vec3& v) {
 
 //return unit vector with length = 1 with the same direction to v
 inline vec3 unit_vector(const vec3& v) {
-	return v / v.length();
+	double len = v.length();
+	if (len < 1e-8) return vec3(0, 0, 0); // Zabezpieczenie przed zerem
+	return v / len;
 }
 
 //generate random vector inside unit disk on XY surface (disk with radius 1 and center(0,0,0))

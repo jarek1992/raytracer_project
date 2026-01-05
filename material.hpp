@@ -67,17 +67,28 @@ public:
 		: albedo(a)
 		, fuzz(f < 1 ? f : 1) //condition for fuzziness 
 	{}
+
 	//constructor for solid color albedo(user friendly)
 	metal(const color& a, double f)
 		: albedo(make_shared<solid_color>(a))
-		, fuzz(fuzz < 1 ? fuzz : 1) //condition for fuzziness 
+		, fuzz(f < 1 ? f : 1) //condition for fuzziness 
 	{}
 
 	bool scatter(const ray& r_in, const hit_record& rec, color& attenuation, ray& scattered) const override {
-		vec3 reflected = reflect(unit_vector(r_in.direction()), rec.normal);
-		//use .value(u, v, p) from texture instead of solid color
+		//mirror-like reflection
+		vec3 v = unit_vector(r_in.direction());
+		vec3 reflected = v - 2 * dot(v, rec.normal) * rec.normal;
+
+		//adding fuzziness to the reflection
+		vec3 scattered_direction = unit_vector(reflected + (fuzz * random_unit_vector()));
+
+		//moving the ray origin a bit off the surface to prevent self-intersection (shadow acne)
+		point3 shadow_orig = rec.p + (1e-4 * rec.normal);
+
+		scattered = ray(shadow_orig, scattered_direction);
 		attenuation = albedo->value(rec.u, rec.v, rec.p);
-		scattered = ray(rec.p, reflected + fuzz * random_unit_vector());
+
+		//if the scattered ray is in the same hemisphere as the normal
 		return (dot(scattered.direction(), rec.normal) > 0);
 	}
 
@@ -129,12 +140,14 @@ private:
 //class for diffuse light-emitting material
 class diffuse_light : public material {
 public:
-	diffuse_light(shared_ptr<texture> a) 
-		: emit(a) 
-	{}
-	diffuse_light(color c) 
-		: emit(make_shared<solid_color>(c)) 
-	{}
+	diffuse_light(shared_ptr<texture> a)
+		: emit(a)
+	{
+	}
+	diffuse_light(color c)
+		: emit(make_shared<solid_color>(c))
+	{
+	}
 
 	bool scatter(
 		const ray& r_in, const hit_record& rec, color& attenuation, ray& scattered

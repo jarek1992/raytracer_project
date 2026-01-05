@@ -63,6 +63,10 @@ public:
 		v = theta / pi;
 	}
 
+	void set_material(std::shared_ptr<material> m) {
+		mat = m;
+	}
+
 private:
 	point3 center; //sphere center
 	double radius; //sphere radius

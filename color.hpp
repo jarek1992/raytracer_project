@@ -9,10 +9,7 @@ using color = vec3;
 
 //gamma correction
 inline double linear_to_gamma(double linear_component) {
-	if (linear_component > 0) {
 		return std::sqrt(linear_component);
-	}
-	return 0;
 }
 
 // save pixel_color to the stream

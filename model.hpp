@@ -109,6 +109,11 @@ public:
 		return mesh_bvh->bounding_box();
 	}
 
+	void set_material(std::shared_ptr<material> m) {
+		mat = m;
+	}
+
 private:
 	shared_ptr<bvh_node> mesh_bvh;
+	shared_ptr<material> mat;
 };

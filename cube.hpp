@@ -82,6 +82,10 @@ public:
 		return true;
 	}
 
+	void set_material(std::shared_ptr<material> m) { 
+		mat = m; 
+	}
+
 private:
 	vec3 half_extents; //half the size of the cube in each dimension
 	point3 center; //center position of the cube

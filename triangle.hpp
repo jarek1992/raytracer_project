@@ -98,6 +98,10 @@ public:
 		return aabb(point3(min_x, min_y, min_z), point3(max_x, max_y, max_z));
 	}
 
+	void set_material(std::shared_ptr<material> m) {
+		mat_ptr = m;
+	}
+
 private:
 	point3 v0, v1, v2;
 	vec3 n0, n1, n2; //new areas

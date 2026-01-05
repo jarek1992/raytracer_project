@@ -4,13 +4,15 @@
 #include "ray.hpp"
 #include "vec3.hpp"
 #include "stb_image_write.h"
-#include "hdr_image.hpp"
+#include "environment.hpp"
+
 #include <iostream>
 #include <limits>
 #include <algorithm>
 #include <thread>
 #include <functional>
 #include <iomanip>
+#include <chrono>
 
 class camera {
 public:
@@ -32,8 +34,11 @@ public:
 	double focus_dist = 10; //distance from camera lookfrom point to plane of perfect focus
 
 	//render
-	void render(const hittable& world) {
+	void render(const hittable& world, const EnvironmentSettings& env) {
 		initialize();
+
+		//timer for render start
+		auto start_time = std::chrono::high_resolution_clock::now();
 
 		std::vector<color> framebuffer(image_width * image_height);
 		std::atomic<int> lines_done = 0;
@@ -48,17 +53,15 @@ public:
 					color pixel_color(0, 0, 0);
 					for (int s = 0; s < samples_per_pixel; s++) {
 						ray r = get_ray(i, j);
-						pixel_color += ray_color(r, world, max_depth);
+						pixel_color += ray_color(r, world, max_depth, env);
 					}
-
 					framebuffer[j * image_width + i] = pixel_color;
 				}
-
 				lines_done++;
 			}
 			};
 
-		//split lines between threads
+		//split the work between threads
 		int rows_per_thread = image_height / num_threads;
 		int extra = image_height % num_threads;
 		int start = 0;
@@ -96,7 +99,12 @@ public:
 
 		//join threads
 		for (auto& th : threads)
+		{
 			th.join();
+		}
+		//timer for render end
+		auto end_time = std::chrono::high_resolution_clock::now();
+		std::chrono::duration<double> elapsed = end_time - start_time;
 
 		std::cerr << "\r[########################################] 100% (" << image_height << "/" << image_height << " lines)\n";
 
@@ -105,7 +113,6 @@ public:
 
 		for (int j = 0; j < image_height; j++) {
 			for (int i = 0; i < image_width; i++) {
-
 				color pixel = framebuffer[j * image_width + i];
 
 				//gamma-correction
@@ -124,6 +131,7 @@ public:
 		//save to .png
 		stbi_write_png("image.png", image_width, image_height, 3, image.data(), image_width * 3);
 
+		std::cerr << "\nRender finished in " << std::fixed << std::setprecision(2) << elapsed.count() << " seconds.\n";
 		std::cerr << "Image saved to image.png\n";
 	}
 
@@ -197,25 +205,73 @@ private:
 	vec3 sample_square() const {
 		return vec3(random_double() - 0.5, random_double() - 0.5, 0);
 	}
+
 	//returns a random point in thecamera defocus disk
 	point3 defocus_disk_sample() const {
 		auto p = random_in_unit_disk();
 		return center + (p[0] * defocus_disk_u) + (p[1] * defocus_disk_v);
 	}
 
+	color get_background_color(const ray& r, const EnvironmentSettings& env) const {
+		vec3 unit_dir = unit_vector(r.direction());
+		color env_color;
+
+		if (env.mode == EnvironmentSettings::HDR_MAP && env.hdr_texture) {
+			vec3 d = unit_dir;
+
+			//HDR rotation 
+			double cos_y = cos(env.hdri_rotation);
+			double sin_y = sin(env.hdri_rotation);
+			double x1 = cos_y * d.x() - sin_y * d.z();
+			double z1 = sin_y * d.x() + cos_y * d.z();
+			d = vec3(x1, d.y(), z1);
+
+			double cos_t = cos(env.hdri_tilt);
+			double sin_t = sin(env.hdri_tilt);
+			double y2 = cos_t * d.y() - sin_t * d.z();
+			double z2 = sin_t * d.y() + cos_t * d.z();
+			d = vec3(d.x(), y2, z2);
+
+			//uv mapping
+			auto phi = atan2(d.z(), d.x()) + pi;
+			auto theta = acos(std::clamp(d.y(), -1.0, 1.0));
+
+			env_color = env.hdr_texture->value(phi / (2 * pi), theta / pi, point3(0, 0, 0));
+		}
+		else {
+			//physcial sun model
+			double sun_height = env.sun_direction.y();
+			double day_factor = std::clamp(sun_height * 4.0, 0.0, 1.0);
+			double sunset_factor = std::clamp(1.0 - std::abs(sun_height - 0.1) * 5.0, 0.0, 1.0);
+
+			color zenit_color = color(0.1, 0.2, 0.5) * (1.0 - day_factor) + color(0.4, 0.6, 1.0) * day_factor;
+			color horizon_color = color(0.1, 0.05, 0.01) * (1.0 - day_factor) + color(0.8, 0.9, 1.0) * day_factor;
+			horizon_color = horizon_color * (1.0 - sunset_factor) + color(1.0, 0.4, 0.1) * sunset_factor;
+
+			auto a = 0.5 * (unit_dir.y() + 1.0);
+			env_color = (1.0 - a) * horizon_color + a * zenit_color;
+
+			double sun_focus = dot(unit_dir, env.sun_direction);
+			if (sun_focus > 0.0 && sun_height > -0.1) {
+				color current_sun_color = env.sun_color * (1.0 - sunset_factor) + color(1.0, 0.3, 0.1) * sunset_factor;
+				double visibility = std::clamp(sun_height * 10.0 + 0.5, 0.0, 1.0);
+				env_color += current_sun_color * std::pow(sun_focus, env.sun_size) * env.sun_intensity * visibility;
+			}
+		}
+		return env_color * env.intensity;
+	}
+
 	//intersection radius with sphere
-	color ray_color(const ray& r, const hittable& world, int depth) const {
+	color ray_color(const ray& r, const hittable& world, int depth, const EnvironmentSettings& env) const {
+		color accumulated_light(0, 0, 0);
+		color accumulated_attenuation(1, 1, 1);
 		ray cur_ray = r;
-		color accumulated_attenuation(1.0, 1.0, 1.0);
-		color accumulated_light(0.0, 0.0, 0.0);
 
 		for (int i = 0; i < depth; i++) {
 			hit_record rec;
+
 			if (!world.hit(cur_ray, interval(0.001, infinity), rec)) {
-				//multiply by sky_intensity to adjust brightness
-				color hdr_sample = hdri_image.environment(cur_ray.direction());
-				//hit onto background/HDR
-				accumulated_light += accumulated_attenuation * (hdr_sample * sky_intesity);
+				accumulated_light += accumulated_attenuation * get_background_color(cur_ray, env);
 				break;
 			}
 
@@ -244,3 +300,4 @@ private:
 		return accumulated_light;
 	}
 };
+

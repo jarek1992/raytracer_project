@@ -21,6 +21,7 @@ public:
 		normal = front_face ? outward_normal : -outward_normal;
 	}
 };
+
 //virtual abstract class for hittable objects
 class hittable {
 public:
