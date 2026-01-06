@@ -16,10 +16,21 @@ inline double linear_to_gamma(double linear_component) {
 void write_color(std::vector<unsigned char>& image, int idx, const color& pixel_color, int samples_per_pixel) {
 	double scale = 1.0 / samples_per_pixel;
 
-	// gamma correction
-	double r = sqrt(pixel_color.x() * scale);
-	double g = sqrt(pixel_color.y() * scale);
-	double b = sqrt(pixel_color.z() * scale);
+	//get raw components after averaging the samples
+	double r_raw = pixel_color.x() * scale;
+	double g_raw = pixel_color.y() * scale;
+	double b_raw = pixel_color.z() * scale;
+
+	//tone mapping
+	r_raw = r_raw / (1.0 + r_raw);
+	g_raw = g_raw / (1.0 + r_raw);
+	b_raw = b_raw / (1.0 + r_raw);
+
+	//gamma correction
+	double r = sqrt(r_raw);
+	double g = sqrt(r_raw);
+	double b = sqrt(r_raw);
+
 
 	//save to vector as 8-bits color
 	image[idx + 0] = static_cast<unsigned char>(256 * std::clamp(r, 0.0, 0.999));

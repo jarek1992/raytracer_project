@@ -39,6 +39,31 @@ public:
 		return names;
 	}
 
+	//FILTER METHODS
+	//get only emissive materials
+	std::vector<std::string> get_emissive_names() const {
+		std::vector<std::string> emissive;
+		for (const auto& [name, mat] : library) {
+			if (name.find("neon") != std::string::npos || name.find("emissive") != std::string::npos) {
+				emissive.push_back(name);
+			}
+		}
+		return emissive;
+	}
+
+	//get all the materials which are non emissive and floor material
+	std::vector<std::string> get_regular_names() const {
+		std::vector<std::string> regular;
+		for (const auto& [name, mat] : library) {
+			bool is_light = (name.find("neon") != std::string::npos || name.find("emissive") != std::string::npos);
+			bool is_ground = (name == "reflective_checker_mat");
+
+			if (!is_light && !is_ground) {
+				regular.push_back(name);
+			}
+		}
+		return regular;
+	}
 
 private:
 	std::map<std::string, std::shared_ptr<material>> library;

@@ -17,6 +17,7 @@
 #include "model.hpp"
 #include "environment.hpp"
 #include "material_library.hpp"
+#include "scale.hpp"
 
 #include <map>
 #include <string>
@@ -33,16 +34,23 @@ int main() {
 	mat_lib.add("glass", make_shared<dielectric>(1.5));
 	mat_lib.add("light_blue_diffuse", make_shared<lambertian>(color(0.1, 0.4, 0.9)));
 	mat_lib.add("white_diffuse", make_shared<lambertian>(color(0.9, 0.9, 0.9)));
-	mat_lib.add("emissive_white", make_shared<diffuse_light>(color(1.0, 1.0, 1.0) * 5.0));
 	mat_lib.add("wood_texture", make_shared<lambertian>(make_shared<image_texture>("assets/textures/fine-wood.jpg")));
 	mat_lib.add("gold_mat", make_shared<metal>(color(1.0, 0.8, 0.4), 0.0));
 	mat_lib.add("mirror", make_shared<metal>(color(1.0, 1.0, 1.0), 0.0));
+	mat_lib.add("brushed_aluminium", make_shared<metal>(color(1.0, 1.0, 1.0), 0.25));
 	mat_lib.add("metal_colored", make_shared<metal>(color(0.2, 0.8, 0.2), 0.05));
 	mat_lib.add("checker_texture", make_shared<lambertian>(make_shared<checker_texture>(0.5, color(0.2, 0.3, 0.1), color(0.9, 0.9, 0.9))));
 	mat_lib.add("glass_bubble", make_shared<dielectric>(1.0 / 1.5));
 	mat_lib.add("pure_mirror", make_shared<metal>(color(1.0, 1.0, 1.0), 0.0));
-	mat_lib.add("random_neon_light", make_shared<diffuse_light>(color::random(0.1, 1.0) * 4.0));
 	mat_lib.add("random_diffuse", make_shared<lambertian>(color::random() * color::random()));
+	mat_lib.add("random_neon_light", make_shared<diffuse_light>(color::random(0.1, 1.0) * 1.5));
+	mat_lib.add("neon_pink", make_shared<diffuse_light>(color(1.0, 0.0, 0.5) * 6.0));
+	mat_lib.add("neon_blue", make_shared<diffuse_light>(color(0.0, 0.5, 1.0) * 6.0));
+	mat_lib.add("neon_green", make_shared<diffuse_light>(color(0.1, 1.0, 0.1) * 6.0));
+	mat_lib.add("neon_yellow", make_shared<diffuse_light>(color(1.0, 0.8, 0.0) * 6.0));
+	mat_lib.add("neon_white", make_shared<diffuse_light>(color(1.0, 1.0, 1.0) * 6.0));
+	mat_lib.add("neon_red", make_shared<diffuse_light>(color(1.0, 0.1, 0.1) * 6.0));
+	mat_lib.add("ceiling_light", make_shared<diffuse_light>(color(1.0, 1.0, 1.0) * 1.2));
 	//... add more materials as needed
 
 	//set up a sphere into world
@@ -59,6 +67,11 @@ int main() {
 	auto reflective_checker_mat = make_shared<metal>(checker, 0.02);
 	world.add(make_shared<sphere>(point3(0.0, -1000.0, 0.0), 1000.0, reflective_checker_mat));
 
+	//SOFT LIGHT ABOVE
+	auto light_geom = make_shared<cube>(point3(-0.2, -0.2, -0.2), point3(0.2, 0.2, 0.2), nullptr);
+	auto light_instance = make_shared<material_instance>(light_geom, mat_lib.get("ceiling_light"));
+	world.add(make_shared<translate>(light_instance, point3(0.0, 15.0, 0.0)));
+
 	//GEOMETRIES WITH MATERIAL INSTANCING
 	//TEAPOT
 	auto teapot_base = make_shared<model>("assets/models/teapot.obj", nullptr, 0.4);
@@ -69,7 +82,7 @@ int main() {
 	world.add(teapot_final);
 	//SPHERE
 	auto big_sphere_geom = make_shared<sphere>(point3(0.0, 0.0, 0.0), 1.0, nullptr);
-	auto big_sphere_instance = make_shared<material_instance>(big_sphere_geom, mat_lib.get("mirror"));
+	auto big_sphere_instance = make_shared<material_instance>(big_sphere_geom, mat_lib.get("brushed_aluminium"));
 	world.add(make_shared<translate>(big_sphere_instance, point3(0.0, 1.0, 0.0)));
 	//SMALLER SPHERE GLASS
 	auto small_sphere_geom = make_shared<sphere>(point3(0.0, 0.0, 0.0), 0.5, nullptr);
@@ -80,7 +93,7 @@ int main() {
 	world.add(make_shared<translate>(small_bubble_instance, point3(3.0, 0.5, 1.0)));
 	//CUBE
 	auto big_cube_geom = make_shared<cube>(point3(0.0, 0.0, 0.0), nullptr);
-	auto big_cube_instance = make_shared<material_instance>(big_cube_geom, mat_lib.get("random_neon_light"));
+	auto big_cube_instance = make_shared<material_instance>(big_cube_geom, mat_lib.get("neon_red"));
 	world.add(make_shared<translate>(big_cube_instance, point3(0.0, 1.0, 2.5)));
 
 	//7. SINGLE MASTER CUBE AND SPHERE FOR INSTANCING*/
@@ -90,9 +103,8 @@ int main() {
 	//get a list of all material names from the material library
 	std::vector<std::string> mat_names = mat_lib.get_material_names(); //vector to hold different materials for instances
 	
-	//remove unnecessary materials from the random list
-	mat_names.erase(std::remove(mat_names.begin(), mat_names.end(), "reflective_checker_mat"), mat_names.end());
-
+	auto neon_mats = mat_lib.get_emissive_names();
+	auto regular_mats = mat_lib.get_regular_names();
 	//for loop to randomize location of small cubes and spheres*/
 	for (int a = -15; a < 15; a++) {
 		for (int b = -15; b < 15; b++) { //create the grid a(-15, 15) / b(-15, 15)
@@ -100,41 +112,53 @@ int main() {
 
 			if ((center - point3(4.0, 0.2, 0.0)).length() > 0.9) {
 				std::string selected_mat_name;
+				shared_ptr<hittable> geometry;
+				//scale
+				vec3 scale_v(1.0, 1.0, 1.0); //default scale
 				//select random number 0.0 - 1.0
 				double dice_roll = random_double();
 
 				//1. Probability distribution
-				if (dice_roll < 0.25) {
+				if (dice_roll < 0.25 && !neon_mats.empty()) {
 					//25% chance to draw neon material
-					selected_mat_name = (random_double() < 0.5) ? "random_neon_light" : "emissive_white";
+					selected_mat_name = neon_mats[random_int(0, static_cast<int>(neon_mats.size()) - 1)];
+					geometry = master_cube;
+					//scale
+					scale_v = vec3(0.4, random_double(1.5, 4.5), 0.4);
 				} else if (dice_roll < 0.55) {
 					//30% chance to draw glass material(0.25 + 0.3 = 0.55)
 					selected_mat_name = (random_double() < 0.7) ? "glass" : "glass_bubble";
+					geometry = master_sphere;
+					double s = random_double(0.5, 1.0);
+					scale_v = vec3(s, s, s);
 				} else {
-					//45% left draw random material left materials from the list
-					int random_idx = random_int(0, static_cast<int>(mat_names.size()) - 1);
-					selected_mat_name = mat_names[random_idx];
+					//45% left draw random material left materials from the list (excluding emissive/neaons using regular_mats)
+					int random_idx = random_int(0, static_cast<int>(regular_mats.size()) - 1);
+					selected_mat_name = regular_mats[random_idx];
 
-					//filter to exclude possibility of drawing again neon material in 45% left
-					if (selected_mat_name == "random_neon_light" || selected_mat_name == "emissive_white") {
-						selected_mat_name = "random_diffuse";
+					if (random_double() < 0.5) {
+						geometry = master_sphere;
+					} else {
+						geometry = master_cube;
 					}
+					//scale to difference
+					double s = random_double(0.8, 1.2);
+					scale_v = vec3(s, s, s);
+
 				}
 				//2. get material
 				auto obj_mat = mat_lib.get(selected_mat_name);
 
-				//3. object selection (cube or sphere 50/50)
-				shared_ptr<hittable> geometry;
-				if (random_double() < 0.4) {
-					//sphere instance
-					geometry = master_sphere;
-				} else {
-					//cube instance with random rotation_y
-					geometry = make_shared<rotate_y>(master_cube, random_double(0.0, 90.0));
+				//3. scale
+				auto scaled_obj = make_shared<scale>(geometry, scale_v);
+				//4. rotation (only cubes)
+				shared_ptr<hittable> rotated_obj = scaled_obj;
+				if (geometry == master_cube) {
+					rotated_obj = make_shared<rotate_y>(scaled_obj, random_double(0.0, 90.0));
 				}
 
-				//applying material to the instance through material_instance class
-				auto instance = make_shared<material_instance>(geometry, obj_mat);
+				//5. applying material to the instance through material_instance class
+				auto instance = make_shared<material_instance>(rotated_obj, obj_mat);
 				//3. final position translation
 				world.add(make_shared<translate>(instance, center));
 			}
@@ -146,8 +170,8 @@ int main() {
 
 	//image aspects ratio
 	cam.aspect_ratio = 16.0 / 9.0;
-	cam.image_width = 600;
-	cam.samples_per_pixel = 100;
+	cam.image_width = 500;
+	cam.samples_per_pixel = 150;
 	cam.max_depth = 80;
 
 	//camera settings
@@ -175,10 +199,10 @@ int main() {
 
 	//2. PHYSICAL SUN with SKY MODEL and settings: 
 	env.mode = EnvironmentSettings::PHYSICAL_SUN;
-	env.sun_direction = unit_vector(vec3(1.0, 0.1, 0.0));
-	env.sun_color = color(1.0, 0.4, 0.1);
-	env.sun_intensity = 10.0;
-	env.sun_size = 200.0;
+	env.sun_direction = unit_vector(vec3(-0.4, -0.25, -0.2));
+	env.sun_color = color(1.0, 1.0, 1.0);
+	env.sun_intensity = 0.7;
+	env.sun_size = 5000.0; //higher value makes sun disc smaller
 	env.intensity = 1.0;
 	
 	//bvh acceleration structure

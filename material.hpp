@@ -100,7 +100,9 @@ private:
 //class for dielectric material always refracts
 class dielectric : public material {
 public:
-	dielectric(double refraction_index) : refraction_index(refraction_index) {}
+	dielectric(double refraction_index) 
+		: refraction_index(refraction_index) 
+	{}
 
 	bool scatter(const ray& r_in, const hit_record& rec, color& attenuation, ray& scattered) const override {
 		attenuation = color(1.0, 1.0, 1.0); //always white, because translucent doesnt change color
@@ -120,8 +122,6 @@ public:
 		else {
 			direction = refract(unit_direction, rec.normal, ri);
 		}
-
-		point3 origin_adjusted = rec.p + ray_epsilon * rec.normal;
 
 		scattered = ray(rec.p, direction, r_in.time()); //creates new scattered ray with beginning = rec.p and refract direction = refracted 
 		return true;
