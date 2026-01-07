@@ -18,6 +18,7 @@
 #include "environment.hpp"
 #include "material_library.hpp"
 #include "scale.hpp"
+#include "constant_medium.hpp"
 
 #include <map>
 #include <string>
@@ -165,14 +166,19 @@ int main() {
 		}
 	}
 
+	//environmental FOG effect
+	auto fog_boundary = make_shared<cube>(point3(-20.0, 0.0, -20.0), point3(20.0, 10.0, 20.0), nullptr);
+	//fog density: 0.01 - delicate fog, 0.1 - dense fog
+	world.add(make_shared<constant_medium>(fog_boundary, 0.05, color(0.1, 0.1, 0.15)));
+
 	//create camera
 	camera cam;
 
 	//image aspects ratio
 	cam.aspect_ratio = 16.0 / 9.0;
 	cam.image_width = 500;
-	cam.samples_per_pixel = 150;
-	cam.max_depth = 80;
+	cam.samples_per_pixel = 100;
+	cam.max_depth = 40;
 
 	//camera settings
 	cam.vfov = 30; //vertical field of the view
