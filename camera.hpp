@@ -5,6 +5,7 @@
 #include "vec3.hpp"
 #include "stb_image_write.h"
 #include "environment.hpp"
+#include <OpenImageDenoise/oidn.hpp>
 
 #include <iostream>
 #include <limits>
@@ -33,125 +34,36 @@ public:
 	double defocus_angle = 0; //variation angle of rays through each pixel
 	double focus_dist = 10; //distance from camera lookfrom point to plane of perfect focus
 
+	//denoiser flag
+	bool use_denoiser = true;
+
 	//render
 	void render(const hittable& world, const EnvironmentSettings& env) {
+		// - 1. INITIALIZE - 
 		initialize();
-
 		//timer for render start
 		auto start_time = std::chrono::high_resolution_clock::now();
 
+		// - 2. MULTITHREADING 
 		std::vector<color> framebuffer(image_width * image_height);
-		std::atomic<int> lines_done = 0;
-
-		//number of threads = number of cores
-		int num_threads = std::max(1u, std::thread::hardware_concurrency());
-		std::vector<std::thread> threads;
-
-		auto render_rows = [&](int start_y, int end_y) {
-			for (int j = start_y; j < end_y; ++j) {
-				for (int i = 0; i < image_width; ++i) {
-					color pixel_color(0, 0, 0);
-					for (int s = 0; s < samples_per_pixel; s++) {
-						ray r = get_ray(i, j);
-						pixel_color += ray_color(r, world, max_depth, env);
-					}
-					framebuffer[j * image_width + i] = pixel_color;
-				}
-				lines_done++;
-			}
-			};
-
-		//split the work between threads
-		int rows_per_thread = image_height / num_threads;
-		int extra = image_height % num_threads;
-		int start = 0;
-
-		for (int t = 0; t < num_threads; t++) {
-			int end = start + rows_per_thread + (t < extra ? 1 : 0);
-			threads.emplace_back(render_rows, start, end);
-			start = end;
+		execute_render_threads(world, env, framebuffer);
+		
+		// - 3. AI DENOISING
+		if (use_denoiser) {
+			std::cerr << "\rApplying AI Denoising (Intel OIDN)..." << std::flush;
+			apply_denoising(image_width, image_height, framebuffer);
+		} else {
+			std::cerr << "\nDenoising is DISABLED. Skipping..." << std::endl;
 		}
 
-		//progress bar
-		while (lines_done < image_height) {
-			int done = lines_done.load();
-			double percent = double(done) / image_height;
+		// - 4. POST-PROCESSING (tone mapping & save)
+		process_framebuffer_to_image(framebuffer);
 
-			int barWidth = 40;
-			int filled = int(percent * barWidth);
-
-			std::cerr << "\r[";
-			for (int i = 0; i < filled; i++) {
-				std::cerr << "#"; //fill of the bar
-			}
-			for (int i = filled; i < barWidth; i++) {
-				std::cerr << "."; //empty space of the bar
-			}
-			std::cerr << "] ";
-
-			std::cerr << std::fixed << std::setprecision(1)
-				<< (percent * 100.0) << "% (" << done << "/" << image_height << " lines)"
-				<< std::flush;
-
-			std::this_thread::sleep_for(std::chrono::milliseconds(200));
-		}
-		std::cerr << "\rProgress : 100% (" << image_height << "/" << image_height << " lines)\n";
-
-		//join threads
-		for (auto& th : threads)
-		{
-			th.join();
-		}
 		//timer for render end
 		auto end_time = std::chrono::high_resolution_clock::now();
 		std::chrono::duration<double> elapsed = end_time - start_time;
 
 		std::cerr << "\r[########################################] 100% (" << image_height << "/" << image_height << " lines)\n";
-
-		//conversion framebuffer → RGB
-		std::vector<unsigned char> image(image_width * image_height * 3);
-
-		for (int j = 0; j < image_height; j++) {
-			for (int i = 0; i < image_width; i++) {
-				//get raw HDR color and scale by sample amount
-				color raw_color = framebuffer[j * image_width + i] * pixel_samples_scale;
-
-				//exposure - tone down or brighten up the scene overall
-				double exposure = 1.0;
-				raw_color *= exposure;
-
-				//ACES tone mapping - avoid to overburn the scene lights to pure white too fast
-				auto aces_color = [](color x) {
-					double a = 2.51;
-					double b = 0.03;
-					double c = 2.43;
-					double d = 0.59;
-					double e = 0.14;
-					return color(
-						(x.x() * (a * x.x() + b)) / (x.x() * (c * x.x() + d) + e),
-						(x.y() * (a * x.y() + b)) / (x.y() * (c * x.y() + d) + e),
-						(x.z() * (a * x.z() + b)) / (x.z() * (c * x.z() + d) + e)
-					);
-				};
-
-				color mapped = aces_color(raw_color);
-
-				//gamma-correction
-				double r = std::pow(mapped.x(), 1.0 / 2.2);
-				double g = std::pow(mapped.y(), 1.0 / 2.2);
-				double b = std::pow(mapped.z(), 1.0 / 2.2);
-
-				int idx = (j * image_width + i) * 3;
-
-				image[idx + 0] = static_cast<unsigned char>(255 * std::clamp(r, 0.0, 0.999));
-				image[idx + 1] = static_cast<unsigned char>(255 * std::clamp(g, 0.0, 0.999));
-				image[idx + 2] = static_cast<unsigned char>(255 * std::clamp(b, 0.0, 0.999));
-			}
-		}
-
-		//save to .png
-		stbi_write_png("image.png", image_width, image_height, 3, image.data(), image_width * 3);
-
 		std::cerr << "\nRender finished in " << std::fixed << std::setprecision(2) << elapsed.count() << " seconds.\n";
 		std::cerr << "Image saved to image.png\n";
 	}
@@ -206,6 +118,156 @@ private:
 		auto defocus_radius = focus_dist * std::tan(degrees_to_radians(defocus_angle / 2));
 		defocus_disk_u = u * defocus_radius;
 		defocus_disk_v = v * defocus_radius;
+	}
+
+	void execute_render_threads(const hittable& world, const EnvironmentSettings& env, std::vector<color>& framebuffer) {
+		std::atomic<int> lines_done = 0;
+
+		//number of threads = number of cores
+		int num_threads = std::max(1u, std::thread::hardware_concurrency());
+		std::vector<std::thread> threads;
+
+		auto render_rows = [&](int start_y, int end_y) {
+			for (int j = start_y; j < end_y; ++j) {
+				for (int i = 0; i < image_width; ++i) {
+					color pixel_color(0, 0, 0);
+					for (int s = 0; s < samples_per_pixel; s++) {
+						ray r = get_ray(i, j);
+						pixel_color += ray_color(r, world, max_depth, env);
+					}
+					framebuffer[j * image_width + i] = pixel_color;
+				}
+				lines_done++;
+			}
+			};
+
+		//split the work between threads
+		int rows_per_thread = image_height / num_threads;
+		int extra = image_height % num_threads;
+		int start = 0;
+		for (int t = 0; t < num_threads; t++) {
+			int end = start + rows_per_thread + (t < extra ? 1 : 0);
+			threads.emplace_back(render_rows, start, end);
+			start = end;
+		}
+
+		//progress bar
+		while (lines_done < image_height) {
+			int done = lines_done.load();
+			double percent = double(done) / image_height;
+			int barWidth = 40;
+			int filled = int(percent * barWidth);
+
+			std::cerr << "\r[";
+			for (int i = 0; i < filled; i++) {
+				std::cerr << "#"; //fill of the bar
+			}
+			for (int i = filled; i < barWidth; i++) {
+				std::cerr << "."; //empty space of the bar
+			}
+			std::cerr << "] ";
+			std::cerr << std::fixed << std::setprecision(1)
+				<< (percent * 100.0) << "% (" << done << "/" << image_height << " lines)"
+				<< std::flush;
+
+			std::this_thread::sleep_for(std::chrono::milliseconds(200));
+		}
+		//final 100% while loop finished
+		std::cerr << "\rProgress : 100% (" << image_height << "/" << image_height << " lines)\n";
+
+		//join threads - finished
+		for (auto& th : threads)
+		{
+			th.join();
+		}
+	}
+
+	void apply_denoising(int width, int height, std::vector<color>& framebuffer) {
+		//OIDN requires float type data, copy if 'color' is double 
+		std::vector<float> float_buffer(width * height * 3);
+		for (size_t i = 0; i < framebuffer.size(); ++i) {
+			float_buffer[i * 3 + 0] = static_cast<float>(framebuffer[i].x());
+			float_buffer[i * 3 + 1] = static_cast<float>(framebuffer[i].y());
+			float_buffer[i * 3 + 2] = static_cast<float>(framebuffer[i].z());
+		}
+
+		//initialize OIDN tool
+		std::cerr << "\rApplying AI Denoising (Intel OIDN)..." << std::endl;
+		oidn::DeviceRef device = oidn::newDevice();
+		device.commit();
+
+		//check erros
+		const char* errorMessage;
+		if (device.getError(errorMessage) != oidn::Error::None) {
+			std::cerr << "ERROR OIDN: " << errorMessage << std::endl;
+			return;
+		}
+
+		//filter
+		std::cerr << "Applying filters..." << std::endl;
+		oidn::FilterRef filter = device.newFilter("RT"); // RT to skrót od Ray Tracing
+		filter.setImage("color", float_buffer.data(), oidn::Format::Float3, width, height);
+		filter.setImage("output", float_buffer.data(), oidn::Format::Float3, width, height);
+		filter.set("hdr", true); // Bardzo ważne dla neonów i słońca!
+		filter.commit();
+
+		//AI execution
+		filter.execute();
+
+		std::cerr << "Denoising finished." << std::endl;
+
+		//copying the results back to the framebuffer (from float to double)
+		for (size_t i = 0; i < framebuffer.size(); ++i) {
+			framebuffer[i] = color(float_buffer[i * 3 + 0],
+				float_buffer[i * 3 + 1],
+				float_buffer[i * 3 + 2]);
+		}
+	}
+
+	void process_framebuffer_to_image(const std::vector<color>& framebuffer) {
+		//conversion framebuffer → RGB
+		std::vector<unsigned char> image(image_width * image_height * 3);
+
+		//tone mapping and RGB conversion
+		for (int j = 0; j < image_height; j++) {
+			for (int i = 0; i < image_width; i++) {
+				//get raw HDR color and scale by sample amount
+				color raw_color = framebuffer[j * image_width + i] * pixel_samples_scale;
+
+				//exposure - tone down or brighten up the scene overall
+				double exposure = 1.0;
+				raw_color *= exposure;
+
+				//ACES tone mapping - avoid to overburn the scene lights to pure white too fast
+				auto aces_color = [](color x) {
+					double a = 2.51;
+					double b = 0.03;
+					double c = 2.43;
+					double d = 0.59;
+					double e = 0.14;
+					return color(
+						(x.x() * (a * x.x() + b)) / (x.x() * (c * x.x() + d) + e),
+						(x.y() * (a * x.y() + b)) / (x.y() * (c * x.y() + d) + e),
+						(x.z() * (a * x.z() + b)) / (x.z() * (c * x.z() + d) + e)
+					);
+					};
+
+				color mapped = aces_color(raw_color);
+
+				//gamma-correction
+				double r = std::pow(mapped.x(), 1.0 / 2.2);
+				double g = std::pow(mapped.y(), 1.0 / 2.2);
+				double b = std::pow(mapped.z(), 1.0 / 2.2);
+
+				int idx = (j * image_width + i) * 3;
+				image[idx + 0] = static_cast<unsigned char>(255 * std::clamp(r, 0.0, 0.999));
+				image[idx + 1] = static_cast<unsigned char>(255 * std::clamp(g, 0.0, 0.999));
+				image[idx + 2] = static_cast<unsigned char>(255 * std::clamp(b, 0.0, 0.999));
+			}
+		}
+
+		//save to .png
+		stbi_write_png("image.png", image_width, image_height, 3, image.data(), image_width * 3);
 	}
 
 	//construct a camera ray originating from the defocus disk and directed at randomly sampled
