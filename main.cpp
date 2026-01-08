@@ -36,11 +36,11 @@ int main() {
 
 	//b. physical sun with sky model: 
 	env.mode = EnvironmentSettings::PHYSICAL_SUN;
-	env.sun_direction = unit_vector(vec3(-0.4, 0.1, -0.2));
+	env.sun_direction = unit_vector(vec3(-0.4, -0.1, -0.2));
 	env.sun_color = color(1.0, 1.0, 1.0);
 	env.sun_intensity = 1.0;
 	env.sun_size = 5000.0; //higher value makes sun disc smaller
-	env.intensity = 1.00;
+	env.intensity = 1.0;
 
 	// - 5. CREATE CAMERA AND SET PARAMETERS -
 	camera cam;
@@ -51,7 +51,7 @@ int main() {
 	cam.max_depth = 50;
 	//b. camera settings
 	cam.vfov = 30; //vertical field of the view
-	cam.lookfrom = point3(10, 2, 0); //cords for camera source
+	cam.lookfrom = point3(10, 1.5, 0); //cords for camera source
 	cam.lookat = point3(0, 0, 0); //cords for camera target
 	cam.vup = vec3(0, 1, 0); //up vector set to Y
 	//c. defocus blur settings

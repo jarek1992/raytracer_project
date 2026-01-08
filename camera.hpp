@@ -113,18 +113,39 @@ public:
 
 		for (int j = 0; j < image_height; j++) {
 			for (int i = 0; i < image_width; i++) {
-				color pixel = framebuffer[j * image_width + i];
+				//get raw HDR color and scale by sample amount
+				color raw_color = framebuffer[j * image_width + i] * pixel_samples_scale;
+
+				//exposure - tone down or brighten up the scene overall
+				double exposure = 1.0;
+				raw_color *= exposure;
+
+				//ACES tone mapping - avoid to overburn the scene lights to pure white too fast
+				auto aces_color = [](color x) {
+					double a = 2.51;
+					double b = 0.03;
+					double c = 2.43;
+					double d = 0.59;
+					double e = 0.14;
+					return color(
+						(x.x() * (a * x.x() + b)) / (x.x() * (c * x.x() + d) + e),
+						(x.y() * (a * x.y() + b)) / (x.y() * (c * x.y() + d) + e),
+						(x.z() * (a * x.z() + b)) / (x.z() * (c * x.z() + d) + e)
+					);
+				};
+
+				color mapped = aces_color(raw_color);
 
 				//gamma-correction
-				double r = std::sqrt(pixel.x() * pixel_samples_scale);
-				double g = std::sqrt(pixel.y() * pixel_samples_scale);
-				double b = std::sqrt(pixel.z() * pixel_samples_scale);
+				double r = std::pow(mapped.x(), 1.0 / 2.2);
+				double g = std::pow(mapped.y(), 1.0 / 2.2);
+				double b = std::pow(mapped.z(), 1.0 / 2.2);
 
 				int idx = (j * image_width + i) * 3;
 
-				image[idx + 0] = static_cast<unsigned char>(256 * std::clamp(r, 0.0, 0.999));
-				image[idx + 1] = static_cast<unsigned char>(256 * std::clamp(g, 0.0, 0.999));
-				image[idx + 2] = static_cast<unsigned char>(256 * std::clamp(b, 0.0, 0.999));
+				image[idx + 0] = static_cast<unsigned char>(255 * std::clamp(r, 0.0, 0.999));
+				image[idx + 1] = static_cast<unsigned char>(255 * std::clamp(g, 0.0, 0.999));
+				image[idx + 2] = static_cast<unsigned char>(255 * std::clamp(b, 0.0, 0.999));
 			}
 		}
 

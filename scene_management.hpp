@@ -28,7 +28,6 @@ void load_materials(MaterialLibrary& mat_lib) {
 	//add some predefined materials to the library
 	mat_lib.add("red_diffuse", make_shared<lambertian>(color(0.8, 0.1, 0.1)));
 	mat_lib.add("rough_gold", make_shared<metal>(color(1.0, 0.84, 0.0), 0.15));
-	mat_lib.add("glass", make_shared<dielectric>(1.5));
 	mat_lib.add("light_blue_diffuse", make_shared<lambertian>(color(0.1, 0.4, 0.9)));
 	mat_lib.add("white_diffuse", make_shared<lambertian>(color(0.9, 0.9, 0.9)));
 	mat_lib.add("wood_texture", make_shared<lambertian>(make_shared<image_texture>("assets/textures/fine-wood.jpg")));
@@ -38,6 +37,7 @@ void load_materials(MaterialLibrary& mat_lib) {
 	mat_lib.add("metal_colored", make_shared<metal>(color(0.2, 0.8, 0.2), 0.05));
 	mat_lib.add("checker_texture", make_shared<lambertian>(make_shared<checker_texture>(0.5, color(0.2, 0.3, 0.1), color(0.9, 0.9, 0.9))));
 	mat_lib.add("glass_bubble", make_shared<dielectric>(1.0 / 1.5));
+	mat_lib.add("glass", make_shared<dielectric>(1.5));
 	mat_lib.add("pure_mirror", make_shared<metal>(color(1.0, 1.0, 1.0), 0.0));
 	mat_lib.add("random_diffuse", make_shared<lambertian>(color::random() * color::random()));
 	mat_lib.add("random_neon_light", make_shared<diffuse_light>(color::random(0.1, 1.0) * 1.5));
@@ -168,7 +168,7 @@ hittable_list build_geometry(MaterialLibrary& mat_lib) {
 
 	// - 5. ENVIRONMENTAL FOG
 	auto fog_boundary = make_shared<sphere>(point3(0, 0, 0), 30.0, nullptr);
-	world.add(make_shared<constant_medium>(fog_boundary, 0.1, color(0.8, 0.8, 0.9))); //fog density: 0.01 - delicate fog, 0.1 - dense fog
+	world.add(make_shared<constant_medium>(fog_boundary, 0.02, color(0.8, 0.8, 0.9))); //fog density: 0.01 - delicate fog, 0.1 - dense fog
 
 	return world;
 }
