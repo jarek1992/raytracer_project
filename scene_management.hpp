@@ -168,7 +168,7 @@ hittable_list build_geometry(MaterialLibrary& mat_lib) {
 
 	// - 5. ENVIRONMENTAL FOG
 	auto fog_boundary = make_shared<sphere>(point3(0, 0, 0), 30.0, nullptr);
-	world.add(make_shared<constant_medium>(fog_boundary, 0.05, color(0.0, 0.5, 1.0))); //fog density: 0.01 - delicate fog, 0.1 - dense fog
+	world.add(make_shared<constant_medium>(fog_boundary, 0.05, color(1.0, 1.0, 1.0))); //fog density: 0.01 - delicate fog, 0.1 - dense fog
 
 	return world;
 }

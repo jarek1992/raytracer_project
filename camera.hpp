@@ -37,6 +37,11 @@ public:
 	//denoiser flag
 	bool use_denoiser = true;
 
+	//render passes
+	bool use_albedo_buffer = false;
+	bool use_normal_buffer = false;
+	bool use_z_depth_buffer = false;
+
 	//render
 	void render(const hittable& world, const EnvironmentSettings& env) {
 		// - 1. INITIALIZE - 
@@ -46,19 +51,38 @@ public:
 
 		// - 2. MULTITHREADING 
 		std::vector<color> framebuffer(image_width * image_height);
-		execute_render_threads(world, env, framebuffer);
-		
-		// - 3. AI DENOISING
+		std::vector<color> albedo_buffer(image_width * image_height);
+		std::vector<color> normal_buffer(image_width * image_height);
+		std::vector<color> z_depth_buffer(image_width * image_height);
+		execute_render_threads(world, env, framebuffer, albedo_buffer, normal_buffer, z_depth_buffer);
+
+		// - 3. SAVE RAW RENDER RGB
+		process_framebuffer_to_image(framebuffer, "image_RGB_raw.png", false);
+
+		// - 4. AI DENOISING
 		if (use_denoiser) {
-			std::cerr << "\rApplying AI Denoising (Intel OIDN)..." << std::flush;
-			apply_denoising(image_width, image_height, framebuffer);
+			std::cerr << "\rApplying HQ AI Denoising..." << std::endl;
+			apply_denoising(image_width, image_height, framebuffer, albedo_buffer, normal_buffer);
+
+			//save with denoiser only if use_denoiser == true
+			process_framebuffer_to_image(framebuffer, "image_RGB_denoised.png", false);
 		} else {
 			std::cerr << "\nDenoising is DISABLED. Skipping..." << std::endl;
 		}
 
-		// - 4. POST-PROCESSING (tone mapping & save)
-		process_framebuffer_to_image(framebuffer);
-
+		// - 5. POST-PROCESSING (tone mapping & save)
+		//
+		//render passes without tone mapping
+		if (use_albedo_buffer) {
+			process_framebuffer_to_image(albedo_buffer, "image_albedo.png", true);
+		}
+		if (use_normal_buffer) {
+			process_framebuffer_to_image(normal_buffer, "image_normals.png", true);
+		}
+		if (use_z_depth_buffer) {
+			process_framebuffer_to_image(z_depth_buffer, "image_zdepth.png", true);
+		}
+		
 		//timer for render end
 		auto end_time = std::chrono::high_resolution_clock::now();
 		std::chrono::duration<double> elapsed = end_time - start_time;
@@ -120,7 +144,13 @@ private:
 		defocus_disk_v = v * defocus_radius;
 	}
 
-	void execute_render_threads(const hittable& world, const EnvironmentSettings& env, std::vector<color>& framebuffer) {
+	void execute_render_threads(
+		const hittable& world, 
+		const EnvironmentSettings& env, 
+		std::vector<color>& framebuffer,
+		std::vector<color>& albedo_buffer, 
+		std::vector<color>& normal_buffer,
+		std::vector<color>& z_depth_buffer) {
 		std::atomic<int> lines_done = 0;
 
 		//number of threads = number of cores
@@ -130,16 +160,42 @@ private:
 		auto render_rows = [&](int start_y, int end_y) {
 			for (int j = start_y; j < end_y; ++j) {
 				for (int i = 0; i < image_width; ++i) {
+
+					//get albedo data
+					ray r_aux = get_center_ray(i, j); //hit the center of the pixel
+					hit_record rec;
+
+					if (world.hit(r_aux, interval(0.001, infinity), rec)) {
+						//get_albedo_data:
+						albedo_buffer[j * image_width + i] = rec.mat->get_albedo(rec);
+
+						//normals (View Space)
+						vec3 n = unit_vector(rec.normal);
+						normal_buffer[j * image_width + i] = color(dot(n, u), dot(n, v), -dot(n, w));
+
+						//z-depth
+						double z_range = 50.0;
+						double depth = std::fmin(rec.t / z_range, 1.0);
+						z_depth_buffer[j * image_width + i] = color(1.0 - depth, 1.0 - depth, 1.0 - depth);
+					} else {
+						//background
+						albedo_buffer[j * image_width + i] = color(0, 0, 0);
+						normal_buffer[j * image_width + i] = color(0, 0, 1);
+						z_depth_buffer[j * image_width + i] = color(0, 0, 0);
+					}
+					//many samples(beauty pass)
+					// 
+					//reset color
 					color pixel_color(0, 0, 0);
 					for (int s = 0; s < samples_per_pixel; s++) {
 						ray r = get_ray(i, j);
-						pixel_color += ray_color(r, world, max_depth, env);
+						pixel_color += ray_color(r, world, this->max_depth, env);
 					}
-					framebuffer[j * image_width + i] = pixel_color;
+					framebuffer[j * image_width + i] = pixel_color * pixel_samples_scale;
 				}
 				lines_done++;
 			}
-			};
+		};
 
 		//split the work between threads
 		int rows_per_thread = image_height / num_threads;
@@ -182,18 +238,61 @@ private:
 		}
 	}
 
-	void apply_denoising(int width, int height, std::vector<color>& framebuffer) {
-		//OIDN requires float type data, copy if 'color' is double 
-		std::vector<float> float_buffer(width * height * 3);
+	void apply_denoising(int width, int height, std::vector<color>& framebuffer, 
+		std::vector<color>& albedo_buffer, std::vector<color>& normal_buffer) {
+		//OIDN requires float type data, create buffors for all 3 layers 
+		std::vector<float> f_color(width * height * 3);
+		std::vector<float> f_albedo(width * height * 3);
+		std::vector<float> f_normal(width * height * 3);
+
+		//helper function for clearing values
+		auto clean_val = [](double v) {
+			if (std::isnan(v) || std::isinf(v)) return 0.0f;
+			return static_cast<float>(v);
+			};
+
 		for (size_t i = 0; i < framebuffer.size(); ++i) {
-			float_buffer[i * 3 + 0] = static_cast<float>(framebuffer[i].x());
-			float_buffer[i * 3 + 1] = static_cast<float>(framebuffer[i].y());
-			float_buffer[i * 3 + 2] = static_cast<float>(framebuffer[i].z());
+			////beauty HDR > 1.0
+			//f_color[i * 3 + 0] = clean_val(framebuffer[i].x());
+			//f_color[i * 3 + 1] = clean_val(framebuffer[i].y());
+			//f_color[i * 3 + 2] = clean_val(framebuffer[i].z());
+
+			////albedo [0, 1]
+			//f_albedo[i * 3 + 0] = std::clamp(clean_val(albedo_buffer[i].x()), 0.0f, 1.0f);
+			//f_albedo[i * 3 + 1] = std::clamp(clean_val(albedo_buffer[i].y()), 0.0f, 1.0f);
+			//f_albedo[i * 3 + 2] = std::clamp(clean_val(albedo_buffer[i].z()), 0.0f, 1.0f);
+
+			////normals
+			////must be normalize [-1, 1]
+			//vec3 n = normal_buffer[i];
+
+			//if (n.length_squared() < 0.001 || std::isnan(n.x())) {
+			//	n = vec3(0, 0, 1);
+			//}
+			//else {
+			//	n = unit_vector(n); // Na wszelki wypadek upewniamy się, że ma długość 1
+			//}
+			//f_normal[i * 3 + 0] = static_cast<float>(n.x());
+			//f_normal[i * 3 + 1] = static_cast<float>(n.y());
+			//f_normal[i * 3 + 2] = static_cast<float>(n.z());
+
+			f_color[i * 3 + 0] = static_cast<float>(framebuffer[i].x());
+			f_color[i * 3 + 1] = static_cast<float>(framebuffer[i].y());
+			f_color[i * 3 + 2] = static_cast<float>(framebuffer[i].z());
+
+			// WYMUŚ IDEALNIE GŁADKIE DANE
+			f_albedo[i * 3 + 0] = 0.5f;
+			f_albedo[i * 3 + 1] = 0.5f;
+			f_albedo[i * 3 + 2] = 0.5f;
+
+			f_normal[i * 3 + 0] = 0.0f;
+			f_normal[i * 3 + 1] = 0.0f;
+			f_normal[i * 3 + 2] = 1.0f;
 		}
 
 		//initialize OIDN tool
-		std::cerr << "\rApplying AI Denoising (Intel OIDN)..." << std::endl;
 		oidn::DeviceRef device = oidn::newDevice();
+		//oidn::DeviceRef device = oidn::newDevice(oidn::DeviceType::CPU); //for more stabilty - uncomment and comment line above
 		device.commit();
 
 		//check erros
@@ -203,71 +302,95 @@ private:
 			return;
 		}
 
+		//configurate filter RT(Ray Tracing)
+		oidn::FilterRef filter = device.newFilter("RT");
+
 		//filter
 		std::cerr << "Applying filters..." << std::endl;
-		oidn::FilterRef filter = device.newFilter("RT"); // RT to skrót od Ray Tracing
-		filter.setImage("color", float_buffer.data(), oidn::Format::Float3, width, height);
-		filter.setImage("output", float_buffer.data(), oidn::Format::Float3, width, height);
-		filter.set("hdr", true); // Bardzo ważne dla neonów i słońca!
+		//connect all 3 inputs
+		filter.setImage("color", f_color.data(), oidn::Format::Float3, width, height);
+		filter.setImage("albedo", f_albedo.data(), oidn::Format::Float3, width, height);
+		filter.setImage("normal", f_normal.data(), oidn::Format::Float3, width, height);
+
+		//output filter(save result back to f_color)
+		filter.setImage("output", f_color.data(), oidn::Format::Float3, width, height);
+		
+		filter.set("hdr", true); //for neons and sun
+		filter.set("cleanAux", true); //pass info to AI - auxiliary buffers are noise-free
 		filter.commit();
 
 		//AI execution
 		filter.execute();
 
+		const char* err;
+		if (device.getError(err) != oidn::Error::None)
+			std::cerr << "OIDN Error during execution: " << err << std::endl;
+
 		std::cerr << "Denoising finished." << std::endl;
 
 		//copying the results back to the framebuffer (from float to double)
 		for (size_t i = 0; i < framebuffer.size(); ++i) {
-			framebuffer[i] = color(float_buffer[i * 3 + 0],
-				float_buffer[i * 3 + 1],
-				float_buffer[i * 3 + 2]);
+			framebuffer[i] = color(f_color[i * 3 + 0], f_color[i * 3 + 1], f_color[i * 3 + 2]);
 		}
 	}
 
-	void process_framebuffer_to_image(const std::vector<color>& framebuffer) {
+	void process_framebuffer_to_image(const std::vector<color>& buffer, const std::string& filename, bool is_data_pass = false) {
 		//conversion framebuffer → RGB
-		std::vector<unsigned char> image(image_width * image_height * 3);
+		std::vector<unsigned char> image_data(image_width * image_height * 3);
+
+		//ACES tone mapping - avoid to overburn the scene lights to pure white too fast
+		auto aces_color = [](color x) {
+			double a = 2.51;
+			double b = 0.03;
+			double c = 2.43;
+			double d = 0.59;
+			double e = 0.14;
+			return color(
+				(x.x() * (a * x.x() + b)) / (x.x() * (c * x.x() + d) + e),
+				(x.y() * (a * x.y() + b)) / (x.y() * (c * x.y() + d) + e),
+				(x.z() * (a * x.z() + b)) / (x.z() * (c * x.z() + d) + e)
+			);
+		};
 
 		//tone mapping and RGB conversion
 		for (int j = 0; j < image_height; j++) {
 			for (int i = 0; i < image_width; i++) {
-				//get raw HDR color and scale by sample amount
-				color raw_color = framebuffer[j * image_width + i] * pixel_samples_scale;
+				//get raw color
+				color pix_color = buffer[j * image_width + i];
 
-				//exposure - tone down or brighten up the scene overall
-				double exposure = 1.0;
-				raw_color *= exposure;
+				if (!is_data_pass) {
+					//beauty path(render)
+					//
+					//exposure - tone down or brighten up the scene overall
+					double exposure = 1.0;
+					pix_color *= exposure;
 
-				//ACES tone mapping - avoid to overburn the scene lights to pure white too fast
-				auto aces_color = [](color x) {
-					double a = 2.51;
-					double b = 0.03;
-					double c = 2.43;
-					double d = 0.59;
-					double e = 0.14;
-					return color(
-						(x.x() * (a * x.x() + b)) / (x.x() * (c * x.x() + d) + e),
-						(x.y() * (a * x.y() + b)) / (x.y() * (c * x.y() + d) + e),
-						(x.z() * (a * x.z() + b)) / (x.z() * (c * x.z() + d) + e)
+					pix_color = aces_color(pix_color);
+					
+					// Gamma 2.2
+					pix_color = color(
+						std::pow(std::clamp(pix_color.x(), 0.0, 1.0), 1.0 / 2.2),
+						std::pow(std::clamp(pix_color.y(), 0.0, 1.0), 1.0 / 2.2),
+						std::pow(std::clamp(pix_color.z(), 0.0, 1.0), 1.0 / 2.2)
 					);
-					};
-
-				color mapped = aces_color(raw_color);
-
-				//gamma-correction
-				double r = std::pow(mapped.x(), 1.0 / 2.2);
-				double g = std::pow(mapped.y(), 1.0 / 2.2);
-				double b = std::pow(mapped.z(), 1.0 / 2.2);
+				} else {
+					//path for datas(albedo/normals/Z-depth)
+					pix_color = color(
+						std::clamp(pix_color.x(), 0.0, 1.0),
+						std::clamp(pix_color.y(), 0.0, 1.0),
+						std::clamp(pix_color.z(), 0.0, 1.0)
+					);
+				}
 
 				int idx = (j * image_width + i) * 3;
-				image[idx + 0] = static_cast<unsigned char>(255 * std::clamp(r, 0.0, 0.999));
-				image[idx + 1] = static_cast<unsigned char>(255 * std::clamp(g, 0.0, 0.999));
-				image[idx + 2] = static_cast<unsigned char>(255 * std::clamp(b, 0.0, 0.999));
+				image_data[idx + 0] = static_cast<unsigned char>(255.999 * pix_color.x());
+				image_data[idx + 1] = static_cast<unsigned char>(255.999 * pix_color.y());
+				image_data[idx + 2] = static_cast<unsigned char>(255.999 * pix_color.z());
 			}
 		}
 
 		//save to .png
-		stbi_write_png("image.png", image_width, image_height, 3, image.data(), image_width * 3);
+		stbi_write_png(filename.c_str(), image_width, image_height, 3, image_data.data(), image_width * 3);
 	}
 
 	//construct a camera ray originating from the defocus disk and directed at randomly sampled
@@ -282,6 +405,13 @@ private:
 		auto ray_direction = pixel_sample - ray_origin;
 
 		return ray(ray_origin, ray_direction);
+	}
+
+	ray get_center_ray(int i, int j) const {
+		//hit the center of the pixel(no randomness)
+		auto pixel_center = pixel00_loc + (i * pixel_delta_u) + (j * pixel_delta_v);
+		auto ray_direction = pixel_center - center;
+		return ray(center, ray_direction);
 	}
 
 	//returns the vector to a random point in the [-.5, -.5]-[+.5,+.5] unit square

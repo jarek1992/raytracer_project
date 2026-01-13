@@ -24,6 +24,11 @@ public:
 	virtual bool scatter(
 		const ray& r_in, const hit_record& rec, color& attenuation, ray& scattered
 	) const = 0;
+
+	//denoising function
+	virtual color get_albedo(const hit_record& rec) const {
+		return color(0, 0, 0); //default black
+	}
 };
 
 //class for lambertian material
@@ -51,8 +56,14 @@ public:
 		scattered = ray(origin_adjusted, scatter_direction, r_in.time());
 		//get albedo from texture
 		attenuation = tex->value(rec.u, rec.v, rec.p);
-
+		
 		return true;
+	}
+
+	//overwrite OIDN function
+	color get_albedo(const hit_record& rec) const override {
+		//return raw texture color in hit point
+		return tex->value(rec.u, rec.v, rec.p);
 	}
 
 private:
@@ -92,6 +103,11 @@ public:
 		return (dot(scattered.direction(), rec.normal) > 0);
 	}
 
+	//albedo function for denoiser
+	color get_albedo(const hit_record& rec) const override {
+		return albedo->value(rec.u, rec.v, rec.p);
+	}
+
 private:
 	shared_ptr<texture> albedo;
 	double fuzz;
@@ -126,6 +142,12 @@ public:
 		scattered = ray(rec.p, direction, r_in.time()); //creates new scattered ray with beginning = rec.p and refract direction = refracted 
 		return true;
 	}
+
+	color get_albedo(const hit_record& rec) const override {
+		//for glas return (1,1,1), ODIN let the ray goes through 
+		return color(1.0, 1.0, 1.0);
+	}
+
 private:
 	//refractive index - n
 	double refraction_index;
@@ -142,12 +164,10 @@ class diffuse_light : public material {
 public:
 	diffuse_light(shared_ptr<texture> a)
 		: emit(a)
-	{
-	}
+	{}
 	diffuse_light(color c)
 		: emit(make_shared<solid_color>(c))
-	{
-	}
+	{}
 
 	bool scatter(
 		const ray& r_in, const hit_record& rec, color& attenuation, ray& scattered
@@ -156,6 +176,18 @@ public:
 	}
 	color emitted(double u, double v, const point3& p) const {
 		return emit->value(u, v, p);
+	}
+
+	//denoising fucntion OIDN
+	color get_albedo(const hit_record& rec) const override {
+		//get texture/light color
+		color c = emit->value(rec.u, rec.v, rec.p);
+		//limit max to 1.0
+		return color(
+			std::fmin(c.x(), 1.0),
+			std::fmin(c.y(), 1.0),
+			std::fmin(c.z(), 1.0)
+		);
 	}
 
 private:

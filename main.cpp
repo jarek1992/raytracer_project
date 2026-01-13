@@ -46,9 +46,9 @@ int main() {
 	camera cam;
 	//a. image aspects ratio
 	cam.aspect_ratio = 16.0 / 9.0;
-	cam.image_width = 800;
-	cam.samples_per_pixel = 10;
-	cam.max_depth = 50;
+	cam.image_width = 700;
+	cam.samples_per_pixel = 30;
+	cam.max_depth = 10;
 	//b. camera settings
 	cam.vfov = 30; //vertical field of the view
 	cam.lookfrom = point3(10, 1.5, 0); //cords for camera source
@@ -57,8 +57,11 @@ int main() {
 	//c. defocus blur settings
 	cam.defocus_angle = 0.6; //higher values more blur on objects outside defocus point
 	cam.focus_dist = 10.0; //higher values defocus point more far from camera
-	//d. denoiser
+	//d. render passes
 	cam.use_denoiser = true;
+	cam.use_albedo_buffer = true;
+	cam.use_normal_buffer = true;
+	cam.use_z_depth_buffer = true;
 
 	// - 6. RENDER
 	cam.render(bvh_world, env);
