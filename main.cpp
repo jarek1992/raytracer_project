@@ -36,19 +36,19 @@ int main() {
 
 	//b. physical sun with sky model: 
 	env.mode = EnvironmentSettings::PHYSICAL_SUN;
-	env.sun_direction = unit_vector(vec3(-0.4, -0.1, -0.2));
-	env.sun_color = color(1.0, 1.0, 1.0);
+	env.sun_direction = unit_vector(vec3(-0.4, -0.3, -0.2));
+	env.sun_color = color(0.8, 0.1, 0.1);
 	env.sun_intensity = 1.0;
 	env.sun_size = 5000.0; //higher value makes sun disc smaller
-	env.intensity = 1.0;
+	env.intensity = 0.2;
 
 	// - 5. CREATE CAMERA AND SET PARAMETERS -
 	camera cam;
 	//a. image aspects ratio
 	cam.aspect_ratio = 16.0 / 9.0;
-	cam.image_width = 700;
-	cam.samples_per_pixel = 30;
-	cam.max_depth = 10;
+	cam.image_width = 600;
+	cam.samples_per_pixel = 150;
+	cam.max_depth = 50;
 	//b. camera settings
 	cam.vfov = 30; //vertical field of the view
 	cam.lookfrom = point3(10, 1.5, 0); //cords for camera source

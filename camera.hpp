@@ -61,12 +61,12 @@ public:
 
 		// - 4. AI DENOISING
 		if (use_denoiser) {
-			std::cerr << "\rApplying HQ AI Denoising..." << std::endl;
 			apply_denoising(image_width, image_height, framebuffer, albedo_buffer, normal_buffer);
 
 			//save with denoiser only if use_denoiser == true
 			process_framebuffer_to_image(framebuffer, "image_RGB_denoised.png", false);
-		} else {
+		}
+		else {
 			std::cerr << "\nDenoising is DISABLED. Skipping..." << std::endl;
 		}
 
@@ -82,7 +82,7 @@ public:
 		if (use_z_depth_buffer) {
 			process_framebuffer_to_image(z_depth_buffer, "image_zdepth.png", true);
 		}
-		
+
 		//timer for render end
 		auto end_time = std::chrono::high_resolution_clock::now();
 		std::chrono::duration<double> elapsed = end_time - start_time;
@@ -145,10 +145,10 @@ private:
 	}
 
 	void execute_render_threads(
-		const hittable& world, 
-		const EnvironmentSettings& env, 
+		const hittable& world,
+		const EnvironmentSettings& env,
 		std::vector<color>& framebuffer,
-		std::vector<color>& albedo_buffer, 
+		std::vector<color>& albedo_buffer,
 		std::vector<color>& normal_buffer,
 		std::vector<color>& z_depth_buffer) {
 		std::atomic<int> lines_done = 0;
@@ -158,40 +158,63 @@ private:
 		std::vector<std::thread> threads;
 
 		auto render_rows = [&](int start_y, int end_y) {
+			const int aux_sample = 64;
+			const double aux_scale = 1.0 / aux_sample;
+
 			for (int j = start_y; j < end_y; ++j) {
 				for (int i = 0; i < image_width; ++i) {
-
-					//get albedo data
-					ray r_aux = get_center_ray(i, j); //hit the center of the pixel
-					hit_record rec;
-
-					if (world.hit(r_aux, interval(0.001, infinity), rec)) {
-						//get_albedo_data:
-						albedo_buffer[j * image_width + i] = rec.mat->get_albedo(rec);
-
-						//normals (View Space)
-						vec3 n = unit_vector(rec.normal);
-						normal_buffer[j * image_width + i] = color(dot(n, u), dot(n, v), -dot(n, w));
-
-						//z-depth
-						double z_range = 50.0;
-						double depth = std::fmin(rec.t / z_range, 1.0);
-						z_depth_buffer[j * image_width + i] = color(1.0 - depth, 1.0 - depth, 1.0 - depth);
-					} else {
-						//background
-						albedo_buffer[j * image_width + i] = color(0, 0, 0);
-						normal_buffer[j * image_width + i] = color(0, 0, 1);
-						z_depth_buffer[j * image_width + i] = color(0, 0, 0);
-					}
-					//many samples(beauty pass)
-					// 
-					//reset color
 					color pixel_color(0, 0, 0);
+					color pixel_albedo(0, 0, 0);
+					color pixel_normal(0, 0, 0);
+					color pixel_depth(0, 0, 0);
+
 					for (int s = 0; s < samples_per_pixel; s++) {
-						ray r = get_ray(i, j);
-						pixel_color += ray_color(r, world, this->max_depth, env);
+						//ray with defocus blur (for beauty pass)
+						ray r_beauty = get_ray(i, j);
+						pixel_color += ray_color(r_beauty, world, this->max_depth, env);
+						//ray without defocus blur(for render passes) 
+						if (s < aux_sample) {
+							ray r_aux = get_sharp_ray(i, j);
+							hit_record rec;
+
+							//calculate auxiliary data for the same sample
+							if (world.hit(r_aux, interval(0.001, infinity), rec)) {
+								//albedo 
+								pixel_albedo += rec.mat->get_albedo(rec);
+								//normals
+								vec3 n = unit_vector(rec.normal);
+								//transition on camera space(view space)
+								double nx = dot(n, u);
+								double ny = dot(n, v);
+								double nz = dot(n, w);
+								//mapping to range[0,1]
+								pixel_normal += color(
+									(nx + 1.0) * 0.5,
+									(ny + 1.0) * 0.5,
+									(nz + 1.0) * 0.5
+								);
+								//z-depth
+								double max_dist = 4.0; //distance to reach pure black color
+								double depth_val = rec.t / max_dist;
+								double z_depth = 1.0 - std::clamp(depth_val, 0.0, 1.0);
+								pixel_depth += color(z_depth, z_depth, z_depth);
+							}
+							else {
+								//backgrounds
+								pixel_albedo += color(0.0, 0.0, 0.0);
+								pixel_normal += color(0.5, 0.5, 1.0);
+								pixel_depth += color(0.0, 0.0, 0.0);
+							}
+						}
 					}
-					framebuffer[j * image_width + i] = pixel_color * pixel_samples_scale;
+
+					//average all the buffers
+					int idx = j * image_width + i;
+					framebuffer[idx] = pixel_color * pixel_samples_scale; //average by all the samples
+					//average all the passes by declared aux_sample
+					albedo_buffer[idx] = pixel_albedo * aux_scale;
+					normal_buffer[idx] = pixel_normal * aux_scale;
+					z_depth_buffer[idx] = pixel_depth * aux_scale;
 				}
 				lines_done++;
 			}
@@ -238,8 +261,20 @@ private:
 		}
 	}
 
-	void apply_denoising(int width, int height, std::vector<color>& framebuffer, 
+	void apply_denoising(int width, int height, std::vector<color>& framebuffer,
 		std::vector<color>& albedo_buffer, std::vector<color>& normal_buffer) {
+
+		//device initialization with error handling
+		oidn::DeviceRef device = oidn::newDevice(oidn::DeviceType::Default);
+		try {
+			device.commit();
+		}
+		catch (...) {
+			//if default (GPU) not working, force CPU
+			device = oidn::newDevice(oidn::DeviceType::CPU);
+			device.commit();
+		}
+
 		//OIDN requires float type data, create buffors for all 3 layers 
 		std::vector<float> f_color(width * height * 3);
 		std::vector<float> f_albedo(width * height * 3);
@@ -247,90 +282,83 @@ private:
 
 		//helper function for clearing values
 		auto clean_val = [](double v) {
-			if (std::isnan(v) || std::isinf(v)) return 0.0f;
+			if (std::isnan(v) || std::isinf(v)) {
+				return 0.0f;
+			}
 			return static_cast<float>(v);
-			};
+		};
 
 		for (size_t i = 0; i < framebuffer.size(); ++i) {
-			////beauty HDR > 1.0
-			//f_color[i * 3 + 0] = clean_val(framebuffer[i].x());
-			//f_color[i * 3 + 1] = clean_val(framebuffer[i].y());
-			//f_color[i * 3 + 2] = clean_val(framebuffer[i].z());
-
-			////albedo [0, 1]
-			//f_albedo[i * 3 + 0] = std::clamp(clean_val(albedo_buffer[i].x()), 0.0f, 1.0f);
-			//f_albedo[i * 3 + 1] = std::clamp(clean_val(albedo_buffer[i].y()), 0.0f, 1.0f);
-			//f_albedo[i * 3 + 2] = std::clamp(clean_val(albedo_buffer[i].z()), 0.0f, 1.0f);
-
-			////normals
-			////must be normalize [-1, 1]
-			//vec3 n = normal_buffer[i];
-
-			//if (n.length_squared() < 0.001 || std::isnan(n.x())) {
-			//	n = vec3(0, 0, 1);
-			//}
-			//else {
-			//	n = unit_vector(n); // Na wszelki wypadek upewniamy się, że ma długość 1
-			//}
-			//f_normal[i * 3 + 0] = static_cast<float>(n.x());
-			//f_normal[i * 3 + 1] = static_cast<float>(n.y());
-			//f_normal[i * 3 + 2] = static_cast<float>(n.z());
-
 			f_color[i * 3 + 0] = static_cast<float>(framebuffer[i].x());
 			f_color[i * 3 + 1] = static_cast<float>(framebuffer[i].y());
 			f_color[i * 3 + 2] = static_cast<float>(framebuffer[i].z());
 
-			// WYMUŚ IDEALNIE GŁADKIE DANE
-			f_albedo[i * 3 + 0] = 0.5f;
-			f_albedo[i * 3 + 1] = 0.5f;
-			f_albedo[i * 3 + 2] = 0.5f;
+			// UŻYJ SWOICH PRAWDZIWYCH, UŚREDNIONYCH DANYCH
+			f_albedo[i * 3 + 0] = clean_val(albedo_buffer[i].x());
+			f_albedo[i * 3 + 1] = clean_val(albedo_buffer[i].y());
+			f_albedo[i * 3 + 2] = clean_val(albedo_buffer[i].z());
 
-			f_normal[i * 3 + 0] = 0.0f;
-			f_normal[i * 3 + 1] = 0.0f;
-			f_normal[i * 3 + 2] = 1.0f;
+			f_normal[i * 3 + 0] = clean_val(normal_buffer[i].x());
+			f_normal[i * 3 + 1] = clean_val(normal_buffer[i].y());
+			f_normal[i * 3 + 2] = clean_val(normal_buffer[i].z());
 		}
 
-		//initialize OIDN tool
-		oidn::DeviceRef device = oidn::newDevice();
-		//oidn::DeviceRef device = oidn::newDevice(oidn::DeviceType::CPU); //for more stabilty - uncomment and comment line above
-		device.commit();
+		//OIDNBuffer for full GPU/CPU compatibility
+		size_t bufferSize = width * height * 3 * sizeof(float);
+		oidn::BufferRef colorBuf = device.newBuffer(bufferSize);
+		oidn::BufferRef albedoBuf = device.newBuffer(bufferSize);
+		oidn::BufferRef normalBuf = device.newBuffer(bufferSize);
 
-		//check erros
-		const char* errorMessage;
-		if (device.getError(errorMessage) != oidn::Error::None) {
-			std::cerr << "ERROR OIDN: " << errorMessage << std::endl;
-			return;
-		}
+		colorBuf.write(0, bufferSize, f_color.data());
+		albedoBuf.write(0, bufferSize, f_albedo.data());
+		normalBuf.write(0, bufferSize, f_normal.data());
 
 		//configurate filter RT(Ray Tracing)
 		oidn::FilterRef filter = device.newFilter("RT");
 
 		//filter
 		std::cerr << "Applying filters..." << std::endl;
-		//connect all 3 inputs
-		filter.setImage("color", f_color.data(), oidn::Format::Float3, width, height);
-		filter.setImage("albedo", f_albedo.data(), oidn::Format::Float3, width, height);
-		filter.setImage("normal", f_normal.data(), oidn::Format::Float3, width, height);
 
+		//connect all 3 inputs
+		filter.setImage("color", colorBuf, oidn::Format::Float3, width, height);
+		filter.setImage("albedo", albedoBuf, oidn::Format::Float3, width, height);
+		filter.setImage("normal", normalBuf, oidn::Format::Float3, width, height);
 		//output filter(save result back to f_color)
-		filter.setImage("output", f_color.data(), oidn::Format::Float3, width, height);
-		
+		filter.setImage("output", colorBuf, oidn::Format::Float3, width, height);
+
 		filter.set("hdr", true); //for neons and sun
 		filter.set("cleanAux", true); //pass info to AI - auxiliary buffers are noise-free
 		filter.commit();
 
+		oidn::DeviceType type = device.get<oidn::DeviceType>("type");
+
+		std::cout << "OIDN is running on: ";
+		switch (type) {
+		case oidn::DeviceType::CPU:   std::cout << "CPU (Procesor)" << std::endl; break;
+		case oidn::DeviceType::CUDA:  std::cout << "GPU (NVIDIA CUDA)" << std::endl; break;
+		case oidn::DeviceType::SYCL:  std::cout << "GPU (Intel/AMD SYCL)" << std::endl; break;
+		case oidn::DeviceType::HIP:   std::cout << "GPU (AMD HIP)" << std::endl; break;
+		case oidn::DeviceType::Metal: std::cout << "GPU (Apple Silicon)" << std::endl; break;
+		default:                      std::cout << "Unknown Device" << std::endl; break;
+		}
+
 		//AI execution
+		std::cerr << "Applying HQ AI Denoising..." << std::endl;
 		filter.execute();
 
 		const char* err;
-		if (device.getError(err) != oidn::Error::None)
+		if (device.getError(err) != oidn::Error::None) {
 			std::cerr << "OIDN Error during execution: " << err << std::endl;
+		}
 
+		colorBuf.read(0, bufferSize, f_color.data());
 		std::cerr << "Denoising finished." << std::endl;
 
 		//copying the results back to the framebuffer (from float to double)
 		for (size_t i = 0; i < framebuffer.size(); ++i) {
 			framebuffer[i] = color(f_color[i * 3 + 0], f_color[i * 3 + 1], f_color[i * 3 + 2]);
+			albedo_buffer[i] = color(f_albedo[i * 3 + 0], f_albedo[i * 3 + 1], f_albedo[i * 3 + 2]);
+			normal_buffer[i] = color(f_normal[i * 3 + 0], f_normal[i * 3 + 1], f_normal[i * 3 + 2]);
 		}
 	}
 
@@ -345,10 +373,15 @@ private:
 			double c = 2.43;
 			double d = 0.59;
 			double e = 0.14;
+
+			double r = (x.x() * (a * x.x() + b)) / (x.x() * (c * x.x() + d) + e);
+			double g = (x.y() * (a * x.y() + b)) / (x.y() * (c * x.y() + d) + e);
+			double b_val = (x.z() * (a * x.z() + b)) / (x.z() * (c * x.z() + d) + e);
+
 			return color(
-				(x.x() * (a * x.x() + b)) / (x.x() * (c * x.x() + d) + e),
-				(x.y() * (a * x.y() + b)) / (x.y() * (c * x.y() + d) + e),
-				(x.z() * (a * x.z() + b)) / (x.z() * (c * x.z() + d) + e)
+				std::clamp(r, 0.0, 1.0),
+				std::clamp(g, 0.0, 1.0),
+				std::clamp(b_val, 0.0, 1.0)
 			);
 		};
 
@@ -366,14 +399,15 @@ private:
 					pix_color *= exposure;
 
 					pix_color = aces_color(pix_color);
-					
+
 					// Gamma 2.2
 					pix_color = color(
 						std::pow(std::clamp(pix_color.x(), 0.0, 1.0), 1.0 / 2.2),
 						std::pow(std::clamp(pix_color.y(), 0.0, 1.0), 1.0 / 2.2),
 						std::pow(std::clamp(pix_color.z(), 0.0, 1.0), 1.0 / 2.2)
 					);
-				} else {
+				}
+				else {
 					//path for datas(albedo/normals/Z-depth)
 					pix_color = color(
 						std::clamp(pix_color.x(), 0.0, 1.0),
@@ -407,6 +441,19 @@ private:
 		return ray(ray_origin, ray_direction);
 	}
 
+	ray get_sharp_ray(int i, int j) const {
+		//transition Antialiasing (jitter)
+		auto px = -0.5 + random_double();
+		auto py = -0.5 + random_double();
+		auto pixel_sample = pixel00_loc + ((i + px) * pixel_delta_u) + ((j + py) * pixel_delta_v);
+
+		//ray Origin here is always camera center
+		auto ray_origin = center;
+		auto ray_direction = pixel_sample - ray_origin;
+
+		return ray(ray_origin, ray_direction);
+	}
+
 	ray get_center_ray(int i, int j) const {
 		//hit the center of the pixel(no randomness)
 		auto pixel_center = pixel00_loc + (i * pixel_delta_u) + (j * pixel_delta_v);
@@ -414,7 +461,7 @@ private:
 		return ray(center, ray_direction);
 	}
 
-	//returns the vector to a random point in the [-.5, -.5]-[+.5,+.5] unit square
+	//returns the vector to a random point in the [-0.5, -0.5]-[0.5, 0.5] unit square
 	vec3 sample_square() const {
 		return vec3(random_double() - 0.5, random_double() - 0.5, 0);
 	}
