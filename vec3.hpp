@@ -1,13 +1,9 @@
 #pragma once
 
-#include "rtweekend.hpp"
-
 #include <cmath>
-#include <cstdlib>
-#include <ostream>
+#include <iostream>
 
-
-//class representing 3demensional vector
+//class representing 3-dimensional vector
 class vec3 {
 public:
 	//variable for x, y and z
@@ -20,16 +16,28 @@ public:
 	constexpr vec3(double e0, double e1, double e2) : e{ e0, e1, e2 } {}
 
 	//getter methods for individual components (x, y, z))
-	constexpr double x() const { return e[0]; }
-	constexpr double y() const { return e[1]; }
-	constexpr double z() const { return e[2]; }
+	constexpr double x() const { 
+		return e[0];
+	}
+	constexpr double y() const { 
+		return e[1]; 
+	}
+	constexpr double z() const {
+		return e[2];
+	}
 
 	//Unary minus operator to negate the vector
-	constexpr vec3 operator-() const { return vec3(-e[0], -e[1], -e[2]); }
+	constexpr vec3 operator-() const { 
+		return vec3(-e[0], -e[1], -e[2]); 
+	}
 
 	//array index operators
-	constexpr double operator[](int i) const { return e[i]; }
-	double& operator[](int i) { return e[i]; }
+	constexpr double operator[](int i) const { 
+		return e[i];
+	}
+	double& operator[](int i) {
+		return e[i];
+	}
 
 	//addition assignment (v += u)
 	vec3& operator+=(const vec3& v) {
@@ -85,9 +93,11 @@ public:
 
 //point3 is allias for vec3, but useful for geometric clarity in the code
 using point3 = vec3;
+//color is allias for vec3, but useful for clarity in the code
+using color = vec3;
 
 //vector utility functions
-
+//
 //allows to display vector as (x y z)
 inline std::ostream& operator<<(std::ostream& out, const vec3& v) {
 	return out << v.e[0] << " " << v.e[1] << " " << v.e[2];

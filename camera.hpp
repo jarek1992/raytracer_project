@@ -5,6 +5,7 @@
 #include "vec3.hpp"
 #include "stb_image_write.h"
 #include "environment.hpp"
+#include "color_processing.hpp"
 #include <OpenImageDenoise/oidn.hpp>
 
 #include <iostream>
@@ -43,7 +44,7 @@ public:
 	bool use_z_depth_buffer = false;
 
 	//render
-	void render(const hittable& world, const EnvironmentSettings& env) {
+	void render(const hittable& world, const EnvironmentSettings& env, const post_processor& post) {
 		// - 1. INITIALIZE - 
 		initialize();
 		//timer for render start
@@ -57,14 +58,14 @@ public:
 		execute_render_threads(world, env, framebuffer, albedo_buffer, normal_buffer, z_depth_buffer);
 
 		// - 3. SAVE RAW RENDER RGB
-		process_framebuffer_to_image(framebuffer, "image_RGB_raw.png", false);
+		process_framebuffer_to_image(framebuffer, "image_RGB_raw.png", post, false);
 
 		// - 4. AI DENOISING
 		if (use_denoiser) {
 			apply_denoising(image_width, image_height, framebuffer, albedo_buffer, normal_buffer);
 
 			//save with denoiser only if use_denoiser == true
-			process_framebuffer_to_image(framebuffer, "image_RGB_denoised.png", false);
+			process_framebuffer_to_image(framebuffer, "image_RGB_denoised.png", post, false);
 		}
 		else {
 			std::cerr << "\nDenoising is DISABLED. Skipping..." << std::endl;
@@ -74,13 +75,13 @@ public:
 		//
 		//render passes without tone mapping
 		if (use_albedo_buffer) {
-			process_framebuffer_to_image(albedo_buffer, "image_albedo.png", true);
+			process_framebuffer_to_image(albedo_buffer, "image_albedo.png", post, true);
 		}
 		if (use_normal_buffer) {
-			process_framebuffer_to_image(normal_buffer, "image_normals.png", true);
+			process_framebuffer_to_image(normal_buffer, "image_normals.png", post, true);
 		}
 		if (use_z_depth_buffer) {
-			process_framebuffer_to_image(z_depth_buffer, "image_zdepth.png", true);
+			process_framebuffer_to_image(z_depth_buffer, "image_zdepth.png", post, true);
 		}
 
 		//timer for render end
@@ -194,7 +195,7 @@ private:
 									(nz + 1.0) * 0.5
 								);
 								//z-depth
-								double max_dist = 4.0; //distance to reach pure black color
+								double max_dist = 1.0; //distance to reach pure black color
 								double depth_val = rec.t / max_dist;
 								double z_depth = 1.0 - std::clamp(depth_val, 0.0, 1.0);
 								pixel_depth += color(z_depth, z_depth, z_depth);
@@ -218,7 +219,7 @@ private:
 				}
 				lines_done++;
 			}
-		};
+			};
 
 		//split the work between threads
 		int rows_per_thread = image_height / num_threads;
@@ -286,7 +287,7 @@ private:
 				return 0.0f;
 			}
 			return static_cast<float>(v);
-		};
+			};
 
 		for (size_t i = 0; i < framebuffer.size(); ++i) {
 			f_color[i * 3 + 0] = static_cast<float>(framebuffer[i].x());
@@ -334,12 +335,12 @@ private:
 
 		std::cout << "OIDN is running on: ";
 		switch (type) {
-		case oidn::DeviceType::CPU:   std::cout << "CPU (Procesor)" << std::endl; break;
-		case oidn::DeviceType::CUDA:  std::cout << "GPU (NVIDIA CUDA)" << std::endl; break;
-		case oidn::DeviceType::SYCL:  std::cout << "GPU (Intel/AMD SYCL)" << std::endl; break;
-		case oidn::DeviceType::HIP:   std::cout << "GPU (AMD HIP)" << std::endl; break;
-		case oidn::DeviceType::Metal: std::cout << "GPU (Apple Silicon)" << std::endl; break;
-		default:                      std::cout << "Unknown Device" << std::endl; break;
+			case oidn::DeviceType::CPU:   std::cout << "CPU (Procesor)" << std::endl; break;
+			case oidn::DeviceType::CUDA:  std::cout << "GPU (NVIDIA CUDA)" << std::endl; break;
+			case oidn::DeviceType::SYCL:  std::cout << "GPU (Intel/AMD SYCL)" << std::endl; break;
+			case oidn::DeviceType::HIP:   std::cout << "GPU (AMD HIP)" << std::endl; break;
+			case oidn::DeviceType::Metal: std::cout << "GPU (Apple Silicon)" << std::endl; break;
+			default:                      std::cout << "Unknown Device" << std::endl; break;
 		}
 
 		//AI execution
@@ -362,28 +363,14 @@ private:
 		}
 	}
 
-	void process_framebuffer_to_image(const std::vector<color>& buffer, const std::string& filename, bool is_data_pass = false) {
+	void process_framebuffer_to_image(
+		const std::vector<color>& buffer, 
+		const std::string& filename, 
+		const post_processor& pp,
+		bool is_data_pass = false
+	) {
 		//conversion framebuffer → RGB
 		std::vector<unsigned char> image_data(image_width * image_height * 3);
-
-		//ACES tone mapping - avoid to overburn the scene lights to pure white too fast
-		auto aces_color = [](color x) {
-			double a = 2.51;
-			double b = 0.03;
-			double c = 2.43;
-			double d = 0.59;
-			double e = 0.14;
-
-			double r = (x.x() * (a * x.x() + b)) / (x.x() * (c * x.x() + d) + e);
-			double g = (x.y() * (a * x.y() + b)) / (x.y() * (c * x.y() + d) + e);
-			double b_val = (x.z() * (a * x.z() + b)) / (x.z() * (c * x.z() + d) + e);
-
-			return color(
-				std::clamp(r, 0.0, 1.0),
-				std::clamp(g, 0.0, 1.0),
-				std::clamp(b_val, 0.0, 1.0)
-			);
-		};
 
 		//tone mapping and RGB conversion
 		for (int j = 0; j < image_height; j++) {
@@ -392,28 +379,16 @@ private:
 				color pix_color = buffer[j * image_width + i];
 
 				if (!is_data_pass) {
-					//beauty path(render)
-					//
-					//exposure - tone down or brighten up the scene overall
-					double exposure = 1.0;
-					pix_color *= exposure;
-
-					pix_color = aces_color(pix_color);
-
-					// Gamma 2.2
-					pix_color = color(
-						std::pow(std::clamp(pix_color.x(), 0.0, 1.0), 1.0 / 2.2),
-						std::pow(std::clamp(pix_color.y(), 0.0, 1.0), 1.0 / 2.2),
-						std::pow(std::clamp(pix_color.z(), 0.0, 1.0), 1.0 / 2.2)
-					);
-				}
-				else {
-					//path for datas(albedo/normals/Z-depth)
+					//calculate normalized u,v (0.0 - 1.0 range)
+					double u = double(i) / (image_width - 1);
+					double v = double(j) / (image_height - 1);
+					//ACES, saturation, contrast, vignette, gamma correction
+					pix_color = pp.process(pix_color, u, v);
+				} else {
 					pix_color = color(
 						std::clamp(pix_color.x(), 0.0, 1.0),
 						std::clamp(pix_color.y(), 0.0, 1.0),
-						std::clamp(pix_color.z(), 0.0, 1.0)
-					);
+						std::clamp(pix_color.z(), 0.0, 1.0));
 				}
 
 				int idx = (j * image_width + i) * 3;

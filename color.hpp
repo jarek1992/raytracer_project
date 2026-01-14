@@ -1,39 +1,34 @@
 #pragma once
 
-#include "interval.hpp"
-#include "vec3.hpp"
+#include "rtweekend.hpp"
+#include "color_processing.hpp"
 
-#include <ostream>
-
-using color = vec3;
-
-//gamma correction
-inline double linear_to_gamma(double linear_component) {
-		return std::sqrt(linear_component);
-}
+#include <vector>
 
 // save pixel_color to the stream
-void write_color(std::vector<unsigned char>& image, int idx, const color& pixel_color, int samples_per_pixel) {
+void write_color(
+	std::vector<unsigned char>& image, 
+	int idx, 
+	const color& pixel_color,
+	int samples_per_pixel,
+	post_processor& post,
+	double u,
+	double v
+) {
 	double scale = 1.0 / samples_per_pixel;
 
-	//get raw components after averaging the samples
-	double r_raw = pixel_color.x() * scale;
-	double g_raw = pixel_color.y() * scale;
-	double b_raw = pixel_color.z() * scale;
+	//average from samples(linear color)
+	color raw_linear_color(
+		pixel_color.x() * scale,
+		pixel_color.y() * scale,
+		pixel_color.z() * scale
+	);
 
-	//tone mapping
-	r_raw = r_raw / (1.0 + r_raw);
-	g_raw = g_raw / (1.0 + r_raw);
-	b_raw = b_raw / (1.0 + r_raw);
-
-	//gamma correction
-	double r = sqrt(r_raw);
-	double g = sqrt(r_raw);
-	double b = sqrt(r_raw);
-
+	//exposure, ACES, hsv, contrast, vignette, gamma
+	color final_color = post.process(raw_linear_color, u, v);;
 
 	//save to vector as 8-bits color
-	image[idx + 0] = static_cast<unsigned char>(256 * std::clamp(r, 0.0, 0.999));
-	image[idx + 1] = static_cast<unsigned char>(256 * std::clamp(g, 0.0, 0.999));
-	image[idx + 2] = static_cast<unsigned char>(256 * std::clamp(b, 0.0, 0.999));
+	image[idx + 0] = static_cast<unsigned char>(255.999 * final_color.x());
+	image[idx + 1] = static_cast<unsigned char>(255.999 * final_color.y());
+	image[idx + 2] = static_cast<unsigned char>(255.999 * final_color.z());
 }

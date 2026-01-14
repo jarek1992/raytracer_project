@@ -1,10 +1,10 @@
 #pragma once
 
 #include <cmath>
-#include <random>
-#include <iostream>
 #include <limits>
 #include <memory>
+#include <random>
+#include <algorithm>
 
 //c++ std usings
 using std::make_shared;
@@ -16,7 +16,7 @@ constexpr double pi = 3.14159265358979323846;
 const double ray_epsilon = 0.0001;
 
 //utility functions
-
+//
 //convert degrees to radians
 inline double degrees_to_radians(double degrees) {
 	return degrees * pi / 180.0;
@@ -35,12 +35,44 @@ inline double random_double(double min, double max) {
 	return min + (max - min) * random_double();
 }
 
+//return random integer in [min,max]
 inline int random_int(int min, int max) {
-	// Zwraca losow¹ liczbê ca³kowit¹ z przedzia³u [min, max].
 	return static_cast<int>(random_double(min, max + 1));
 }
 
-//common headers
+#include "vec3.hpp"
+
+inline color apply_aces(color x) {
+	//ACES tone mapping curve
+	const double a = 2.51;
+	const double b = 0.03;
+	const double c = 2.43;
+	const double d = 0.59;
+	const double e = 0.14;
+	return color(
+		std::clamp((x.x() * (a * x.x() + b)) / (x.x() * (c * x.x() + d) + e), 0.0, 1.0),
+		std::clamp((x.y() * (a * x.y() + b)) / (x.y() * (c * x.y() + d) + e), 0.0, 1.0),
+		std::clamp((x.z() * (a * x.z() + b)) / (x.z() * (c * x.z() + d) + e), 0.0, 1.0)
+	);
+}
+
+//convert linear color component to gamma corrected component
+inline double linear_to_gamma(double linear_component) {
+	if (linear_component > 0) {
+		return std::pow(linear_component, 1.0 / 2.2);
+	}
+	return 0;
+}
+
+//convert linear color to gamma corrected color
+inline color linear_to_gamma(color linear_color) {
+	return color(
+		linear_to_gamma(linear_color.x()),
+		linear_to_gamma(linear_color.y()),
+		linear_to_gamma(linear_color.z())
+	);
+}
+
 #include "color.hpp"
 #include "interval.hpp"
 #include "ray.hpp"

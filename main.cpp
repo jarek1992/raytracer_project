@@ -47,8 +47,8 @@ int main() {
 	//a. image aspects ratio
 	cam.aspect_ratio = 16.0 / 9.0;
 	cam.image_width = 600;
-	cam.samples_per_pixel = 150;
-	cam.max_depth = 50;
+	cam.samples_per_pixel = 80;
+	cam.max_depth = 40;
 	//b. camera settings
 	cam.vfov = 30; //vertical field of the view
 	cam.lookfrom = point3(10, 1.5, 0); //cords for camera source
@@ -63,8 +63,16 @@ int main() {
 	cam.use_normal_buffer = true;
 	cam.use_z_depth_buffer = true;
 
+	post_processor my_post;
+	my_post.exposure = 1.0;
+	my_post.contrast = 1.0;
+	my_post.saturation = 0.0;
+	my_post.color_balance = vec3(1.0, 0.8, 0.6);
+	my_post.hue_shift = 0.0;
+	my_post.vignette_intensity = 0.5;
+
 	// - 6. RENDER
-	cam.render(bvh_world, env);
+	cam.render(bvh_world, env, my_post);
 
 	return 0;
 }
