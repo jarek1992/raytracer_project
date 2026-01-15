@@ -46,8 +46,8 @@ int main() {
 	camera cam;
 	//a. image aspects ratio
 	cam.aspect_ratio = 16.0 / 9.0;
-	cam.image_width = 600;
-	cam.samples_per_pixel = 80;
+	cam.image_width = 500;
+	cam.samples_per_pixel = 60;
 	cam.max_depth = 40;
 	//b. camera settings
 	cam.vfov = 30; //vertical field of the view
@@ -59,19 +59,24 @@ int main() {
 	cam.focus_dist = 10.0; //higher values defocus point more far from camera
 	//d. render passes
 	cam.use_denoiser = true;
-	cam.use_albedo_buffer = true;
-	cam.use_normal_buffer = true;
-	cam.use_z_depth_buffer = true;
+	cam.use_albedo_buffer = false;
+	cam.use_normal_buffer = false;
+	cam.use_z_depth_buffer = false;
 
+	// - 6. POST-PROCESSING -
 	post_processor my_post;
+	//a. parameters
 	my_post.exposure = 1.0;
 	my_post.contrast = 1.0;
-	my_post.saturation = 0.0;
-	my_post.color_balance = vec3(1.0, 0.8, 0.6);
-	my_post.hue_shift = 0.0;
-	my_post.vignette_intensity = 0.5;
+	my_post.saturation = 1.0;
+	my_post.color_balance = vec3(1.0, 1.0, 1.0);
+	my_post.hue_shift = 0.0; //in degrees [-180, 180]
+	my_post.vignette_intensity = 0.0;
+	my_post.use_aces_tone_mapping = true;
+	//b. z-depth settings
+	my_post.z_depth_max_dist = 2.0;
 
-	// - 6. RENDER
+	// - 7. RENDER
 	cam.render(bvh_world, env, my_post);
 
 	return 0;

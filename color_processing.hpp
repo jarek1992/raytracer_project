@@ -14,11 +14,20 @@ public:
 	double hue_shift = 0.0; //in degrees [-180, 180]
 	double vignette_intensity = 1.0;
 	vec3 color_balance = vec3(1.0, 1.0, 1.0); //RGB tint
+	double z_depth_max_dist = 1.0; //for depth buffer normalization
+	bool use_aces_tone_mapping = true;
 
 	color process(color raw_color, double u = 0.5, double v = 0.5) const {
 		color c = raw_color * exposure;
 		//apply_aces
-		c = apply_aces(c);
+		if (use_aces_tone_mapping) {
+			c = apply_aces(c);
+		} else {
+			c = color(std::clamp(c.x(), 0.0, 1.0),
+				std::clamp(c.y(), 0.0, 1.0),
+				std::clamp(c.z(), 0.0, 1.0));
+		}
+
 		c = apply_contrast(c, contrast);
 
 		//HSV operations
@@ -80,27 +89,27 @@ private:
 		double p = v * (1 - s), q = v * (1 - f * s), t = v * (1 - (1 - f) * s);
 
 		switch (i % 6) {
-			case 0: {
-				return vec3(v, t, p);
-			}
-			case 1: {
-				return vec3(q, v, p);
-			}
-			case 2: {
-				return vec3(p, v, t);
-			}
-			case 3: {
-				return vec3(p, q, v);
-			}
-			case 4: {
-				return vec3(t, p, v);
-			}
-			case 5: {
-				return vec3(v, p, q);
-			}
-			default: {
-				return vec3(0, 0, 0);
-			}
+		case 0: {
+			return vec3(v, t, p);
+		}
+		case 1: {
+			return vec3(q, v, p);
+		}
+		case 2: {
+			return vec3(p, v, t);
+		}
+		case 3: {
+			return vec3(p, q, v);
+		}
+		case 4: {
+			return vec3(t, p, v);
+		}
+		case 5: {
+			return vec3(v, p, q);
+		}
+		default: {
+			return vec3(0, 0, 0);
+		}
 		}
 	};
 };

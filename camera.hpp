@@ -55,7 +55,7 @@ public:
 		std::vector<color> albedo_buffer(image_width * image_height);
 		std::vector<color> normal_buffer(image_width * image_height);
 		std::vector<color> z_depth_buffer(image_width * image_height);
-		execute_render_threads(world, env, framebuffer, albedo_buffer, normal_buffer, z_depth_buffer);
+		execute_render_threads(world, env, framebuffer, albedo_buffer, normal_buffer, z_depth_buffer, post.z_depth_max_dist);
 
 		// - 3. SAVE RAW RENDER RGB
 		process_framebuffer_to_image(framebuffer, "image_RGB_raw.png", post, false);
@@ -151,7 +151,8 @@ private:
 		std::vector<color>& framebuffer,
 		std::vector<color>& albedo_buffer,
 		std::vector<color>& normal_buffer,
-		std::vector<color>& z_depth_buffer) {
+		std::vector<color>& z_depth_buffer,
+		double z_depth_max_dist) {
 		std::atomic<int> lines_done = 0;
 
 		//number of threads = number of cores
@@ -167,7 +168,7 @@ private:
 					color pixel_color(0, 0, 0);
 					color pixel_albedo(0, 0, 0);
 					color pixel_normal(0, 0, 0);
-					color pixel_depth(0, 0, 0);
+					color pixel_zdepth(0, 0, 0);
 
 					for (int s = 0; s < samples_per_pixel; s++) {
 						//ray with defocus blur (for beauty pass)
@@ -195,16 +196,15 @@ private:
 									(nz + 1.0) * 0.5
 								);
 								//z-depth
-								double max_dist = 1.0; //distance to reach pure black color
-								double depth_val = rec.t / max_dist;
+								double depth_val = rec.t / z_depth_max_dist;
 								double z_depth = 1.0 - std::clamp(depth_val, 0.0, 1.0);
-								pixel_depth += color(z_depth, z_depth, z_depth);
+								pixel_zdepth += color(z_depth, z_depth, z_depth);
 							}
 							else {
 								//backgrounds
 								pixel_albedo += color(0.0, 0.0, 0.0);
 								pixel_normal += color(0.5, 0.5, 1.0);
-								pixel_depth += color(0.0, 0.0, 0.0);
+								pixel_zdepth += color(0.0, 0.0, 0.0);
 							}
 						}
 					}
@@ -215,7 +215,7 @@ private:
 					//average all the passes by declared aux_sample
 					albedo_buffer[idx] = pixel_albedo * aux_scale;
 					normal_buffer[idx] = pixel_normal * aux_scale;
-					z_depth_buffer[idx] = pixel_depth * aux_scale;
+					z_depth_buffer[idx] = pixel_zdepth * aux_scale;
 				}
 				lines_done++;
 			}
