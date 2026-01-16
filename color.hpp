@@ -25,10 +25,10 @@ void write_color(
 	);
 
 	//exposure, ACES, hsv, contrast, vignette, gamma
-	color final_color = post.process(raw_linear_color, u, v);;
+	color final_color = post.process(raw_linear_color, static_cast<float>(u), static_cast<float>(v));;
 
 	//save to vector as 8-bits color
-	image[idx + 0] = static_cast<unsigned char>(255.999 * final_color.x());
-	image[idx + 1] = static_cast<unsigned char>(255.999 * final_color.y());
-	image[idx + 2] = static_cast<unsigned char>(255.999 * final_color.z());
+	image[idx + 0] = static_cast<unsigned char>(255.999f * static_cast<float>(final_color.x()));
+	image[idx + 1] = static_cast<unsigned char>(255.999f * static_cast<float>(final_color.y()));
+	image[idx + 2] = static_cast<unsigned char>(255.999f * static_cast<float>(final_color.z()));
 }

@@ -6,7 +6,7 @@ class ray {
 public:
 	point3 orig;
 	vec3 dir;
-	double tm;
+	double tm = 0.0;
 
 	//default constructor
 	ray() {}

@@ -47,8 +47,8 @@ int main() {
 	//a. image aspects ratio
 	cam.aspect_ratio = 16.0 / 9.0;
 	cam.image_width = 500;
-	cam.samples_per_pixel = 60;
-	cam.max_depth = 40;
+	cam.samples_per_pixel = 100;
+	cam.max_depth = 30;
 	//b. camera settings
 	cam.vfov = 30; //vertical field of the view
 	cam.lookfrom = point3(10, 1.5, 0); //cords for camera source
@@ -62,19 +62,21 @@ int main() {
 	cam.use_albedo_buffer = true;
 	cam.use_normal_buffer = true;
 	cam.use_z_depth_buffer = true;
+	cam.use_reflection = true;
+	cam.use_refraction = true;
 
 	// - 6. POST-PROCESSING -
 	post_processor my_post;
 	//a. parameters
 	my_post.exposure = 1.0;
-	my_post.contrast = 1.0;
-	my_post.saturation = 1.0;
+	my_post.contrast = 1.0f;
+	my_post.saturation = 1.0f;
 	my_post.color_balance = vec3(1.0, 1.0, 1.0);
-	my_post.hue_shift = 0.0; //in degrees [-180, 180]
+	my_post.hue_shift = 0.0f; //in degrees [-180, 180]
 	my_post.vignette_intensity = 0.0;
 	my_post.use_aces_tone_mapping = true;
 	//b. z-depth settings
-	my_post.z_depth_max_dist = 2.0;
+	my_post.z_depth_max_dist = 3.0;
 
 	// - 7. RENDER
 	cam.render(bvh_world, env, my_post);

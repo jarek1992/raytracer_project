@@ -16,6 +16,14 @@
 #include <iomanip>
 #include <chrono>
 
+struct render_pass_data {
+	color main_colr;
+	color albedo;
+	color normal;
+	color reflection;
+	color refraction;
+};
+
 class camera {
 public:
 	//image settings
@@ -42,6 +50,8 @@ public:
 	bool use_albedo_buffer = false;
 	bool use_normal_buffer = false;
 	bool use_z_depth_buffer = false;
+	bool use_reflection = false;
+	bool use_refraction = false;
 
 	//render
 	void render(const hittable& world, const EnvironmentSettings& env, const post_processor& post) {
@@ -55,7 +65,10 @@ public:
 		std::vector<color> albedo_buffer(image_width * image_height);
 		std::vector<color> normal_buffer(image_width * image_height);
 		std::vector<color> z_depth_buffer(image_width * image_height);
-		execute_render_threads(world, env, framebuffer, albedo_buffer, normal_buffer, z_depth_buffer, post.z_depth_max_dist);
+		std::vector<color> reflection_buffer(image_width * image_height);
+		std::vector<color> refraction_buffer(image_width * image_height);
+
+		execute_render_threads(world, env, framebuffer, albedo_buffer, normal_buffer, z_depth_buffer, reflection_buffer, refraction_buffer, post.z_depth_max_dist);
 
 		// - 3. SAVE RAW RENDER RGB
 		process_framebuffer_to_image(framebuffer, "image_RGB_raw.png", post, false);
@@ -82,6 +95,12 @@ public:
 		}
 		if (use_z_depth_buffer) {
 			process_framebuffer_to_image(z_depth_buffer, "image_zdepth.png", post, true);
+		}
+		if (use_reflection) {
+			process_framebuffer_to_image(reflection_buffer, "image_reflection.png", post, true);
+		}
+		if (use_refraction) {
+			process_framebuffer_to_image(refraction_buffer, "image_refraction.png", post, true);
 		}
 
 		//timer for render end
@@ -152,6 +171,8 @@ private:
 		std::vector<color>& albedo_buffer,
 		std::vector<color>& normal_buffer,
 		std::vector<color>& z_depth_buffer,
+		std::vector<color>& reflection_buffer,
+		std::vector<color>& refraction_buffer,
 		double z_depth_max_dist) {
 		std::atomic<int> lines_done = 0;
 
@@ -169,6 +190,8 @@ private:
 					color pixel_albedo(0, 0, 0);
 					color pixel_normal(0, 0, 0);
 					color pixel_zdepth(0, 0, 0);
+					color pixel_reflection(0, 0, 0);
+					color pixel_refraction(0, 0, 0);
 
 					for (int s = 0; s < samples_per_pixel; s++) {
 						//ray with defocus blur (for beauty pass)
@@ -193,18 +216,41 @@ private:
 								pixel_normal += color(
 									(nx + 1.0) * 0.5,
 									(ny + 1.0) * 0.5,
-									(nz + 1.0) * 0.5
-								);
+									(nz + 1.0) * 0.5);
 								//z-depth
 								double depth_val = rec.t / z_depth_max_dist;
 								double z_depth = 1.0 - std::clamp(depth_val, 0.0, 1.0);
 								pixel_zdepth += color(z_depth, z_depth, z_depth);
+								//reflection/refraction
+								ray scattered;
+								color attenuation;
+								//calculate the color that "returns" from this reflection/refraction
+								//max_depth-1 to avoid an infinite loop
+								if (rec.mat->scatter(r_aux, rec, attenuation, scattered)) {
+									color scattered_color = ray_color(scattered, world, this->max_depth - 1, env);
+
+									//divide into buffers depending on material type
+									//scattered ray has almost the same direction as the perfect reflection:
+									vec3 reflected_dir = reflect(unit_vector(r_aux.direction()), n);
+									bool is_specular = dot(unit_vector(scattered.direction()), reflected_dir) > 0.9;
+
+									if (is_specular) {
+										pixel_reflection += attenuation * scattered_color;
+									} else {
+										//if not mirror check if glass 
+										if (dot(scattered.direction(), rec.normal) < 0) {
+											pixel_refraction += attenuation * scattered_color;
+										}
+									}
+								}
 							}
 							else {
 								//backgrounds
 								pixel_albedo += color(0.0, 0.0, 0.0);
 								pixel_normal += color(0.5, 0.5, 1.0);
 								pixel_zdepth += color(0.0, 0.0, 0.0);
+								pixel_reflection += color(0.0, 0.0, 0.0);
+								pixel_refraction += color(0.0, 0.0, 0.0);
 							}
 						}
 					}
@@ -216,6 +262,8 @@ private:
 					albedo_buffer[idx] = pixel_albedo * aux_scale;
 					normal_buffer[idx] = pixel_normal * aux_scale;
 					z_depth_buffer[idx] = pixel_zdepth * aux_scale;
+					reflection_buffer[idx] = pixel_reflection * aux_scale;
+					refraction_buffer[idx] = pixel_refraction * aux_scale;
 				}
 				lines_done++;
 			}
@@ -225,7 +273,7 @@ private:
 		int rows_per_thread = image_height / num_threads;
 		int extra = image_height % num_threads;
 		int start = 0;
-		for (int t = 0; t < num_threads; t++) {
+		for (int t = 0; t < num_threads; ++t) {
 			int end = start + rows_per_thread + (t < extra ? 1 : 0);
 			threads.emplace_back(render_rows, start, end);
 			start = end;
@@ -335,12 +383,12 @@ private:
 
 		std::cout << "OIDN is running on: ";
 		switch (type) {
-			case oidn::DeviceType::CPU:   std::cout << "CPU (Procesor)" << std::endl; break;
-			case oidn::DeviceType::CUDA:  std::cout << "GPU (NVIDIA CUDA)" << std::endl; break;
-			case oidn::DeviceType::SYCL:  std::cout << "GPU (Intel/AMD SYCL)" << std::endl; break;
-			case oidn::DeviceType::HIP:   std::cout << "GPU (AMD HIP)" << std::endl; break;
-			case oidn::DeviceType::Metal: std::cout << "GPU (Apple Silicon)" << std::endl; break;
-			default:                      std::cout << "Unknown Device" << std::endl; break;
+		case oidn::DeviceType::CPU:   std::cout << "CPU (Procesor)" << std::endl; break;
+		case oidn::DeviceType::CUDA:  std::cout << "GPU (NVIDIA CUDA)" << std::endl; break;
+		case oidn::DeviceType::SYCL:  std::cout << "GPU (Intel/AMD SYCL)" << std::endl; break;
+		case oidn::DeviceType::HIP:   std::cout << "GPU (AMD HIP)" << std::endl; break;
+		case oidn::DeviceType::Metal: std::cout << "GPU (Apple Silicon)" << std::endl; break;
+		default:                      std::cout << "Unknown Device" << std::endl; break;
 		}
 
 		//AI execution
@@ -364,8 +412,8 @@ private:
 	}
 
 	void process_framebuffer_to_image(
-		const std::vector<color>& buffer, 
-		const std::string& filename, 
+		const std::vector<color>& buffer,
+		const std::string& filename,
 		const post_processor& pp,
 		bool is_data_pass = false
 	) {
@@ -380,11 +428,12 @@ private:
 
 				if (!is_data_pass) {
 					//calculate normalized u,v (0.0 - 1.0 range)
-					double u = double(i) / (image_width - 1);
-					double v = double(j) / (image_height - 1);
+					float u = static_cast<float>(i) / (image_width - 1);
+					float v = static_cast<float>(j) / (image_height - 1);
 					//ACES, saturation, contrast, vignette, gamma correction
 					pix_color = pp.process(pix_color, u, v);
-				} else {
+				}
+				else {
 					pix_color = color(
 						std::clamp(pix_color.x(), 0.0, 1.0),
 						std::clamp(pix_color.y(), 0.0, 1.0),

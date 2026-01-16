@@ -89,6 +89,11 @@ public:
 	static vec3 random(double min, double max) {
 		return vec3(random_double(min, max), random_double(min, max), random_double(min, max));
 	}
+
+	//luminance calculation using Rec. 709 coefficients
+	double luminance() const {
+		return 0.2126 * e[0] + 0.7152 * e[1] + 0.0722 * e[2];
+	}
 };
 
 //point3 is allias for vec3, but useful for geometric clarity in the code
