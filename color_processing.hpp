@@ -8,35 +8,35 @@
 
 class post_processor {
 public:
-	double exposure = 1.0;
-	double saturation = 1.0;
-	double contrast = 1.0;
-	double hue_shift = 0.0; //in degrees [-180, 180]
-	double vignette_intensity = 1.0;
-	vec3 color_balance = vec3(1.0, 1.0, 1.0); //RGB tint
-	double z_depth_max_dist = 1.0; //for depth buffer normalization
+	float exposure = 1.0f;
+	float saturation = 1.0f;
+	float contrast = 1.0f;
+	float hue_shift = 0.0f; //in degrees [-180, 180]
+	float vignette_intensity = 1.0f;
+	vec3 color_balance = vec3(1.0f, 1.0f, 1.0f); //RGB tint
+	float z_depth_max_dist = 1.0f; //for depth buffer normalization
 	bool use_aces_tone_mapping = true;
 
-	color process(color raw_color, double u = 0.5, double v = 0.5) const {
+	color process(color raw_color, float u = 0.5f, float v = 0.5f) const {
 		color c = raw_color * exposure;
 		//apply_aces
 		if (use_aces_tone_mapping) {
 			c = apply_aces(c);
 		} else {
-			c = color(std::clamp(c.x(), 0.0, 1.0),
-				std::clamp(c.y(), 0.0, 1.0),
-				std::clamp(c.z(), 0.0, 1.0));
+			c = color(std::clamp(static_cast<float>(c.x()), 0.0f, 1.0f),
+				std::clamp(static_cast<float>(c.y()), 0.0f, 1.0f),
+				std::clamp(static_cast<float>(c.z()), 0.0f, 1.0f));
 		}
 
 		c = apply_contrast(c, contrast);
 
 		//HSV operations
 		vec3 hsv = rgb_to_hsv(c);
-		hsv[0] = std::fmod(hsv[0] + hue_shift, 360.0); //hue shift
+		hsv[0] = std::fmod(hsv[0] + hue_shift, 360.0f); //hue shift
 		if (hsv[0] < 0) {
-			hsv[0] += 360.0;
+			hsv[0] += 360.0f;
 		}
-		hsv[1] = std::clamp(hsv[1] * saturation, 0.0, 1.0); //saturation
+		hsv[1] = std::clamp(static_cast<float>(hsv[1] * saturation), 0.0f, 1.0f); //saturation
 		c = hsv_to_rgb(hsv);
 
 		c = color(
@@ -46,9 +46,9 @@ public:
 		);
 
 		//vignette effect
-		if (vignette_intensity > 0.0) {
-			double dist = std::sqrt((u - 0.5) * (u - 0.5) + (v - 0.5) * (v - 0.5));
-			double vig = std::clamp(1.0 - dist * vignette_intensity, 0.0, 1.0);
+		if (vignette_intensity > 0.0f) {
+			float dist = std::sqrt((u - 0.5f) * (u - 0.5f) + (v - 0.5f) * (v - 0.5f));
+			float vig = std::clamp(1.0f - dist * vignette_intensity, 0.0f, 1.0f);
 			c *= vig;
 		}
 
@@ -57,20 +57,20 @@ public:
 
 
 private:
-	color apply_contrast(color c, double contrast) const {
+	color apply_contrast(color c, float contrast) const {
 		auto midpoint = 0.5;
 		return color(
-			std::pow(std::clamp(c.x(), 0.0, 1.0) / midpoint, contrast) * midpoint,
-			std::pow(std::clamp(c.y(), 0.0, 1.0) / midpoint, contrast) * midpoint,
-			std::pow(std::clamp(c.z(), 0.0, 1.0) / midpoint, contrast) * midpoint
+			std::pow(std::clamp(static_cast<float>(c.x()), 0.0f, 1.0f) / midpoint, contrast) * midpoint,
+			std::pow(std::clamp(static_cast<float>(c.y()), 0.0f, 1.0f) / midpoint, contrast) * midpoint,
+			std::pow(std::clamp(static_cast<float>(c.z()), 0.0f, 1.0f) / midpoint, contrast) * midpoint
 		);
 	}
 
 	vec3 rgb_to_hsv(vec3 c) const {
-		double r = c.x(), g = c.y(), b = c.z();
-		double max = std::max({ r, g, b }), min = std::min({ r, g, b });
-		double h, s, v = max;
-		double d = max - min;
+		float r = c.x(), g = c.y(), b = c.z();
+		float max = std::max({ r, g, b }), min = std::min({ r, g, b });
+		float h, s, v = max;
+		float d = max - min;
 		s = max == 0 ? 0 : d / max;
 		if (max == min) h = 0;
 		else {
@@ -83,10 +83,10 @@ private:
 	}
 
 	vec3 hsv_to_rgb(vec3 hsv) const {
-		double h = hsv.x() / 360.0, s = hsv.y(), v = hsv.z();
+		float h = hsv.x() / 360.0f, s = hsv.y(), v = hsv.z();
 		int i = int(h * 6);
-		double f = h * 6 - i;
-		double p = v * (1 - s), q = v * (1 - f * s), t = v * (1 - (1 - f) * s);
+		float f = h * 6 - i;
+		float p = v * (1 - s), q = v * (1 - f * s), t = v * (1 - (1 - f) * s);
 
 		switch (i % 6) {
 		case 0: {

@@ -59,9 +59,9 @@ int main() {
 	cam.focus_dist = 10.0; //higher values defocus point more far from camera
 	//d. render passes
 	cam.use_denoiser = true;
-	cam.use_albedo_buffer = false;
-	cam.use_normal_buffer = false;
-	cam.use_z_depth_buffer = false;
+	cam.use_albedo_buffer = true;
+	cam.use_normal_buffer = true;
+	cam.use_z_depth_buffer = true;
 
 	// - 6. POST-PROCESSING -
 	post_processor my_post;
