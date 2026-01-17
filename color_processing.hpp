@@ -10,6 +10,21 @@ struct image_statistics {
 	float average_luminance = 0.0f;
 	float max_luminance = 0.0f;
 	int histogram[256] = { 0 }; //256 bins for luminance distribution
+	float normalized_histogram[256] = { 0.0f }; //for plotting purposes Imgui
+
+	void normalize() {
+		int max_pixels = 0;
+		for (int i = 0; i < 256; i++) {
+			if (histogram[i] > max_pixels) {
+				max_pixels = histogram[i];
+			}
+			if (max_pixels > 0) {
+				for (int i = 0; i < 256; i++) {
+					normalized_histogram[i] = static_cast<float>(histogram[i]) / max_pixels;
+				}
+			}
+		}
+	}
 };
 
 enum class debug_mode {
@@ -32,7 +47,7 @@ public:
 
 	bool use_aces_tone_mapping = true;
 	bool use_auto_exposure = false;
-	float target_luminance = 0.18f; //aimed value for auto exposure
+	float target_luminance = 0.18f; //aimed value for autoexposure (middle gray standard in photography 18%, higher value = overburn)
 	debug_mode current_debug_mode = debug_mode::NONE;
 
 	color process(color raw_color, float u = 0.5f, float v = 0.5f) const {
@@ -122,6 +137,7 @@ public:
 		}
 
 		stats.average_luminance = static_cast<float>(total_lum / framebuffer.size());
+		stats.normalize();
 		return stats;
 	}
 

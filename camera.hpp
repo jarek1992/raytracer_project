@@ -15,6 +15,7 @@
 #include <functional>
 #include <iomanip>
 #include <chrono>
+#include <vector>
 
 struct render_pass_data {
 	color main_colr;
@@ -363,7 +364,7 @@ private:
 		}
 
 		//OIDNBuffer for full GPU/CPU compatibility
-		size_t bufferSize = width * height * 3 * sizeof(float);
+		size_t bufferSize = static_cast<size_t>(width) * height * 3 * sizeof(float);
 		oidn::BufferRef colorBuf = device.newBuffer(bufferSize);
 		oidn::BufferRef albedoBuf = device.newBuffer(bufferSize);
 		oidn::BufferRef normalBuf = device.newBuffer(bufferSize);
@@ -434,7 +435,7 @@ private:
 		for (int j = 0; j < image_height; j++) {
 			for (int i = 0; i < image_width; i++) {
 				//get raw color
-				color pix_color = buffer[j * image_width + i];
+				color pix_color = buffer[static_cast<size_t>(j) * image_width + i];
 
 				if (!is_data_pass) {
 					//calculate normalized u,v (0.0 - 1.0 range)
@@ -450,7 +451,7 @@ private:
 						std::clamp(pix_color.z(), 0.0, 1.0));
 				}
 
-				int idx = (j * image_width + i) * 3;
+				size_t idx = (static_cast<size_t>(j) * image_width + i) * 3;
 				image_data[idx + 0] = static_cast<unsigned char>(255.999 * pix_color.x());
 				image_data[idx + 1] = static_cast<unsigned char>(255.999 * pix_color.y());
 				image_data[idx + 2] = static_cast<unsigned char>(255.999 * pix_color.z());
