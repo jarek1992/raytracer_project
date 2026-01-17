@@ -78,6 +78,9 @@ int main() {
 	//b. z-depth settings
 	my_post.z_depth_max_dist = 3.0;
 
+	my_post.use_auto_exposure = true;
+	my_post.current_debug_mode = debug_mode::NONE;
+
 	// - 7. RENDER
 	cam.render(bvh_world, env, my_post);
 

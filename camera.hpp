@@ -70,6 +70,17 @@ public:
 
 		execute_render_threads(world, env, framebuffer, albedo_buffer, normal_buffer, z_depth_buffer, reflection_buffer, refraction_buffer, post.z_depth_max_dist);
 
+		// - 2.5 AUTO-EXPOSURE -
+		if (post.use_auto_exposure) {
+			image_statistics stats = post.analyze_framebuffer(framebuffer);
+			std::cerr << "\n[Auto-Exposure] Average Luminance: " << stats.average_luminance << "\n";
+
+			post.apply_auto_exposure(stats);
+			std::cerr << "[Auto-Exposure] New Exposure Value: " << post.exposure << "\n";
+		} else {
+			std::cerr << "\n[Exposure] Manual mode active. Value: " << post.exposure << "\n";
+		}
+
 		// - 3. SAVE RAW RENDER RGB
 		process_framebuffer_to_image(framebuffer, "image_RGB_raw.png", post, false);
 
@@ -79,8 +90,7 @@ public:
 
 			//save with denoiser only if use_denoiser == true
 			process_framebuffer_to_image(framebuffer, "image_RGB_denoised.png", post, false);
-		}
-		else {
+		} else {
 			std::cerr << "\nDenoising is DISABLED. Skipping..." << std::endl;
 		}
 
