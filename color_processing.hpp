@@ -50,6 +50,12 @@ public:
 	float target_luminance = 0.22f; //aimed value for autoexposure (middle gray standard in photography 22%, higher value = overburn)
 	mutable debug_mode current_debug_mode = debug_mode::NONE;
 
+	//bloom effect
+	bool use_bloom = false;
+	float bloom_threshold = 1.0f;
+	float bloom_intensity = 0.3f;
+	int bloom_radius = 5;;
+
 	color process(color raw_color, float u = 0.5f, float v = 0.5f) const {
 		//1. exposure (double/HDR)
 		color c = raw_color * static_cast<double>(exposure);

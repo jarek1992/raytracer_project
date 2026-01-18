@@ -6,6 +6,7 @@
 #include "stb_image_write.h"
 #include "environment.hpp"
 #include "color_processing.hpp"
+#include "bloom.hpp"
 #include <OpenImageDenoise/oidn.hpp>
 
 #include <iostream>
@@ -90,33 +91,28 @@ public:
 			std::cerr << "\nDenoising is DISABLED. Skipping..." << std::endl;
 		}
 
-		// - 4.5 BLOOM EFFECT -
-
-		// - 5. POST-PROCESSING & DIAGNOSTICS -
-		//final render with tone mapping
-		process_framebuffer_to_image(framebuffer, "image_RGB_final.png", post, false);
-		//save additional pass only if debug_mode is not NONE
+		// - 5. DIAGNOSTICS OUTPUTS RGB channels-
 		if (user_diagnostic != debug_mode::NONE) {
 			std::string debug_filename = "debug_output.png";
 			switch (user_diagnostic) {
-				case debug_mode::RED: {
-					debug_filename = "image_RED_channel.png";
-					break;
-				}
-				case debug_mode::GREEN: {
-					debug_filename = "image_GREEN_channel.png";
-					break;
-				}
-				case debug_mode::BLUE: {
-					debug_filename = "image_BLUE_channel.png";
-					break;
-				}
-				case debug_mode::LUMINANCE: {
-					debug_filename = "image_LUMINANCE_channel.png";
-					break;
-				}
-				default:
-					break;
+			case debug_mode::RED: {
+				debug_filename = "image_RED_channel.png";
+				break;
+			}
+			case debug_mode::GREEN: {
+				debug_filename = "image_GREEN_channel.png";
+				break;
+			}
+			case debug_mode::BLUE: {
+				debug_filename = "image_BLUE_channel.png";
+				break;
+			}
+			case debug_mode::LUMINANCE: {
+				debug_filename = "image_LUMINANCE_channel.png";
+				break;
+			}
+			default:
+				break;
 			}
 			//restore user choice
 			post.current_debug_mode = user_diagnostic;
@@ -124,7 +120,21 @@ public:
 			post.current_debug_mode = debug_mode::NONE; //reset
 		}
 
-		// - 6. RENDER PASSES (save) -
+		// - 6. BLOOM EFFECT -
+		if(post.use_bloom) {
+			std::cerr << "\n[Post-Processing] Applying Bloom (Threshold: " << post.bloom_threshold << ")...";
+			bloom_filter bloom(post.bloom_threshold, post.bloom_intensity, post.bloom_radius);
+			bloom.apply(framebuffer, image_width, image_height);
+			std::cerr << "Bloom Effect applied." << std::endl;
+		} else {
+			std::cerr << "\nBloom Effect is DISABLED. Skipping..." << std::endl;
+		}
+
+		// - 7. FINAL RENDER WTIH TONE MAPPING -
+		process_framebuffer_to_image(framebuffer, "image_RGB_final.png", post, false);
+		
+
+		// - 8. RENDER PASSES (save) -
 		//render passes without tone mapping
 		if (use_albedo_buffer) {
 			process_framebuffer_to_image(albedo_buffer, "image_albedo.png", post, true, true);
