@@ -76,10 +76,10 @@ int main() {
 	my_post.vignette_intensity = 0.0;
 	my_post.use_aces_tone_mapping = true;
 	//b. z-depth settings
-	my_post.z_depth_max_dist = 3.0;
-
+	my_post.z_depth_max_dist = 2.0;
+	//c. debug modes
 	my_post.use_auto_exposure = true;
-	my_post.current_debug_mode = debug_mode::NONE;
+	my_post.current_debug_mode = debug_mode::LUMINANCE; //change debug mode here(NONE, RED, GREEN, BLUE, LUMINANCE)
 
 	// - 7. RENDER
 	cam.render(bvh_world, env, my_post);

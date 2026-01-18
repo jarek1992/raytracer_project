@@ -17,14 +17,6 @@
 #include <chrono>
 #include <vector>
 
-struct render_pass_data {
-	color main_colr;
-	color albedo;
-	color normal;
-	color reflection;
-	color refraction;
-};
-
 class camera {
 public:
 	//image settings
@@ -61,51 +53,87 @@ public:
 		//timer for render start
 		auto start_time = std::chrono::high_resolution_clock::now();
 
-		// - 2. MULTITHREADING 
-		std::vector<color> framebuffer(image_width * image_height);
-		std::vector<color> albedo_buffer(image_width * image_height);
-		std::vector<color> normal_buffer(image_width * image_height);
-		std::vector<color> z_depth_buffer(image_width * image_height);
-		std::vector<color> reflection_buffer(image_width * image_height);
-		std::vector<color> refraction_buffer(image_width * image_height);
+		// - 2. MULTITHREADING  -
+		std::vector<color> framebuffer(static_cast<size_t>(image_width) * image_height);
+		std::vector<color> albedo_buffer(static_cast<size_t>(image_width) * image_height);
+		std::vector<color> normal_buffer(static_cast<size_t>(image_width) * image_height);
+		std::vector<color> z_depth_buffer(static_cast<size_t>(image_width) * image_height);
+		std::vector<color> reflection_buffer(static_cast<size_t>(image_width) * image_height);
+		std::vector<color> refraction_buffer(static_cast<size_t>(image_width) * image_height);
 
 		execute_render_threads(world, env, framebuffer, albedo_buffer, normal_buffer, z_depth_buffer, reflection_buffer, refraction_buffer, post.z_depth_max_dist);
+		
+		//remember the diagnostic selection and clean immediately
+		debug_mode user_diagnostic = post.current_debug_mode;
+		post.current_debug_mode = debug_mode::NONE;
 
 		// - 2.5 AUTO-EXPOSURE -
 		if (post.use_auto_exposure) {
 			image_statistics stats = post.analyze_framebuffer(framebuffer);
 			std::cerr << "\n[Auto-Exposure] Average Luminance: " << stats.average_luminance << "\n";
-
 			post.apply_auto_exposure(stats);
 			std::cerr << "[Auto-Exposure] New Exposure Value: " << post.exposure << "\n";
 		} else {
 			std::cerr << "\n[Exposure] Manual mode active. Value: " << post.exposure << "\n";
 		}
 
-		// - 3. SAVE RAW RENDER RGB
-		process_framebuffer_to_image(framebuffer, "image_RGB_raw.png", post, false);
+		// - 3. SAVE RAW RENDER RGB -
+		//always save raw render without aces tone mapping
+		process_framebuffer_to_image(framebuffer, "image_RGB_raw.png", post, true);
 
-		// - 4. AI DENOISING
+		// - 4. AI DENOISING -
 		if (use_denoiser) {
 			apply_denoising(image_width, image_height, framebuffer, albedo_buffer, normal_buffer);
-
 			//save with denoiser only if use_denoiser == true
 			process_framebuffer_to_image(framebuffer, "image_RGB_denoised.png", post, false);
 		} else {
 			std::cerr << "\nDenoising is DISABLED. Skipping..." << std::endl;
 		}
 
-		// - 5. POST-PROCESSING (tone mapping & save)
-		//
+		// - 4.5 BLOOM EFFECT -
+
+		// - 5. POST-PROCESSING & DIAGNOSTICS -
+		//final render with tone mapping
+		process_framebuffer_to_image(framebuffer, "image_RGB_final.png", post, false);
+		//save additional pass only if debug_mode is not NONE
+		if (user_diagnostic != debug_mode::NONE) {
+			std::string debug_filename = "debug_output.png";
+			switch (user_diagnostic) {
+				case debug_mode::RED: {
+					debug_filename = "image_RED_channel.png";
+					break;
+				}
+				case debug_mode::GREEN: {
+					debug_filename = "image_GREEN_channel.png";
+					break;
+				}
+				case debug_mode::BLUE: {
+					debug_filename = "image_BLUE_channel.png";
+					break;
+				}
+				case debug_mode::LUMINANCE: {
+					debug_filename = "image_LUMINANCE_channel.png";
+					break;
+				}
+				default:
+					break;
+			}
+			//restore user choice
+			post.current_debug_mode = user_diagnostic;
+			process_framebuffer_to_image(framebuffer, debug_filename, post, false);
+			post.current_debug_mode = debug_mode::NONE; //reset
+		}
+
+		// - 6. RENDER PASSES (save) -
 		//render passes without tone mapping
 		if (use_albedo_buffer) {
-			process_framebuffer_to_image(albedo_buffer, "image_albedo.png", post, true);
+			process_framebuffer_to_image(albedo_buffer, "image_albedo.png", post, true, true);
 		}
 		if (use_normal_buffer) {
-			process_framebuffer_to_image(normal_buffer, "image_normals.png", post, true);
+			process_framebuffer_to_image(normal_buffer, "image_normals.png", post, true, true);
 		}
 		if (use_z_depth_buffer) {
-			process_framebuffer_to_image(z_depth_buffer, "image_zdepth.png", post, true);
+			process_framebuffer_to_image(z_depth_buffer, "image_zdepth.png", post, true, false);
 		}
 		if (use_reflection) {
 			process_framebuffer_to_image(reflection_buffer, "image_reflection.png", post, true);
@@ -120,7 +148,7 @@ public:
 
 		std::cerr << "\r[########################################] 100% (" << image_height << "/" << image_height << " lines)\n";
 		std::cerr << "\nRender finished in " << std::fixed << std::setprecision(2) << elapsed.count() << " seconds.\n";
-		std::cerr << "Image saved to image.png\n";
+		std::cerr << "All the passes saved\n";
 	}
 
 private:
@@ -192,7 +220,7 @@ private:
 		std::vector<std::thread> threads;
 
 		auto render_rows = [&](int start_y, int end_y) {
-			const int aux_sample = 64;
+			const int aux_sample = 128;
 			const double aux_scale = 1.0 / aux_sample;
 
 			for (int j = start_y; j < end_y; ++j) {
@@ -247,7 +275,8 @@ private:
 
 									if (is_specular) {
 										pixel_reflection += attenuation * scattered_color;
-									} else {
+									}
+									else {
 										//if not mirror check if glass 
 										if (dot(scattered.direction(), rec.normal) < 0) {
 											pixel_refraction += attenuation * scattered_color;
@@ -394,12 +423,30 @@ private:
 
 		std::cout << "OIDN is running on: ";
 		switch (type) {
-		case oidn::DeviceType::CPU:   std::cout << "CPU (Procesor)" << std::endl; break;
-		case oidn::DeviceType::CUDA:  std::cout << "GPU (NVIDIA CUDA)" << std::endl; break;
-		case oidn::DeviceType::SYCL:  std::cout << "GPU (Intel/AMD SYCL)" << std::endl; break;
-		case oidn::DeviceType::HIP:   std::cout << "GPU (AMD HIP)" << std::endl; break;
-		case oidn::DeviceType::Metal: std::cout << "GPU (Apple Silicon)" << std::endl; break;
-		default:                      std::cout << "Unknown Device" << std::endl; break;
+			case oidn::DeviceType::CPU: {
+				std::cout << "CPU (Procesor)" << std::endl;
+				break;
+			}
+			case oidn::DeviceType::CUDA: {
+				std::cout << "GPU (NVIDIA CUDA)" << std::endl;
+				break;
+			}
+			case oidn::DeviceType::SYCL: {
+				std::cout << "GPU (Intel/AMD SYCL)" << std::endl;
+				break;
+			}
+			case oidn::DeviceType::HIP: {
+				std::cout << "GPU (AMD HIP)" << std::endl;
+				break;
+			}
+			case oidn::DeviceType::Metal: {
+				std::cout << "GPU (Apple Silicon)" << std::endl;
+				break;
+			}
+			default: {
+				std::cout << "Unknown Device" << std::endl;
+				break;
+			}
 		}
 
 		//AI execution
@@ -426,8 +473,8 @@ private:
 		const std::vector<color>& buffer,
 		const std::string& filename,
 		const post_processor& pp,
-		bool is_data_pass = false
-	) {
+		bool is_data_pass = false,
+		bool apply_gamma = true) {
 		//conversion framebuffer → RGB
 		std::vector<unsigned char> image_data(image_width * image_height * 3);
 
@@ -443,12 +490,15 @@ private:
 					float v = static_cast<float>(j) / (image_height - 1);
 					//ACES, saturation, contrast, vignette, gamma correction
 					pix_color = pp.process(pix_color, u, v);
-				}
-				else {
+				} else {
 					pix_color = color(
 						std::clamp(pix_color.x(), 0.0, 1.0),
 						std::clamp(pix_color.y(), 0.0, 1.0),
 						std::clamp(pix_color.z(), 0.0, 1.0));
+
+					if (apply_gamma) {
+						pix_color = linear_to_gamma(pix_color);
+					}
 				}
 
 				size_t idx = (static_cast<size_t>(j) * image_width + i) * 3;
@@ -457,7 +507,6 @@ private:
 				image_data[idx + 2] = static_cast<unsigned char>(255.999 * pix_color.z());
 			}
 		}
-
 		//save to .png
 		stbi_write_png(filename.c_str(), image_width, image_height, 3, image_data.data(), image_width * 3);
 	}

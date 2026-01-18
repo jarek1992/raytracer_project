@@ -47,8 +47,8 @@ public:
 
 	bool use_aces_tone_mapping = true;
 	bool use_auto_exposure = false;
-	float target_luminance = 0.18f; //aimed value for autoexposure (middle gray standard in photography 18%, higher value = overburn)
-	debug_mode current_debug_mode = debug_mode::NONE;
+	float target_luminance = 0.22f; //aimed value for autoexposure (middle gray standard in photography 22%, higher value = overburn)
+	mutable debug_mode current_debug_mode = debug_mode::NONE;
 
 	color process(color raw_color, float u = 0.5f, float v = 0.5f) const {
 		//1. exposure (double/HDR)
@@ -65,33 +65,6 @@ public:
 			std::clamp(static_cast<float>(c.y()), 0.0f, 1.0f),
 			std::clamp(static_cast<float>(c.z()), 0.0f, 1.0f)
 		);
-		//1.5 flags debug modes RGB/Luminance
-		if (current_debug_mode != debug_mode::NONE) {
-			double r = c.x();
-			double g = c.y();
-			double b = c.z();
-			switch (current_debug_mode) {
-			case debug_mode::RED:  {
-				c = color(r, 0.0, 0.0);
-				break;
-			}
-			case debug_mode::GREEN: {
-				c = color(0.0, g, 0.0);
-				break;
-			}
-			case debug_mode::BLUE: {
-				c = color(0.0, 0.0, b);
-				break;
-			}
-			case debug_mode::LUMINANCE: {
-				double lum = c.luminance();
-				c = color(lum, lum, lum);
-				break;
-			}
-			default:
-				break;
-			}
-		}
 		//2. contrast (0-1 range)
 		if (std::abs(contrast - 1.0f) > 0.001f) {
 			c = apply_contrast(c, contrast);
@@ -115,6 +88,33 @@ public:
 			float dist = std::sqrt((u - 0.5f) * (u - 0.5f) + (v - 0.5f) * (v - 0.5f));
 			float vig = std::clamp(1.0f - dist * vignette_intensity, 0.0f, 1.0f);
 			c *= static_cast<double>(vig);
+		}
+		//7. flags debug modes RGB/Luminance
+		if (current_debug_mode != debug_mode::NONE) {
+			double r = c.x();
+			double g = c.y();
+			double b = c.z();
+			switch (current_debug_mode) {
+				case debug_mode::RED: {
+					c = color(r, 0.0, 0.0);
+					break;
+				}
+				case debug_mode::GREEN: {
+					c = color(0.0, g, 0.0);
+					break;
+				}
+				case debug_mode::BLUE: {
+					c = color(0.0, 0.0, b);
+					break;
+				}
+				case debug_mode::LUMINANCE: {
+					double lum = c.luminance();
+					c = color(lum, lum, lum);
+					break;
+				}
+				default:
+					break;
+				}
 		}
 
 		return linear_to_gamma(c);
