@@ -114,7 +114,8 @@ hittable_list build_geometry(MaterialLibrary& mat_lib) {
 				//1. Probability distribution
 				if (dice_roll < 0.25 && !neon_mats.empty()) {
 					//25% chance to draw neon material
-					selected_mat_name = neon_mats[random_int(0, static_cast<int>(neon_mats.size()) - 1)];
+					int max_idx = static_cast<int>(neon_mats.size()) - 1;
+					selected_mat_name = neon_mats[random_int(0, max_idx)];
 					geometry = master_cube;
 					//scale
 					scale_v = vec3(0.4, random_double(1.5, 4.5), 0.4);

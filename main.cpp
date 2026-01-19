@@ -49,9 +49,9 @@ int main() {
 	camera cam;
 	//a. image aspects ratio
 	cam.aspect_ratio = 16.0 / 9.0;
-	cam.image_width = 1200;
-	cam.samples_per_pixel = 500;
-	cam.max_depth = 100;
+	cam.image_width = 800;
+	cam.samples_per_pixel = 1500;
+	cam.max_depth = 50;
 	//b. camera settings
 	cam.vfov = 30; //vertical field of the view
 	cam.lookfrom = point3(10, 1.5, 0); //cords for camera source
@@ -79,15 +79,15 @@ int main() {
 	my_post.vignette_intensity = 0.0;
 	my_post.use_aces_tone_mapping = true;
 	//b. z-depth settings
-	my_post.z_depth_max_dist = 2.0;
+	my_post.z_depth_max_dist = 15.0;
 	//c. debug modes
 	my_post.use_auto_exposure = true;
-	my_post.current_debug_mode = debug_mode::GREEN; //change debug mode here(NONE, RED, GREEN, BLUE, LUMINANCE)
+	my_post.current_debug_mode = debug_mode::NONE; //change debug mode here(NONE, RED, GREEN, BLUE, LUMINANCE)
 	//d. bloom settings
 	my_post.use_bloom = true;
 	my_post.bloom_threshold = 1.2f;	
-	my_post.bloom_intensity = 0.4f;
-	my_post.bloom_radius = 5;
+	my_post.bloom_intensity = 0.6f;
+	my_post.bloom_radius = 8;
 
 	// - 7. RENDER
 	cam.render(bvh_world, env, my_post);
