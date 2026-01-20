@@ -58,7 +58,7 @@ int main() {
 	cam.lookat = point3(0, 0, 0); //cords for camera target
 	cam.vup = vec3(0, 1, 0); //up vector set to Y
 	//c. defocus blur settings
-	cam.defocus_angle = 0.6; //higher values more blur on objects outside defocus point
+	cam.defocus_angle = 0.5; //higher values more blur on objects outside defocus point
 	cam.focus_dist = 10.0; //higher values defocus point more far from camera
 	//d. render passes
 	cam.use_denoiser = true;
@@ -79,15 +79,15 @@ int main() {
 	my_post.vignette_intensity = 0.0;
 	my_post.use_aces_tone_mapping = true;
 	//b. z-depth settings
-	my_post.z_depth_max_dist = 15.0;
+	my_post.z_depth_max_dist = 2.0;
 	//c. debug modes
 	my_post.use_auto_exposure = true;
 	my_post.current_debug_mode = debug_mode::NONE; //change debug mode here(NONE, RED, GREEN, BLUE, LUMINANCE)
 	//d. bloom settings
 	my_post.use_bloom = true;
 	my_post.bloom_threshold = 1.2f;	
-	my_post.bloom_intensity = 0.6f;
-	my_post.bloom_radius = 8;
+	my_post.bloom_intensity = 0.35f;
+	my_post.bloom_radius = 4;
 
 	// - 7. RENDER
 	cam.render(bvh_world, env, my_post);

@@ -85,11 +85,22 @@ public:
 
 		// - 4. AI DENOISING -
 		if (use_denoiser) {
+			//beauty pass
 			apply_denoising(image_width, image_height, framebuffer, albedo_buffer, normal_buffer);
-			//save with denoiser only if use_denoiser == true
 			process_framebuffer_to_image(framebuffer, "image_RGB_denoised.png", post, false);
-		}
-		else {
+			//reflection pass
+			if (use_reflection) {
+				std::cerr << "[OIDN] Denoising Reflection Pass...\n";
+				apply_denoising(image_width, image_height, reflection_buffer, albedo_buffer, normal_buffer);
+			}
+			//refraction pass
+			if (use_refraction) {
+				std::cerr << "[OIDN] Denoising Refraction Pass...\n";
+				apply_denoising(image_width, image_height, refraction_buffer, albedo_buffer, normal_buffer);
+			}
+
+			std::cerr << "[OIDN] Multi-Pass Denoising finished.\n";
+		} else {
 			std::cerr << "\nDenoising is DISABLED. Skipping..." << std::endl;
 		}
 
@@ -128,8 +139,7 @@ public:
 			bloom_filter bloom(post.bloom_threshold, post.bloom_intensity, post.bloom_radius);
 			bloom.apply(framebuffer, image_width, image_height);
 			std::cerr << "Bloom Effect applied." << std::endl;
-		}
-		else {
+		} else {
 			std::cerr << "\nBloom Effect is DISABLED. Skipping..." << std::endl;
 		}
 
@@ -232,9 +242,10 @@ private:
 		int num_threads = std::max(1u, std::thread::hardware_concurrency());
 		std::vector<std::thread> threads;
 
+		//lamba function for rendering a block of rows
 		auto render_rows = [&](int start_y, int end_y) {
-			const int aux_sample = std::clamp(samples_per_pixel / 4, 16, 256);
-			const int light_pass_sample = std::clamp(samples_per_pixel / 2, 32, 512);
+			const int aux_sample = std::clamp(samples_per_pixel / 8, 64, 1024); //for albedo, normals, zdepth
+			const int light_pass_sample = samples_per_pixel; //for reflection/refraction
 
 			const double aux_scale = 1.0 / aux_sample;
 			const double light_scale = 1.0 / light_pass_sample;
@@ -248,6 +259,7 @@ private:
 					color pixel_reflection(0, 0, 0);
 					color pixel_refraction(0, 0, 0);
 
+					//sampling loop for each pixel 
 					for (int s = 0; s < samples_per_pixel; s++) {
 						//beauty pass (ray with defocus blur)
 						ray r_beauty = get_ray(i, j);
@@ -285,6 +297,7 @@ private:
 						}
 						//reflection/refraction passes
 						if (s < light_pass_sample) {
+							//get_sharp_ray to avoid defocus blur in reflection/refraction
 							ray r_light = get_sharp_ray(i, j);
 							hit_record rec_l;
 							//calculate reflection/refraction for the same sample
@@ -296,8 +309,9 @@ private:
 								if (rec_l.mat->scatter(r_light, rec_l, attenuation, scattered)) {
 									color scattered_color = ray_color(scattered, world, this->max_depth - 1, env);
 
-									double max_luma = 5.0; //brightness limiter for reflection/refraction
+									//limit maximum luma for reflection/refraction to avoid fireflies
 									double luma = 0.2126 * scattered_color.length();
+									double max_luma = 2.0; //maximum luma threshold
 									if (luma > max_luma) {
 										scattered_color *= (max_luma / luma);
 									}
@@ -324,7 +338,7 @@ private:
 
 					//average all the buffers
 					int idx = j * image_width + i;
-					framebuffer[idx] = pixel_color * pixel_samples_scale; //average by all the samples
+					framebuffer[idx] = pixel_color * light_scale; //average by all the samples
 					//average all the passes by declared aux_sample
 					albedo_buffer[idx] = pixel_albedo * aux_scale;
 					normal_buffer[idx] = pixel_normal * aux_scale;
@@ -492,8 +506,9 @@ void apply_denoising(int width, int height, std::vector<color>& framebuffer,
 	//copying the results back to the framebuffer (from float to double)
 	for (size_t i = 0; i < framebuffer.size(); ++i) {
 		framebuffer[i] = color(f_color[i * 3 + 0], f_color[i * 3 + 1], f_color[i * 3 + 2]);
-		albedo_buffer[i] = color(f_albedo[i * 3 + 0], f_albedo[i * 3 + 1], f_albedo[i * 3 + 2]);
-		normal_buffer[i] = color(f_normal[i * 3 + 0], f_normal[i * 3 + 1], f_normal[i * 3 + 2]);
+
+		//albedo_buffer[i] = color(f_albedo[i * 3 + 0], f_albedo[i * 3 + 1], f_albedo[i * 3 + 2]);
+		//normal_buffer[i] = color(f_normal[i * 3 + 0], f_normal[i * 3 + 1], f_normal[i * 3 + 2]);
 	}
 }
 
@@ -659,17 +674,24 @@ color ray_color(const ray& r, const hittable& world, int depth, const Environmen
 		if (rec.mat->scatter(cur_ray, rec, attenuation, scattered)) {
 			accumulated_attenuation *= attenuation;
 			cur_ray = scattered;
+
+			//early termination if the ray is very weak after 10 bounces
+			if (i > 10 && accumulated_attenuation.length() < 0.00001) {
+				break;
+			}
 		}
 		else {
 			//material absorbed the ray, no more light is gathered
 			break;
 		}
 
-		//optimization "russian roulette" (for rays bouncing optimazation e.g. after 4 hits)
-		if (i > 4) {
+		//optimization "russian roulette" (for rays bouncing optimazation e.g. after 10 hits)
+		if (i > 10) {
 			//chance of survival based on the strongest color channel (luminance)
 			double p = std::max({ accumulated_attenuation.x(), accumulated_attenuation.y(), accumulated_attenuation.z() });
 
+			//prevent division by zero and too small values
+			p = std::clamp(p, 0.05, 0.95);
 			//if the ray is very weak, we give it a chance to survive (e.g., 50% or p)
 			if (random_double() > p) {
 				break; //ray terminated
