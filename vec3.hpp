@@ -61,6 +61,14 @@ public:
 		return *this;
 	}
 
+	//subtraction assignment (v -= u)
+	vec3& operator-=(const vec3& v) {
+		e[0] -= v.e[0];
+		e[1] -= v.e[1];
+		e[2] -= v.e[2];
+		return *this;
+	}
+
 	//division assignment (v /= scalar)
 	vec3& operator/=(double t) {
 		return *this *= 1 / t;

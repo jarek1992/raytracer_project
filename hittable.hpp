@@ -8,12 +8,13 @@ class hit_record {
 public:
 	point3 p;         //intersection point
 	vec3 normal;      //normal vector at the intersection point
+	vec3 tangent;     //tangent vector "u" at the intersection point
+	vec3 bitangent;   //bitangent vector "v" at the intersection point
 	shared_ptr<material> mat; //shared_ptr on material
 	bool front_face = false;;  //flag for front/back face hit;
 	double t = 0.0;         //distance along the ray to the intersection point
 	double u = 0.0;        //u texture coordinate
 	double v = 0.0;        //v texture coordinate
-
 
 	//sets the hit record normal vector, 'outward_normal' is assumed to have unit length
 	void set_face_normal(const ray& r, const vec3& outward_normal) {

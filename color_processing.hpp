@@ -54,7 +54,11 @@ public:
 	bool use_bloom = false;
 	float bloom_threshold = 1.0f;
 	float bloom_intensity = 0.3f;
-	int bloom_radius = 5;;
+	int bloom_radius = 5;
+
+	//post-denoise sharpening
+	bool use_sharpening = true;
+	double sharpen_amount = 0.2; //0.05 - 0.3 suggested range
 
 	color process(color raw_color, float u = 0.5f, float v = 0.5f) const {
 		//1. exposure (double/HDR)
@@ -101,26 +105,26 @@ public:
 			double g = c.y();
 			double b = c.z();
 			switch (current_debug_mode) {
-				case debug_mode::RED: {
-					c = color(r, 0.0, 0.0);
-					break;
-				}
-				case debug_mode::GREEN: {
-					c = color(0.0, g, 0.0);
-					break;
-				}
-				case debug_mode::BLUE: {
-					c = color(0.0, 0.0, b);
-					break;
-				}
-				case debug_mode::LUMINANCE: {
-					double lum = c.luminance();
-					c = color(lum, lum, lum);
-					break;
-				}
-				default:
-					break;
-				}
+			case debug_mode::RED: {
+				c = color(r, 0.0, 0.0);
+				break;
+			}
+			case debug_mode::GREEN: {
+				c = color(0.0, g, 0.0);
+				break;
+			}
+			case debug_mode::BLUE: {
+				c = color(0.0, 0.0, b);
+				break;
+			}
+			case debug_mode::LUMINANCE: {
+				double lum = c.luminance();
+				c = color(lum, lum, lum);
+				break;
+			}
+			default:
+				break;
+			}
 		}
 
 		return linear_to_gamma(c);
@@ -153,6 +157,34 @@ public:
 		}
 		//clamp exposure to avoid over/under exposure
 		exposure = std::clamp(exposure, 0.1f, 10.0f);
+	}
+
+	//post-denoise sharpness filter
+	void apply_sharpening(std::vector<color>& buffer, int width, int height, double amount) const {
+		if (amount <= 0.0) {
+			return;
+		}
+		std::vector<color> original = buffer; //copy of original buffer
+
+		for (size_t y = 1; y < static_cast<size_t>(height) - 1; ++y) {
+			for (size_t x = 1; x < static_cast<size_t>(width) - 1; ++x) {
+				size_t idx = y * width + x;
+
+				//simple sharpenning filter (Laplacian kernel)
+				//[ 0 -1  0]
+				//[-1  5 -1]
+				//[ 0 -1  0]
+
+				color sum = original[idx] * 5.0;
+				sum -= original[(y - 1) * width + x];
+				sum -= original[(y + 1) * width + x];
+				sum -= original[y * width + (x - 1)];
+				sum -= original[y * width + (x + 1)];
+
+				//mix original and sharpened based on amount (interpolation)
+				buffer[idx] = (original[idx] * (1.0 - amount)) + (sum * amount);
+			}
+		}
 	}
 
 private:

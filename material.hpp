@@ -29,26 +29,58 @@ public:
 	virtual color get_albedo(const hit_record& rec) const {
 		return color(0, 0, 0); //default black
 	}
+
+protected:
+	//function to modify normal in hit_record 
+	vec3 get_bumped_normal(const hit_record& rec, shared_ptr<texture> bump_map, double strenth) const {
+		if (!bump_map) {
+			return; //no bump map provided
+		}
+
+		double du = 1.0 / 1024.0; //small offset in u direction
+		double dv = 1.0 / 1024.0; //small offset in v direction
+
+		//get brightness values from bump map texture (black-white map, get R channel)
+		double height_center = bump_map->value(rec.u, rec.v, rec.p).x();
+		double height_u = bump_map->value(rec.u + du, rec.v, rec.p).x();
+		double height_v = bump_map->value(rec.u, rec.v + dv, rec.p).x();
+
+		double f_u = (height_u  - height_center) * strenth; //height difference in u direction
+		double f_v = (height_v  - height_center) * strenth; //height difference in v direction
+
+		//N' = N - f_u * Tangent - f_v * Bitangent
+		vec3 bumped_normal = rec.normal - (f_u * rec.tangent) - (f_v * rec.bitangent);
+		return unit_vector(bumped_normal); //normalize the new normal
+	}
 };
 
 //class for lambertian material
 class lambertian : public material {
 public:
 	//constructor for solid color albedo
-	lambertian(const color& albedo)
+	lambertian(const color& albedo, shared_ptr<texture> bump = nullptr)
 		: tex(make_shared<solid_color>(albedo))
+		, my_bump_texture(bump)
 	{}
 	//constructor for texture albedo
-	lambertian(shared_ptr<texture>tex)
+	lambertian(shared_ptr<texture>tex, shared_ptr<texture> bump = nullptr)
 		: tex(tex)
+		, my_bump_texture(bump)
 	{}
 
 	bool scatter(const ray& r_in, const hit_record& rec, color& attenuation, ray& scattered) const override {
-		auto scatter_direction = rec.normal + random_unit_vector();
+		//get normal from hit record
+		vec3 working_normal = rec.normal;
+		//condition for bump mapping
+		if (my_bump_texture) {
+			working_normal = get_bumped_normal(rec, my_bump_texture, 2.0);
+		}
+
+		auto scatter_direction = working_normal + random_unit_vector();
 
 		//catch degenerate scatter direction
 		if (scatter_direction.near_zero()) {
-			scatter_direction = rec.normal;
+			scatter_direction = working_normal;
 		}
 		//adjust hit point by a small epsilon to avoid self-intersection
 		point3 origin_adjusted = rec.p + rec.normal * ray_epsilon;
@@ -56,7 +88,7 @@ public:
 		scattered = ray(origin_adjusted, scatter_direction, r_in.time());
 		//get albedo from texture
 		attenuation = tex->value(rec.u, rec.v, rec.p);
-		
+
 		return true;
 	}
 
@@ -68,33 +100,42 @@ public:
 
 private:
 	shared_ptr<texture> tex;
+	shared_ptr<texture> my_bump_texture; //bump map texture pointer
 };
 
 //class for metal material with reflections
 class metal : public material {
 public:
 	//constructor for checker texture
-	metal(shared_ptr<texture> a, double f)
+	metal(shared_ptr<texture> a, double f, shared_ptr<texture> bump = nullptr)
 		: albedo(a)
 		, fuzz(f < 1 ? f : 1) //condition for fuzziness 
+		, my_bump_texture(bump)
 	{}
 
 	//constructor for solid color albedo(user friendly)
-	metal(const color& a, double f)
+	metal(const color& a, double f, shared_ptr<texture> bump = nullptr)
 		: albedo(make_shared<solid_color>(a))
 		, fuzz(f < 1 ? f : 1) //condition for fuzziness 
+		, my_bump_texture(bump)
 	{}
 
 	bool scatter(const ray& r_in, const hit_record& rec, color& attenuation, ray& scattered) const override {
+		//get normal from hit record
+		vec3 working_normal = rec.normal;
+		//condition for bump mapping
+		if (my_bump_texture) {
+			working_normal = get_bumped_normal(rec, my_bump_texture, 2.0);
+		}
 		//mirror-like reflection
 		vec3 v = unit_vector(r_in.direction());
-		vec3 reflected = v - 2 * dot(v, rec.normal) * rec.normal;
+		vec3 reflected = reflect(v, working_normal);
 
 		//adding fuzziness to the reflection
 		vec3 scattered_direction = unit_vector(reflected + (fuzz * random_unit_vector()));
 
 		//moving the ray origin a bit off the surface to prevent self-intersection (shadow acne)
-		point3 shadow_orig = rec.p + (1e-4 * rec.normal);
+		point3 shadow_orig = rec.p + (ray_epsilon * rec.normal);
 
 		scattered = ray(shadow_orig, scattered_direction);
 		attenuation = albedo->value(rec.u, rec.v, rec.p);
@@ -111,13 +152,14 @@ public:
 private:
 	shared_ptr<texture> albedo;
 	double fuzz;
+	shared_ptr<texture> my_bump_texture; //bump map texture pointer
 };
 
 //class for dielectric material always refracts
 class dielectric : public material {
 public:
-	dielectric(double refraction_index) 
-		: refraction_index(refraction_index) 
+	dielectric(double refraction_index)
+		: refraction_index(refraction_index)
 	{}
 
 	bool scatter(const ray& r_in, const hit_record& rec, color& attenuation, ray& scattered) const override {

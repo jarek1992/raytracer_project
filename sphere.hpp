@@ -42,7 +42,22 @@ public:
 		rec.p = r.at(rec.t);
 		vec3 outward_normal = (rec.p - center) / radius;
 		rec.set_face_normal(r, outward_normal);
+
+		//set uv coordinates (for texturizing and bump direction)
 		get_sphere_uv(outward_normal, rec.u, rec.v);
+
+		//calculate tangent and bitangent vectors
+		vec3 world_up = vec3(0, 1, 0);
+		rec.tangent = cross(world_up, rec.normal);
+
+		//handle case when normal is parallel to world_up
+		if (rec.tangent.length_squared() < 0.001) { 
+			rec.tangent = cross(vec3(0, 0, 1), rec.normal);
+		}
+		rec.tangent = unit_vector(rec.tangent);
+		//bitangent is cross product of normal and tangent
+		rec.bitangent = cross(rec.normal, rec.tangent);
+
 		rec.mat = mat;
 
 		return true;

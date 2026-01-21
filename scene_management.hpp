@@ -76,7 +76,7 @@ hittable_list build_geometry(MaterialLibrary& mat_lib) {
 	world.add(teapot_final);
 	//sphere
 	auto big_sphere_geom = make_shared<sphere>(point3(0.0, 0.0, 0.0), 1.0, nullptr);
-	auto big_sphere_instance = make_shared<material_instance>(big_sphere_geom, mat_lib.get("brushed_aluminium"));
+	auto big_sphere_instance = make_shared<material_instance>(big_sphere_geom, mat_lib.get("mirror"));
 	world.add(make_shared<translate>(big_sphere_instance, point3(0.0, 1.0, 0.0)));
 	//small sphere #1
 	auto small_sphere_geom = make_shared<sphere>(point3(0.0, 0.0, 0.0), 0.5, nullptr);
@@ -87,7 +87,7 @@ hittable_list build_geometry(MaterialLibrary& mat_lib) {
 	world.add(make_shared<translate>(small_bubble_instance, point3(3.0, 0.5, 1.0)));
 	//cube
 	auto big_cube_geom = make_shared<cube>(point3(0.0, 0.0, 0.0), nullptr);
-	auto big_cube_instance = make_shared<material_instance>(big_cube_geom, mat_lib.get("neon_red"));
+	auto big_cube_instance = make_shared<material_instance>(big_cube_geom, mat_lib.get("glass"));
 	world.add(make_shared<translate>(big_cube_instance, point3(0.0, 1.0, 2.5)));
 
 	// - 3. RANDOM SPREADED GEOMETRIES

@@ -49,8 +49,8 @@ int main() {
 	camera cam;
 	//a. image aspects ratio
 	cam.aspect_ratio = 16.0 / 9.0;
-	cam.image_width = 800;
-	cam.samples_per_pixel = 1500;
+	cam.image_width = 600;
+	cam.samples_per_pixel = 800;
 	cam.max_depth = 50;
 	//b. camera settings
 	cam.vfov = 30; //vertical field of the view
@@ -88,6 +88,10 @@ int main() {
 	my_post.bloom_threshold = 1.2f;	
 	my_post.bloom_intensity = 0.35f;
 	my_post.bloom_radius = 4;
+	//e. sharpening settings
+	my_post.use_sharpening = true;
+	my_post.sharpen_amount = 0.1; //0.05 - 0.3 suggested range
+
 
 	// - 7. RENDER
 	cam.render(bvh_world, env, my_post);
