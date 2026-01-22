@@ -512,7 +512,6 @@ private:
 		}
 
 		//AI execution
-		std::cerr << "Applying HQ AI Denoising..." << std::endl;
 		filter.execute();
 
 		const char* err;

@@ -73,17 +73,20 @@ public:
 		rec.t = tmin; //set distance from starting point of the radius to the place of intersection
 		rec.p = r.at(rec.t);
 
-		//updated compute normal function
-		rec.normal = compute_normal(rec.p - center);
+		//calculate local vector in cube space (centered at origin)
+		vec3 local_p = rec.p - center;
+
+		//set normal,UV and tangents
+		set_cube_hit_data(local_p, rec);
 
 		rec.mat = mat; //assign cube material
 		rec.set_face_normal(r, rec.normal);
-	
+
 		return true;
 	}
 
-	void set_material(std::shared_ptr<material> m) { 
-		mat = m; 
+	void set_material(std::shared_ptr<material> m) {
+		mat = m;
 	}
 
 private:
@@ -93,17 +96,62 @@ private:
 	point3 min_p;
 	point3 max_p;
 
-	//function to determine normal vector in intersection
-	vec3 compute_normal(const point3& p) const {
+	////function to determine normal vector in intersection
+	//vec3 compute_normal(const point3& p) const {
+	//	const double EPS = 1e-3;
+
+	//	if (std::fabs(p.x() + half_extents.x()) < EPS) return vec3(-1, 0, 0); //mix_x (back face)
+	//	if (std::fabs(p.x() - half_extents.x()) < EPS) return vec3(1, 0, 0); //max_x (front face)
+
+	//	if (std::fabs(p.y() + half_extents.y()) < EPS) return vec3(0, -1, 0); //min_y (bottom face)
+	//	if (std::fabs(p.y() - half_extents.y()) < EPS) return vec3(0, 1, 0); //max_y (top face)
+
+	//	if (std::fabs(p.z() + half_extents.z()) < EPS) return vec3(0, 0, -1); //min_z (left face)
+	//	return vec3(0, 0, 1);
+	//}
+
+	//function to set hit record data (normal, UV coordinates, tangent, bitangent)
+	void set_cube_hit_data(const vec3& p, hit_record& rec) const {
 		const double EPS = 1e-3;
 
-		if (std::fabs(p.x() + half_extents.x()) < EPS) return vec3(-1, 0, 0); //mix_x (back face)
-		if (std::fabs(p.x() - half_extents.x()) < EPS) return vec3(1, 0, 0); //max_x (front face)
+		//side X (left/right)
+		if (std::fabs(p.x() + half_extents.x()) < EPS) { // MIN_X
+			rec.normal = vec3(-1, 0, 0);
+			rec.u = (p.z() + half_extents.z()) / (2 * half_extents.z());
+			rec.v = (p.y() + half_extents.y()) / (2 * half_extents.y());
+			rec.tangent = vec3(0, 0, 1);
+		} else if (std::fabs(p.x() - half_extents.x()) < EPS) { // MAX_X
+			rec.normal = vec3(1, 0, 0);
+			rec.u = (p.z() + half_extents.z()) / (2 * half_extents.z());
+			rec.v = (p.y() + half_extents.y()) / (2 * half_extents.y());
+			rec.tangent = vec3(0, 0, -1);
+		}
+		//side Y (bottom/top)
+		else if (std::fabs(p.y() + half_extents.y()) < EPS) { // MIN_Y
+			rec.normal = vec3(0, -1, 0);
+			rec.u = (p.x() + half_extents.x()) / (2 * half_extents.x());
+			rec.v = (p.z() + half_extents.z()) / (2 * half_extents.z());
+			rec.tangent = vec3(1, 0, 0);
+		} else if (std::fabs(p.y() - half_extents.y()) < EPS) { // MAX_Y
+			rec.normal = vec3(0, 1, 0);
+			rec.u = (p.x() + half_extents.x()) / (2 * half_extents.x());
+			rec.v = (p.z() + half_extents.z()) / (2 * half_extents.z());
+			rec.tangent = vec3(-1, 0, 0);
+		}
+		//side Z (front/back)
+		else if (std::fabs(p.z() + half_extents.z()) < EPS) { // MIN_Z
+			rec.normal = vec3(0, 0, -1);
+			rec.u = (half_extents.x() - p.x()) / (2 * half_extents.x());
+			rec.v = (p.y() + half_extents.y()) / (2 * half_extents.y());
+			rec.tangent = vec3(-1, 0, 0);
+		} else { // MAX_Z
+			rec.normal = vec3(0, 0, 1);
+			rec.u = (p.x() + half_extents.x()) / (2 * half_extents.x());
+			rec.v = (p.y() + half_extents.y()) / (2 * half_extents.y());
+			rec.tangent = vec3(1, 0, 0);
+		}
 
-		if (std::fabs(p.y() + half_extents.y()) < EPS) return vec3(0, -1, 0); //min_y (bottom face)
-		if (std::fabs(p.y() - half_extents.y()) < EPS) return vec3(0, 1, 0); //max_y (top face)
-
-		if (std::fabs(p.z() + half_extents.z()) < EPS) return vec3(0, 0, -1); //min_z (left face)
-		return vec3(0, 0, 1);
+		//bitangent calculation (orthogonal to normal and tangent)
+		rec.bitangent = cross(rec.normal, rec.tangent);
 	}
 };
