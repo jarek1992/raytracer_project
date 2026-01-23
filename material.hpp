@@ -164,9 +164,24 @@ private:
 //class for dielectric material always refracts
 class dielectric : public material {
 public:
-	dielectric(double refraction_index, const color& a = color(1.0, 1.0, 1.0), shared_ptr<texture> bump = nullptr, double strength = 1.0)
-		: refraction_index(refraction_index)
+	//constructor for simple dielectric or colored dielectric
+	dielectric(double ri, const color& a = color(1.0, 1.0, 1.0))
+		: refraction_index(ri)
 		, albedo(a)
+		, my_bump_texture(nullptr)
+		, bump_strength(1.0)
+	{}
+	//constructor for bump mapping dielectric (color and strength of bump)
+	dielectric(double ri, const color& a, shared_ptr<texture> bump, double strength)
+		: refraction_index(ri)
+		, albedo(a)
+		, my_bump_texture(bump)
+		, bump_strength(strength)
+	{}
+	//constructor for bump mapping dielectric (default white color)
+	dielectric(double ri, shared_ptr<texture> bump, double strength)
+		: refraction_index(ri)
+		, albedo(color(1.0, 1.0, 1.0))
 		, my_bump_texture(bump)
 		, bump_strength(strength)
 	{}
@@ -192,8 +207,7 @@ public:
 		//direction of the angle of incidence
 		if (cannot_refract || reflectance(cos_theta, ri) > random_double()) {
 			direction = reflect(unit_direction, working_normal);
-		}
-		else {
+		} else {
 			direction = refract(unit_direction, working_normal, ri);
 		}
 

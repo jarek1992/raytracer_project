@@ -82,7 +82,7 @@ hittable_list build_geometry(MaterialLibrary& mat_lib) {
 
 	// - 1. FLOOR -
 	auto ground_geom = make_shared<sphere>(point3(0.0, -1000.0, 0.0), 1000.0, nullptr);
-	world.add(make_shared<material_instance>(ground_geom, mat_lib.get("turquoise_water")));
+	world.add(make_shared<material_instance>(ground_geom, mat_lib.get("reflective_checker_mat")));
 
 	// - 2. FREE STANDING GEOMETRIES (in the middle)
 	//
