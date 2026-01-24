@@ -55,7 +55,7 @@ void load_materials(MaterialLibrary& mat_lib) {
 	mat_lib.add("glass_bubble", make_shared<dielectric>(1.0 / 1.5));
 
 	mat_lib.add("glass", make_shared<dielectric>(1.5));
-	mat_lib.add("foggy_glass", make_shared<dielectric>(1.5, concrete_bump, 0.1));
+	mat_lib.add("foggy_glass", make_shared<dielectric>(1.5, concrete_bump, 0.02));
 
 	mat_lib.add("pure_mirror", make_shared<metal>(color(1.0, 1.0, 1.0), 0.0));
 	mat_lib.add("random_diffuse", make_shared<lambertian>(color::random() * color::random()));
@@ -66,7 +66,7 @@ void load_materials(MaterialLibrary& mat_lib) {
 	mat_lib.add("neon_yellow", make_shared<diffuse_light>(color(1.0, 0.8, 0.0) * 6.0));
 	mat_lib.add("neon_white", make_shared<diffuse_light>(color(1.0, 1.0, 1.0) * 6.0));
 	mat_lib.add("neon_red", make_shared<diffuse_light>(color(1.0, 0.1, 0.1) * 6.0));
-	mat_lib.add("ceiling_light", make_shared<diffuse_light>(color(1.0, 1.0, 1.0) * 15.0));
+	mat_lib.add("ceiling_light", make_shared<diffuse_light>(color(1.0, 0.0, 0.5) * 10.0));
 	//... add more materials as needed
 
 	//floor checker material 
@@ -182,13 +182,13 @@ hittable_list build_geometry(MaterialLibrary& mat_lib) {
 	}
 
 	// - 4. LIGHTS 
-	/*auto light_geom = make_shared<cube>(point3(-0.2, -0.2, -0.2), point3(0.2, 0.2, 0.2), nullptr);
+	auto light_geom = make_shared<cube>(point3(-0.2, -0.2, -0.2), point3(0.2, 0.2, 0.2), nullptr);
 	auto light_instance = make_shared<material_instance>(light_geom, mat_lib.get("ceiling_light"));
-	world.add(make_shared<translate>(light_instance, point3(0.0, 15.0, 0.0)));*/
+	world.add(make_shared<translate>(light_instance, point3(0.0, 15.0, 0.0)));
 
 	// - 5. ENVIRONMENTAL FOG
-	auto fog_boundary = make_shared<sphere>(point3(0, 0, 0), 30.0, nullptr);
-	world.add(make_shared<constant_medium>(fog_boundary, 0.05, color(0.65, 0.55, 0.60))); //fog density: 0.01 - delicate fog, 0.1 - dense fog
+	auto fog_boundary = make_shared<sphere>(point3(0.0, 0.0, 0.0), 30.0, nullptr);
+	world.add(make_shared<constant_medium>(fog_boundary, 0.1, color(0.0, 0.5, 1.0))); //fog density: 0.01 - delicate fog, 0.1 - dense fog
 
 	return world;
 }

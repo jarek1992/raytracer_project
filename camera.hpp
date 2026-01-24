@@ -192,8 +192,8 @@ public:
 	}
 
 private:
-	int image_height; //rendered image height
-	double pixel_samples_scale; //color scale factor for a sum of pixel samples
+	int image_height = 0; //rendered image height
+	double pixel_samples_scale = 0.0; //color scale factor for a sum of pixel samples
 	point3 center; //camera center
 	point3 pixel00_loc; //location of pixel 0, 0
 	vec3 pixel_delta_u; //offset to pixel to the right
@@ -644,8 +644,7 @@ private:
 			auto theta = acos(std::clamp(d.y(), -1.0, 1.0));
 
 			env_color = env.hdr_texture->value(phi / (2 * pi), theta / pi, point3(0, 0, 0));
-		}
-		else {
+		} else {
 			//physcial sun model
 			double sun_height = env.sun_direction.y();
 			double day_factor = std::clamp(sun_height * 4.0, 0.0, 1.0);

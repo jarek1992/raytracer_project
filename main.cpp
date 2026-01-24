@@ -39,7 +39,7 @@ int main() {
 
 	//b. physical sun with sky model: 
 	env.mode = EnvironmentSettings::PHYSICAL_SUN;
-	env.sun_direction = unit_vector(vec3(-0.4, -0.3, -0.2));
+	env.sun_direction = unit_vector(vec3(-0.4, 0.3, -0.2));
 	env.sun_color = color(0.8, 0.1, 0.1);
 	env.sun_intensity = 1.0;
 	env.sun_size = 5000.0; //higher value makes sun disc smaller
@@ -50,8 +50,8 @@ int main() {
 	//a. image aspects ratio
 	cam.aspect_ratio = 16.0 / 9.0;
 	cam.image_width = 800;
-	cam.samples_per_pixel = 1000;
-	cam.max_depth = 50;
+	cam.samples_per_pixel = 200;
+	cam.max_depth = 35;
 	//b. camera settings
 	cam.vfov = 30; //vertical field of the view
 	cam.lookfrom = point3(10, 1.5, 0); //cords for camera source
@@ -76,18 +76,18 @@ int main() {
 	my_post.saturation = 1.0f;
 	my_post.color_balance = vec3(1.0, 1.0, 1.0);
 	my_post.hue_shift = 0.0f; //in degrees [-180, 180]
-	my_post.vignette_intensity = 0.0;
+	my_post.vignette_intensity = 0.35f;
 	my_post.use_aces_tone_mapping = true;
 	//b. z-depth settings
 	my_post.z_depth_max_dist = 2.0;
 	//c. debug modes
 	my_post.use_auto_exposure = true;
-	my_post.current_debug_mode = debug_mode::NONE; //change debug mode here(NONE, RED, GREEN, BLUE, LUMINANCE)
+	my_post.current_debug_mode = debug_mode::LUMINANCE; //change debug mode here(NONE, RED, GREEN, BLUE, LUMINANCE)
 	//d. bloom settings
 	my_post.use_bloom = true;
 	my_post.bloom_threshold = 1.2f;	
-	my_post.bloom_intensity = 0.35f;
-	my_post.bloom_radius = 4;
+	my_post.bloom_intensity = 0.8f;
+	my_post.bloom_radius = 8;
 	//e. sharpening settings
 	my_post.use_sharpening = true;
 	my_post.sharpen_amount = 0.1; //0.05 - 0.3 suggested range
