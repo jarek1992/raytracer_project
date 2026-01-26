@@ -63,11 +63,29 @@ public:
 	color process(color raw_color, float u = 0.5f, float v = 0.5f) const {
 		//1. exposure (double/HDR)
 		color c = raw_color * static_cast<double>(exposure);
-		//tone mapping apply_aces (0-1 range)
+		//2. color balance
+		c = color(
+			c.x() * color_balance.x(),
+			c.y() * color_balance.y(),
+			c.z() * color_balance.z());
+		//3. contrast (0-1 range)
+		if (std::abs(contrast - 1.0f) > 0.001f) {
+			c = apply_contrast(c, contrast);
+		}
+		//4. HSV operations
+		vec3 hsv = rgb_to_hsv(c);
+		//5. hue shift and saturation
+		hsv[0] = std::fmod(hsv[0] + hue_shift, 360.0f); //hue shift
+		if (hsv[0] < 0) {
+			hsv[0] += 360.0f;
+		}
+		hsv[1] = std::clamp(static_cast<float>(hsv[1] * saturation), 0.0f, 1.0f); //saturation
+		c = hsv_to_rgb(hsv);
+		//6. tone mapping apply_aces (0-1 range)
 		if (use_aces_tone_mapping) {
 			c = apply_aces(c);
 		}
-		//clamping before color operations 
+		//7. clamping before color operations 
 		//
 		//prevent from weird values like 1.5, -1 for constrast,hsv 
 		c = color(
@@ -75,31 +93,13 @@ public:
 			std::clamp(static_cast<float>(c.y()), 0.0f, 1.0f),
 			std::clamp(static_cast<float>(c.z()), 0.0f, 1.0f)
 		);
-		//2. contrast (0-1 range)
-		if (std::abs(contrast - 1.0f) > 0.001f) {
-			c = apply_contrast(c, contrast);
-		}
-		//3. HSV operations
-		vec3 hsv = rgb_to_hsv(c);
-		//4. hue shift and saturation
-		hsv[0] = std::fmod(hsv[0] + hue_shift, 360.0f); //hue shift
-		if (hsv[0] < 0) {
-			hsv[0] += 360.0f;
-		}
-		hsv[1] = std::clamp(static_cast<float>(hsv[1] * saturation), 0.0f, 1.0f); //saturation
-		c = hsv_to_rgb(hsv);
-		//5. color balance
-		c = color(
-			c.x() * color_balance.x(),
-			c.y() * color_balance.y(),
-			c.z() * color_balance.z());
-		//6. vignette effect
+		//8. vignette effect
 		if (vignette_intensity > 0.0f) {
 			float dist = std::sqrt((u - 0.5f) * (u - 0.5f) + (v - 0.5f) * (v - 0.5f));
 			float vig = std::clamp(1.0f - dist * vignette_intensity, 0.0f, 1.0f);
 			c *= static_cast<double>(vig);
 		}
-		//7. flags debug modes RGB/Luminance
+		//9. flags debug modes RGB/Luminance
 		if (current_debug_mode != debug_mode::NONE) {
 			double r = c.x();
 			double g = c.y();
