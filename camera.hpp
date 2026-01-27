@@ -83,10 +83,10 @@ public:
 	}
 
 	//render
-	void render(const hittable& world, const EnvironmentSettings& env, const post_processor& post) {
+	void render(const hittable& world, const EnvironmentSettings& env, const post_processor& post, std::atomic<bool>& render_flag) {
 		// - 1. INITIALIZE - 
 		initialize();
-		
+
 		// - 2. MULTITHREADING  -
 		//initialize render_accumulator for ImGui display
 		render_accumulator.assign(static_cast<size_t>(image_width) * image_height, color(0.0, 0.0, 0.0));
@@ -96,11 +96,18 @@ public:
 		std::vector<color> z_depth_buffer(static_cast<size_t>(image_width) * image_height);
 		std::vector<color> reflection_buffer(static_cast<size_t>(image_width) * image_height);
 		std::vector<color> refraction_buffer(static_cast<size_t>(image_width) * image_height);
-		execute_render_threads(world, env, render_accumulator,
 
+		//transfer reference to is_rendering so threads can check if they should stop working
+		execute_render_threads(world, env, render_accumulator,
 			albedo_buffer, normal_buffer, z_depth_buffer,
-			reflection_buffer, refraction_buffer, post.z_depth_max_dist);
-		
+			reflection_buffer, refraction_buffer, post.z_depth_max_dist,
+			render_flag);
+
+		//if rendering was cancelled, skip post-processing steps 
+		if (!render_flag.load()) {
+			return;
+		}
+
 		// - 3. AUTO-EXPOSURE -
 		if (post.use_auto_exposure) {
 			image_statistics stats = post.analyze_framebuffer(render_accumulator);
@@ -110,7 +117,7 @@ public:
 		} else {
 			std::cerr << "\n[Exposure] Manual mode active. Value: " << post.exposure << "\n";
 		}
-		
+
 		// - 4. AI DENOISING AND POST-DENOISE SHARPENING -
 		if (use_denoiser) {
 			//a. denoise all the necessary passes (linear hdr)
@@ -330,7 +337,11 @@ private:
 		std::vector<color>& z_depth_buffer,
 		std::vector<color>& reflection_buffer,
 		std::vector<color>& refraction_buffer,
-		double z_depth_max_dist) {
+		double z_depth_max_dist,
+		std::atomic<bool>& render_flag) {
+		//reset atomic counter for progress bar
+		this->lines_rendered = 0;
+		//local atomic counter for progress bar in this function
 		std::atomic<int> lines_done = 0;
 
 		//number of threads = number of cores
@@ -346,6 +357,10 @@ private:
 			const double light_scale = 1.0 / light_pass_sample;
 
 			for (int j = start_y; j < end_y; ++j) {
+				//check if rendering should stop
+				if (!render_flag.load()) {
+					return;
+				}
 				for (int i = 0; i < image_width; ++i) {
 					color pixel_color(0, 0, 0);
 					color pixel_albedo(0, 0, 0);
@@ -356,6 +371,9 @@ private:
 
 					//sampling loop for each pixel 
 					for (int s = 0; s < samples_per_pixel; s++) {
+						if (!render_flag.load()) {
+							return;
+						}
 						//beauty pass (ray with defocus blur)
 						ray r_beauty = get_ray(i, j);
 						pixel_color += ray_color(r_beauty, world, this->max_depth, env);
@@ -418,7 +436,8 @@ private:
 
 									if (is_specular) {
 										pixel_reflection += attenuation * scattered_color;
-									} else if (dot(scattered.direction(), rec_l.normal) < 0) {
+									}
+									else if (dot(scattered.direction(), rec_l.normal) < 0) {
 										//if not mirror check if glass 
 										pixel_refraction += attenuation * scattered_color;
 									}
@@ -447,7 +466,7 @@ private:
 				//increase the global counter for Imgui progress bar 
 				this->lines_rendered++;
 			}
-		};
+			};
 
 		//split the work between threads
 		int rows_per_thread = image_height / num_threads;
@@ -460,7 +479,7 @@ private:
 		}
 
 		//progress bar
-		while (lines_done < image_height) {
+		while (lines_done < image_height && render_flag.load()) {
 			int done = lines_done.load();
 			double percent = double(done) / image_height;
 			int barWidth = 40;
@@ -481,15 +500,20 @@ private:
 			std::this_thread::sleep_for(std::chrono::milliseconds(200));
 		}
 		//final 100% while loop finished
-		std::cerr << "\rProgress : 100% (" << image_height << "/" << image_height << " lines)\n";
-
+		if (render_flag.load()) {
+			//100% only if we actually reached the end without cancellation
+			std::cerr << "\rProgress : 100% (" << image_height << "/" << image_height << " lines)          \n";
+		} else {
+			//inform about render cancellation
+			std::cerr << "\rRender cancelled/restarting...                                         \n";
+		}
 		//join threads - finished
-		for (auto& th : threads)
-		{
-			th.join();
+		for (auto& th : threads) {
+			if (th.joinable()) {
+				th.join();
+			}
 		}
 	}
-
 	void apply_denoising(int width, int height, std::vector<color>& framebuffer,
 		std::vector<color>& albedo_buffer, std::vector<color>& normal_buffer) {
 
