@@ -52,6 +52,10 @@ int main(int argc, char* argv[]) {
 	bvh_world.add(make_shared<bvh_node>(world));
 	// - 4. CREATE ENVIRONMENT -
 	EnvironmentSettings env;
+	//loading 
+	env.hdr_texture = make_shared<image_texture>("assets/sunny_rose_garden_2k.hdr", true); 
+	env.mode = EnvironmentSettings::HDR_MAP;
+	env.intensity = 1.0;
 	// - 5. CREATE CAMERA  -
 	camera cam;
 	// - 6. POST-PROCESSING -

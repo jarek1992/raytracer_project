@@ -22,5 +22,5 @@ struct EnvironmentSettings {
 	vec3 sun_direction = unit_vector(vec3(1.0, 0.5, -0.5));
 	color sun_color = color(1.0, 0.9, 0.8);
 	double sun_intensity = 5.0;
-	double sun_size = 100; //higher values = smaller sun disk
+	double sun_size = 10; //higher values = smaller sun disk
 };

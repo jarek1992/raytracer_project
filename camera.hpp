@@ -114,7 +114,8 @@ public:
 			std::cerr << "\n[Auto-Exposure] Average Luminance: " << stats.average_luminance << "\n";
 			post.apply_auto_exposure(stats);
 			std::cerr << "[Auto-Exposure] New Exposure Value: " << post.exposure << "\n";
-		} else {
+		}
+		else {
 			std::cerr << "\n[Exposure] Manual mode active. Value: " << post.exposure << "\n";
 		}
 
@@ -401,7 +402,8 @@ private:
 								double depth_val = rec.t / z_depth_max_dist;
 								double z_depth = 1.0 - std::clamp(depth_val, 0.0, 1.0);
 								pixel_zdepth += color(z_depth, z_depth, z_depth);
-							} else {
+							}
+							else {
 								//backgrounds for passes aux(albedo, normals, zdepth)
 								pixel_albedo += color(0.0, 0.0, 0.0);
 								pixel_normal += color(0.5, 0.5, 1.0);
@@ -442,7 +444,8 @@ private:
 										pixel_refraction += attenuation * scattered_color;
 									}
 								}
-							} else {
+							}
+							else {
 								//backgrounds for reflection/refraction
 								pixel_reflection += color(0.0, 0.0, 0.0);
 								pixel_refraction += color(0.0, 0.0, 0.0);
@@ -503,7 +506,8 @@ private:
 		if (render_flag.load()) {
 			//100% only if we actually reached the end without cancellation
 			std::cerr << "\rProgress : 100% (" << image_height << "/" << image_height << " lines)          \n";
-		} else {
+		}
+		else {
 			//inform about render cancellation
 			std::cerr << "\rRender cancelled/restarting...                                         \n";
 		}
@@ -654,7 +658,8 @@ private:
 					float v = static_cast<float>(j) / (image_height - 1);
 					//ACES, saturation, contrast, vignette, gamma correction
 					pix_color = pp.process(pix_color, u, v);
-				} else {
+				}
+				else {
 					pix_color = color(
 						std::clamp(pix_color.x(), 0.0, 1.0),
 						std::clamp(pix_color.y(), 0.0, 1.0),
@@ -724,7 +729,10 @@ private:
 		vec3 unit_dir = unit_vector(r.direction());
 		color env_color;
 
-		if (env.mode == EnvironmentSettings::HDR_MAP && env.hdr_texture) {
+		if (env.mode == EnvironmentSettings::HDR_MAP) {
+			if (!env.hdr_texture) {
+				return color(0, 0, 0);
+			}
 			vec3 d = unit_dir;
 
 			//HDR rotation 
@@ -733,38 +741,35 @@ private:
 			double x1 = cos_y * d.x() - sin_y * d.z();
 			double z1 = sin_y * d.x() + cos_y * d.z();
 			d = vec3(x1, d.y(), z1);
-
+			//HDR tilt
 			double cos_t = cos(env.hdri_tilt);
 			double sin_t = sin(env.hdri_tilt);
 			double y2 = cos_t * d.y() - sin_t * d.z();
 			double z2 = sin_t * d.y() + cos_t * d.z();
 			d = vec3(d.x(), y2, z2);
-
 			//uv mapping
 			auto phi = atan2(d.z(), d.x()) + pi;
 			auto theta = acos(std::clamp(d.y(), -1.0, 1.0));
 
-			env_color = env.hdr_texture->value(phi / (2 * pi), theta / pi, point3(0, 0, 0));
+			return env.hdr_texture->value(phi / (2 * pi), theta / pi, point3(0, 0, 0)) * env.intensity;
 		}
-		else {
-			//physcial sun model
-			double sun_height = env.sun_direction.y();
-			double day_factor = std::clamp(sun_height * 4.0, 0.0, 1.0);
-			double sunset_factor = std::clamp(1.0 - std::abs(sun_height - 0.1) * 5.0, 0.0, 1.0);
+		//physcial sun model
+		double sun_height = env.sun_direction.y();
+		double day_factor = std::clamp(sun_height * 4.0, 0.0, 1.0);
+		double sunset_factor = std::clamp(1.0 - std::abs(sun_height - 0.1) * 5.0, 0.0, 1.0);
 
-			color zenit_color = color(0.1, 0.2, 0.5) * (1.0 - day_factor) + color(0.4, 0.6, 1.0) * day_factor;
-			color horizon_color = color(0.1, 0.05, 0.01) * (1.0 - day_factor) + color(0.8, 0.9, 1.0) * day_factor;
-			horizon_color = horizon_color * (1.0 - sunset_factor) + color(1.0, 0.4, 0.1) * sunset_factor;
+		color zenit_color = color(0.1, 0.2, 0.5) * (1.0 - day_factor) + color(0.4, 0.6, 1.0) * day_factor;
+		color horizon_color = color(0.1, 0.05, 0.01) * (1.0 - day_factor) + color(0.8, 0.9, 1.0) * day_factor;
+		horizon_color = horizon_color * (1.0 - sunset_factor) + color(1.0, 0.4, 0.1) * sunset_factor;
 
-			auto a = 0.5 * (unit_dir.y() + 1.0);
-			env_color = (1.0 - a) * horizon_color + a * zenit_color;
+		auto a = 0.5 * (unit_dir.y() + 1.0);
+		env_color = (1.0 - a) * horizon_color + a * zenit_color;
 
-			double sun_focus = dot(unit_dir, env.sun_direction);
-			if (sun_focus > 0.0 && sun_height > -0.1) {
-				color current_sun_color = env.sun_color * (1.0 - sunset_factor) + color(1.0, 0.3, 0.1) * sunset_factor;
-				double visibility = std::clamp(sun_height * 10.0 + 0.5, 0.0, 1.0);
-				env_color += current_sun_color * std::pow(sun_focus, env.sun_size) * env.sun_intensity * visibility;
-			}
+		double sun_focus = dot(unit_dir, env.sun_direction);
+		if (sun_focus > 0.0 && sun_height > -0.1) {
+			color current_sun_color = env.sun_color * (1.0 - sunset_factor) + color(1.0, 0.3, 0.1) * sunset_factor;
+			double visibility = std::clamp(sun_height * 10.0 + 0.5, 0.0, 1.0);
+			env_color += current_sun_color * std::pow(sun_focus, env.sun_size) * env.sun_intensity * visibility;
 		}
 		return env_color * env.intensity;
 	}
