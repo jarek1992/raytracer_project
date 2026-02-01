@@ -114,8 +114,7 @@ public:
 			std::cerr << "\n[Auto-Exposure] Average Luminance: " << stats.average_luminance << "\n";
 			post.apply_auto_exposure(stats);
 			std::cerr << "[Auto-Exposure] New Exposure Value: " << post.exposure << "\n";
-		}
-		else {
+		} else {
 			std::cerr << "\n[Exposure] Manual mode active. Value: " << post.exposure << "\n";
 		}
 
@@ -506,8 +505,7 @@ private:
 		if (render_flag.load()) {
 			//100% only if we actually reached the end without cancellation
 			std::cerr << "\rProgress : 100% (" << image_height << "/" << image_height << " lines)          \n";
-		}
-		else {
+		} else {
 			//inform about render cancellation
 			std::cerr << "\rRender cancelled/restarting...                                         \n";
 		}
@@ -731,7 +729,7 @@ private:
 
 		if (env.mode == EnvironmentSettings::HDR_MAP) {
 			if (!env.hdr_texture) {
-				return color(0, 0, 0);
+				return color(0.0, 0.0, 0.0);
 			}
 			vec3 d = unit_dir;
 
@@ -751,7 +749,7 @@ private:
 			auto phi = atan2(d.z(), d.x()) + pi;
 			auto theta = acos(std::clamp(d.y(), -1.0, 1.0));
 
-			return env.hdr_texture->value(phi / (2 * pi), theta / pi, point3(0, 0, 0)) * env.intensity;
+			return env.hdr_texture->value(phi / (2 * pi), theta / pi, point3(0.0, 0.0, 0.0)) * env.intensity;
 		}
 		//physcial sun model
 		double sun_height = env.sun_direction.y();

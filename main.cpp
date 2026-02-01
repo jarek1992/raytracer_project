@@ -38,7 +38,6 @@ GLuint create_texture_from_buffer(const std::vector<color>& buffer, int width, i
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 
 	return textureID;
-
 }
 
 int main(int argc, char* argv[]) {
@@ -53,7 +52,7 @@ int main(int argc, char* argv[]) {
 	// - 4. CREATE ENVIRONMENT -
 	EnvironmentSettings env;
 	//loading 
-	env.hdr_texture = make_shared<image_texture>("assets/sunny_rose_garden_2k.hdr", true); 
+	env.hdr_texture = make_shared<image_texture>("assets/sunny_rose_garden_2k.hdr", true);
 	env.mode = EnvironmentSettings::HDR_MAP;
 	env.intensity = 1.0;
 	// - 5. CREATE CAMERA  -
@@ -75,31 +74,9 @@ int main(int argc, char* argv[]) {
 
 	bool running = true;
 	std::atomic<bool> is_rendering{ false }; //flag to indicate if rendering is in progress
+	bool is_active_session = false;
 	GLuint rendered_texture = 0; //global texture ID for rendered image
-
-	//lambda function to restart a new render when settings change (interactive preview window)
-	auto start_new_render = [&]() {
-		// 1. Wymuś stop obecnego renderu
-		is_rendering = false;
-
-		// 2. Bardzo ważne: Poczekaj chwilę, aż wątek zauważy zmianę flagi 
-		// lub upewnij się, że Twoja funkcja cam.render() sprawdza is_rendering w pętli
-
-		// 3. Zaktualizuj wysokość na podstawie nowych proporcji
-		cam.image_height = static_cast<int>(cam.image_width / cam.aspect_ratio);
-		if (cam.image_height < 1) {
-			cam.image_height = 1;
-		}
-
-		cam.lines_rendered = 0;
-		is_rendering = true;
-
-		std::thread render_thread([&is_rendering, &cam, bvh_world, env, my_post]() {
-			cam.render(bvh_world, env, my_post, is_rendering);
-			is_rendering = false;
-			});
-		render_thread.detach();
-		};
+	std::thread render_thread; //thread declaration
 
 	// - MAIN LOOP -
 	while (running) {
@@ -116,13 +93,45 @@ int main(int argc, char* argv[]) {
 		ImGui::NewFrame();
 
 		bool needs_update = false; //flag to indicate if any setting changed
-		// - WINDOW 1: CONTROL PANEL -
-		ImGui::Begin("Engine Control Panel");
 		bool should_restart = false; //flag to indicate if render should be restarted
 
+		// - WINDOW 1: CONTROL PANEL -
+		ImGui::Begin("Engine Control Panel");
 		if (ImGui::BeginTabBar("Tabs")) {
 			//camera settings tab
 			if (ImGui::BeginTabItem("Camera & Quality")) {
+				//buffers definition
+				static double lookfrom_buf[3] = {
+					cam.lookfrom.x(),
+					cam.lookfrom.y(),
+					cam.lookfrom.z()
+				};
+				static double lookat_buf[3] = {
+					cam.lookat.x(),
+					cam.lookat.y(),
+					cam.lookat.z()
+				};
+				static double vup_buf[3] = {
+					cam.vup.x(),
+					cam.vup.y(),
+					cam.vup.z()
+				};
+
+				//refresh the buffers
+				if (!ImGui::IsAnyItemActive()) {
+					lookfrom_buf[0] = cam.lookfrom.x();
+					lookfrom_buf[1] = cam.lookfrom.y();
+					lookfrom_buf[2] = cam.lookfrom.z();
+
+					lookat_buf[0] = cam.lookat.x();
+					lookat_buf[1] = cam.lookat.y();
+					lookat_buf[2] = cam.lookat.z();
+
+					vup_buf[0] = cam.vup.x();
+					vup_buf[1] = cam.vup.y();
+					vup_buf[2] = cam.vup.z();
+				}
+
 				//image resolution and aspect ratio
 				ImGui::SeparatorText("Resolution & Aspect");
 				if (ImGui::InputInt("Image Width", &cam.image_width)) {
@@ -155,15 +164,11 @@ int main(int argc, char* argv[]) {
 
 				ImGui::SeparatorText("Position & Orientation");
 				//look from
-				static double lookfrom_buf[3] = { cam.lookfrom.x(), cam.lookfrom.y(), cam.lookfrom.z() };
 				if (ImGui::InputScalarN("Look From", ImGuiDataType_Double, lookfrom_buf, 3)) {
 					cam.lookfrom = point3(lookfrom_buf[0], lookfrom_buf[1], lookfrom_buf[2]);
 					should_restart = true;
 				}
 				//look at
-				static double lookat_buf[3] = {
-					cam.lookat.x(), cam.lookat.y(), cam.lookat.z()
-				};
 				if (ImGui::InputScalarN("Look At", ImGuiDataType_Double, lookat_buf, 3)) {
 					cam.lookat = point3(lookat_buf[0], lookat_buf[1], lookat_buf[2]);
 					should_restart = true;
@@ -171,7 +176,6 @@ int main(int argc, char* argv[]) {
 				//up vector
 				ImGui::Text("Up Vector");
 				//create a temporary buffer for InputScalarN to handle the data
-				static double vup_buf[3];
 				vup_buf[0] = cam.vup.x();
 				vup_buf[1] = cam.vup.y();
 				vup_buf[2] = cam.vup.z();
@@ -233,34 +237,25 @@ int main(int argc, char* argv[]) {
 				ImGui::Checkbox("Reflections (Mirrors)", &cam.use_reflection);
 				ImGui::Checkbox("Refractions (Glass)", &cam.use_refraction);
 				ImGui::EndTabItem();
-
-				//restart render only if any setting changed and render is pending
-				if (should_restart && is_rendering.load()) {
-					//signal the render thread to stop 
-					is_rendering = false;
-					//wait a short moment to ensure the render thread has noticed the change 
-					std::this_thread::sleep_for(std::chrono::milliseconds(30));
-					//always calculate before starting a new render
-					cam.image_height = static_cast<int>(cam.image_width / cam.aspect_ratio);
-					if (cam.image_height < 1) {
-						cam.image_height = 1;
-					}
-					//reset progress and start new render
-					cam.lines_rendered = 0;
-					is_rendering = true; //set true so the new thread can start
-
-					std::thread render_thread([&is_rendering, &cam, bvh_world, env, my_post]() {
-						cam.render(bvh_world, env, my_post, is_rendering);
-						//set false only when render actually finished naturally 
-						if (is_rendering.load() && cam.lines_rendered >= cam.image_height) {
-							is_rendering = false;
-						}
-					});
-					render_thread.detach();
-				}
 			}
 			//environment settings tab
 			if (ImGui::BeginTabItem("Environment")) {
+				//buffer definition 
+				static double sun_dir_buf[3] = {
+					env.sun_direction.x(),
+					env.sun_direction.y(),
+					env.sun_direction.z()
+				};
+				static float rot_deg = -45.0f;
+				static float tilt_deg = -4.0f;
+
+				//desychronization and crash prevention
+				if (!ImGui::IsAnyItemActive()) {
+					sun_dir_buf[0] = env.sun_direction.x();
+					sun_dir_buf[1] = env.sun_direction.y();
+					sun_dir_buf[2] = env.sun_direction.z();
+				}
+
 				ImGui::SeparatorText("Sky Mode Selection");
 				//switching buttons for environment mode (use enum from EnvironmentSetting)
 				int current_mode = (int)env.mode;
@@ -282,13 +277,13 @@ int main(int argc, char* argv[]) {
 				}
 				//HDRI mode settings
 				if (env.mode == EnvironmentSettings::HDR_MAP) {
+					if (!ImGui::IsAnyItemActive()) {
+						rot_deg = static_cast<float>(radians_to_degrees(env.hdri_rotation));
+						tilt_deg = static_cast<float>(radians_to_degrees(env.hdri_tilt));
+					}
 					ImGui::TextColored(ImVec4(0.4f, 0.8f, 1.0f, 1.0f), "HDR Map Settings");
 					//desplay the name of the loaded texture (informational)
 					ImGui::Text("Active Texture: assets/sunny_rose_garden_2k.hdr");
-					//rotation around Y-axis and tilt around X-axis
-					static float rot_deg = -45.0f;
-					static float tilt_deg = -4.0f;
-
 					if (ImGui::Button("Reset Orientation")) {
 						rot_deg = 0.0f;
 						tilt_deg = 0.0f; //reset parameters to default
@@ -328,17 +323,19 @@ int main(int argc, char* argv[]) {
 					}
 					//sun direction
 					ImGui::Text("Sun Direction");
-					bool sun_dir_changed = false;
-					sun_dir_changed |= ImGui::InputDouble("X##sun", &env.sun_direction[0]); ImGui::SameLine();
-					sun_dir_changed |= ImGui::InputDouble("Y##sun", &env.sun_direction[1]); ImGui::SameLine();
-					sun_dir_changed |= ImGui::InputDouble("Z##sun", &env.sun_direction[2]);
-
-					if (sun_dir_changed) {
+					if (ImGui::InputScalarN("##sun_dir_input", ImGuiDataType_Double, sun_dir_buf, 3)) {
+						env.sun_direction = vec3(sun_dir_buf[0], sun_dir_buf[1], sun_dir_buf[2]);
 						should_restart = true;
 					}
 					//button to normalize the sun direction vector
-					if (ImGui::Button("Normalize Direction")) {
+					ImGui::SameLine();
+					if (ImGui::Button("Normalize")) {
 						env.sun_direction = unit_vector(env.sun_direction);
+						//update buffer to normalize values 
+						sun_dir_buf[0] = env.sun_direction.x();
+						sun_dir_buf[1] = env.sun_direction.y();
+						sun_dir_buf[2] = env.sun_direction.z();
+
 						should_restart = true;
 					}
 				}
@@ -392,42 +389,68 @@ int main(int argc, char* argv[]) {
 				}
 				ImGui::EndTabItem();
 			}
-
 			ImGui::EndTabBar();
 		}
 
+		//render control & progress
 		ImGui::Separator();
-		//render button and progress bar
-		if (is_rendering) {
+		if (is_active_session) {
+			//progress bar
 			float progress = (float)cam.lines_rendered / (float)cam.image_height;
 			ImGui::ProgressBar(progress, ImVec2(-1.0f, 0.0f));
-			ImGui::TextColored(ImVec4(1.0f, 1.0f, 0.0f, 1.0f), "Rendering: %.1f%%", progress * 100.0f);
+
+			if (is_rendering) {
+				ImGui::TextColored(ImVec4(1.0f, 1.0f, 0.0f, 1.0f), "Rendering: %.1f%%", progress * 100.0f);
+			} else {
+				ImGui::TextColored(ImVec4(0.0f, 1.0f, 0.0f, 1.0f), "Render Finished (100%)");
+			}
+			//stop render button
+			ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.6f, 0.1f, 0.1f, 1.0f)); //red color
+			if (ImGui::Button("Stop Render", ImVec2(-1, 0))) {
+				is_active_session = false;
+				is_rendering = false;
+				if (render_thread.joinable()) {
+					render_thread.detach(); //detach old thread
+				}
+			}
+			ImGui::PopStyleColor();
+		} else {
+			//start render button
+			ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.1f, 0.4f, 0.1f, 1.0f)); //green color
+			if (ImGui::Button("Render", ImVec2(-1, 0))) {
+				is_active_session = true;
+				should_restart = true; //launch central restart system below
+			}
+			ImGui::PopStyleColor();
 		}
 
-		if (ImGui::Button("Render Frame") && !is_rendering) {
-			// 1. Zawsze aktualizuj wysokość przed startem! [cite: 2026-01-18]
+		//central restart render system
+		if (should_restart && is_active_session) {
+			is_rendering = false;
+
+			if (render_thread.joinable()) {
+				render_thread.join();
+			}
+
+			//prepare datas for a new render
 			cam.image_height = static_cast<int>(cam.image_width / cam.aspect_ratio);
 			if (cam.image_height < 1) {
 				cam.image_height = 1;
 			}
-			cam.lines_rendered = 0; //reset progress
-			is_rendering = true; //block the button to prevent starting multiple renders at once
-			//create a detached thread to run the render function
-			std::thread render_thread([&is_rendering, &cam, bvh_world, env, my_post]() {
+			cam.lines_rendered = 0;
+
+			//launch the new thread
+			is_rendering = true;
+			render_thread = std::thread([&is_rendering, &cam, bvh_world, env, my_post]() {
 				cam.render(bvh_world, env, my_post, is_rendering);
-				//set false only when render actually finished naturally
+
+				//finalize - only if render finished without interrupts
 				if (is_rendering.load() && cam.lines_rendered >= cam.image_height) {
 					is_rendering = false;
 				}
 			});
-			render_thread.detach();
 		}
 
-		//add a small status indicator next to the button
-		if (is_rendering) {
-			ImGui::SameLine();
-			ImGui::TextColored(ImVec4(1.0f, 1.0f, 0.0f, 1.0f), "Rendering in progress...");
-		}
 		ImGui::End();
 
 		// - WINDOW 2: RENDER PREVIEW -
@@ -486,7 +509,8 @@ int main(int argc, char* argv[]) {
 					//image is wider than window -> fit to width
 					display_w = avail_size.x;
 					display_h = avail_size.x / image_aspect;
-				} else {
+				}
+				else {
 					//image is higher than window -> fit to height
 					display_h = avail_size.y;
 					display_w = avail_size.y * image_aspect;
@@ -500,7 +524,8 @@ int main(int argc, char* argv[]) {
 				ImGui::SetCursorPos(ImVec2(offset_x, offset_y));
 				//display the image 
 				ImGui::Image((ImTextureID)(intptr_t)rendered_texture, ImVec2(display_w, display_h));
-			} else {
+			}
+			else {
 				ImGui::Text("Ready to render...");
 			}
 			last_rendering_state = rendering_active;

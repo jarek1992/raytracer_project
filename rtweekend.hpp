@@ -21,6 +21,10 @@ const double ray_epsilon = 0.0001;
 inline double degrees_to_radians(double degrees) {
 	return degrees * pi / 180.0;
 }
+//convert radians to degrees
+inline double radians_to_degrees(double radians) {
+	return radians * 180.0 / pi;
+}
 
 //generates a random double between 0 and 1
 inline double random_double() {
