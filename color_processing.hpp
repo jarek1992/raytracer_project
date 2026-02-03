@@ -18,10 +18,10 @@ struct image_statistics {
 			if (histogram[i] > max_pixels) {
 				max_pixels = histogram[i];
 			}
-			if (max_pixels > 0) {
-				for (int i = 0; i < 256; i++) {
-					normalized_histogram[i] = static_cast<float>(histogram[i]) / max_pixels;
-				}
+		}
+		if (max_pixels > 0) {
+			for (int i = 0; i < 256; i++) {
+				normalized_histogram[i] = static_cast<float>(histogram[i]) / max_pixels;
 			}
 		}
 	}
@@ -44,6 +44,7 @@ public:
 	float vignette_intensity = 1.0f;
 	vec3 color_balance = vec3(1.0f, 1.0f, 1.0f); //RGB tint
 	float z_depth_max_dist = 1.0f; //for depth buffer normalization
+	float exposure_compensation_stops = 0.0f; // 0.0 - no correction
 
 	bool use_aces_tone_mapping = true;
 	bool use_auto_exposure = false;
@@ -54,45 +55,44 @@ public:
 	bool use_bloom = false;
 	float bloom_threshold = 1.0f;
 	float bloom_intensity = 0.3f;
-	int bloom_radius = 5;
+	int bloom_radius = 4;
+
+	bool needs_update = true;
 
 	//post-denoise sharpening
 	bool use_sharpening = true;
 	double sharpen_amount = 0.2; //0.05 - 0.3 suggested range
 
-	color process(color raw_color, float u = 0.5f, float v = 0.5f) const {
-		//1. exposure (double/HDR)
-		color c = raw_color * static_cast<double>(exposure);
-		//2. color balance
+	color process(color exposed_color, float u = 0.5f, float v = 0.5f) const {
+		color c = exposed_color;
+		//1. color balance(HDR)
 		c = color(
 			c.x() * color_balance.x(),
 			c.y() * color_balance.y(),
 			c.z() * color_balance.z());
-		//3. contrast (0-1 range)
+		//2. contrast (0-1 range)
 		if (std::abs(contrast - 1.0f) > 0.001f) {
 			c = apply_contrast(c, contrast);
 		}
-		//4. HSV operations
-		vec3 hsv = rgb_to_hsv(c);
-		//5. hue shift and saturation
+		//3. HSV operations
+		//clamp for HSV
+		color safe_hsv_input = color(
+			std::clamp(static_cast<float>(c.x()), 0.0f, 1.0f),
+			std::clamp(static_cast<float>(c.y()), 0.0f, 1.0f),
+			std::clamp(static_cast<float>(c.z()), 0.0f, 1.0f)
+		);
+		vec3 hsv = rgb_to_hsv(safe_hsv_input);
+		//4. hue shift and saturation
 		hsv[0] = std::fmod(hsv[0] + hue_shift, 360.0f); //hue shift
 		if (hsv[0] < 0) {
 			hsv[0] += 360.0f;
 		}
 		hsv[1] = std::clamp(static_cast<float>(hsv[1] * saturation), 0.0f, 1.0f); //saturation
 		c = hsv_to_rgb(hsv);
-		//6. tone mapping apply_aces (0-1 range)
+		//5. tone mapping apply_aces (0-1 range)
 		if (use_aces_tone_mapping) {
 			c = apply_aces(c);
 		}
-		//7. clamping before color operations 
-		//
-		//prevent from weird values like 1.5, -1 for constrast,hsv 
-		c = color(
-			std::clamp(static_cast<float>(c.x()), 0.0f, 1.0f),
-			std::clamp(static_cast<float>(c.y()), 0.0f, 1.0f),
-			std::clamp(static_cast<float>(c.z()), 0.0f, 1.0f)
-		);
 		//8. vignette effect
 		if (vignette_intensity > 0.0f) {
 			float dist = std::sqrt((u - 0.5f) * (u - 0.5f) + (v - 0.5f) * (v - 0.5f));
@@ -101,62 +101,79 @@ public:
 		}
 		//9. flags debug modes RGB/Luminance
 		if (current_debug_mode != debug_mode::NONE) {
-			double r = c.x();
-			double g = c.y();
-			double b = c.z();
-			switch (current_debug_mode) {
-			case debug_mode::RED: {
-				c = color(r, 0.0, 0.0);
-				break;
-			}
-			case debug_mode::GREEN: {
-				c = color(0.0, g, 0.0);
-				break;
-			}
-			case debug_mode::BLUE: {
-				c = color(0.0, 0.0, b);
-				break;
-			}
-			case debug_mode::LUMINANCE: {
-				double lum = c.luminance();
-				c = color(lum, lum, lum);
-				break;
-			}
-			default:
-				break;
-			}
+			apply_debug_view(c);
 		}
 
-		return linear_to_gamma(c);
+		return linear_to_gamma(color(
+			std::clamp(c.x(), 0.0, 1.0),
+			std::clamp(c.y(), 0.0, 1.0),
+			std::clamp(c.z(), 0.0, 1.0)
+		));
 	}
 
 	//function to analyze framebuffer and compute image statistics
 	image_statistics analyze_framebuffer(const std::vector<color>& framebuffer) const {
 		image_statistics stats;
-		double total_lum = 0.0;
+		double total_log_lum = 0.0;
+
+		//define HDR range for histogram (e.i. 2^-10 to 2^10)
+		const float min_log = -10.0f;
+		const float max_log = 10.0f;
+		const float log_range = max_log - min_log;
 
 		for (const auto& pix : framebuffer) {
 			float lum = static_cast<float>(pix.luminance());
+
+			//general statistics
 			if (lum > stats.max_luminance) {
 				stats.max_luminance = lum;
 			}
-			total_lum += lum;
-			//histogram: map luminance to 0-255 range (brightness 0.0-1.0)
-			int bin = std::clamp(static_cast<int>(lum * 255.0f), 0, 255);
+
+			//logarithmic mean (better for auto-exposure)
+			float clamped_lum = std::max(0.0001f, lum);
+			total_log_lum += std::log2(clamped_lum);
+
+			//logarithmic histogram: map luminance to 0-255 range (brightness 0.0-1.0)
+			float log_lum = std::log2(clamped_lum);
+			float normalized_log = (log_lum - min_log) / log_range;
+			int bin = std::clamp(static_cast<int>(normalized_log * 255.0f), 0, 255);
+
 			stats.histogram[bin]++;
 		}
 
-		stats.average_luminance = static_cast<float>(total_lum / framebuffer.size());
+		stats.average_luminance = std::pow(2.0f, static_cast<float>(total_log_lum / framebuffer.size()));
 		stats.normalize();
 		return stats;
 	}
 
-	void apply_auto_exposure(const image_statistics& stats) const {
-		if (use_auto_exposure && stats.average_luminance > 0.001f) {
-			exposure = target_luminance / stats.average_luminance;
+	//auto-exposure for progressive render display
+	double calculate_auto_exposure(const std::vector<color>& buffer) const {
+		if (buffer.empty()) {
+			return exposure;
 		}
-		//clamp exposure to avoid over/under exposure
-		exposure = std::clamp(exposure, 0.1f, 10.0f);
+		double total_lum = 0.0;
+		for (const auto& c : buffer) {
+			total_lum += c.luminance();
+		}
+		double avg_lum = total_lum / buffer.size();
+		if (avg_lum < 0.001) {
+			avg_lum = 0.001;
+		}
+		double auto_exp = (target_luminance / avg_lum) * std::pow(2.0, exposure_compensation_stops);
+		return std::clamp(auto_exp, 0.01, 20.0);
+	}
+
+	//auto-exposure applied to final render
+	double apply_auto_exposure(const image_statistics& stats) const {
+		double current_exp = exposure; // domyślna wartość
+
+		if (use_auto_exposure && stats.average_luminance > 0.001f) {
+			//add multiplier user_exposure_offset for user control
+			float raw_exposure = target_luminance / stats.average_luminance;
+			current_exp = raw_exposure * std::pow(2.0f, exposure_compensation_stops);
+		}
+
+		return std::clamp(static_cast<float>(current_exp), 0.01f, 20.0f);
 	}
 
 	//post-denoise sharpness filter
@@ -189,12 +206,56 @@ public:
 
 private:
 	color apply_contrast(color c, float contrast) const {
-		auto midpoint = 0.5f;
-		return color(
-			std::pow(std::clamp(static_cast<float>(c.x()), 0.0f, 1.0f) / midpoint, contrast) * midpoint,
-			std::pow(std::clamp(static_cast<float>(c.y()), 0.0f, 1.0f) / midpoint, contrast) * midpoint,
-			std::pow(std::clamp(static_cast<float>(c.z()), 0.0f, 1.0f) / midpoint, contrast) * midpoint
-		);
+
+		//get pixel brightness (luminance)
+		double lum = c.luminance();
+		//linear contrast 
+		double new_lum = (lum - 0.5) * contrast + 0.5;
+		new_lum = std::clamp(new_lum, 0.0, 1.0);
+
+		if (lum > 0.0001) {
+			return c * (new_lum / lum);
+		}
+		return color(new_lum, new_lum, new_lum);
+	}
+
+	color apply_debug_view(color c) const {
+		switch (current_debug_mode) {
+			case debug_mode::RED: { 
+				return color(c.x(), 0, 0);
+			}
+			case debug_mode::GREEN: { 
+				return color(0, c.y(), 0); 
+			}
+			case debug_mode::BLUE: { 
+				return color(0, 0, c.z()); 
+			}
+			case debug_mode::LUMINANCE: {
+				double lum = c.luminance();
+				if (lum >= 1.0) {
+					return color(1, 1, 1);
+				}
+				if (lum > 0.95) {
+					return color(1, 0, 0);
+				}
+				if (lum > 0.70) {
+					return color(1, 1, 0);
+				}
+				if (lum > 0.40) {
+					return color(0.5, 0.5, 0.5);
+				}
+				if (lum > 0.10) {
+					return color(0, 0.5, 0);
+				}
+				if (lum > 0.02) {
+					return color(0, 0, 1);
+				}
+				else {
+					return color(0.1, 0, 0.2);
+				}
+			}
+			default: return c;
+		}
 	}
 
 	vec3 rgb_to_hsv(vec3 c) const {
@@ -209,7 +270,7 @@ private:
 		float s, v = max;
 		float d = max - min;
 
-		s = max == 0.0f ? 0.0f : d / max;
+		s = max < 1e-6f ? 0.0f : d / max;
 
 		if (max == min) {
 			h = 0.0f;

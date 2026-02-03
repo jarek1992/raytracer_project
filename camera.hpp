@@ -59,26 +59,36 @@ public:
 		//step 1: copy raw data to final framebuffer 
 		final_framebuffer.resize(render_accumulator.size());
 
-		//step 2: apply post-processing effects
+		//step 2: bloom buffer(HDR)
+		std::vector<color> bloom_overlay(render_accumulator.size(), color(0.0, 0.0, 0.0));
+
+		if (post.use_bloom) {
+			bloom_filter bloom(post.bloom_threshold, post.bloom_intensity, post.bloom_radius);
+			bloom.generate_bloom_overlay(render_accumulator, bloom_overlay, image_width, image_height, post.exposure);
+		}
+
+		//step 3: apply post-processing effects
 		for (int j = 0; j < image_height; ++j) {
 			for (int i = 0; i < image_width; ++i) {
 				int idx = j * image_width + i;
 
+				//raw color * exposure
+				color c = render_accumulator[idx] * post.exposure;
+				//add bloom before ACES
+				if (post.use_bloom) {
+					c += bloom_overlay[idx];
+				}
 				//calculate normalized u,v (0.0 - 1.0 range)
 				float u = float(i) / (image_width - 1);
 				float v = float(j) / (image_height - 1);
-
-				final_framebuffer[idx] = post.process(render_accumulator[idx], u, v);
+				//process
+				final_framebuffer[idx] = post.process(c, u, v);
 			}
 		}
 
-		//step 3: apply sharpening and bloom if enabled
+		//step 4: apply sharpening and bloom if enabled
 		if (post.use_sharpening) {
 			post.apply_sharpening(final_framebuffer, image_width, image_height, post.sharpen_amount);
-		}
-		if (post.use_bloom) {
-			bloom_filter bloom(post.bloom_threshold, post.bloom_intensity, post.bloom_radius);
-			bloom.apply(final_framebuffer, image_width, image_height);
 		}
 	}
 
@@ -401,8 +411,7 @@ private:
 								double depth_val = rec.t / z_depth_max_dist;
 								double z_depth = 1.0 - std::clamp(depth_val, 0.0, 1.0);
 								pixel_zdepth += color(z_depth, z_depth, z_depth);
-							}
-							else {
+							} else {
 								//backgrounds for passes aux(albedo, normals, zdepth)
 								pixel_albedo += color(0.0, 0.0, 0.0);
 								pixel_normal += color(0.5, 0.5, 1.0);
@@ -437,14 +446,12 @@ private:
 
 									if (is_specular) {
 										pixel_reflection += attenuation * scattered_color;
-									}
-									else if (dot(scattered.direction(), rec_l.normal) < 0) {
+									} else if (dot(scattered.direction(), rec_l.normal) < 0) {
 										//if not mirror check if glass 
 										pixel_refraction += attenuation * scattered_color;
 									}
 								}
-							}
-							else {
+							} else {
 								//backgrounds for reflection/refraction
 								pixel_reflection += color(0.0, 0.0, 0.0);
 								pixel_refraction += color(0.0, 0.0, 0.0);

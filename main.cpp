@@ -351,40 +351,81 @@ int main(int argc, char* argv[]) {
 					my_post.current_debug_mode = (debug_mode)current_mode;
 					needs_update = true; //setting changed
 				}
+				//display legend only if LUMINANCE debug mode on
+				if (my_post.current_debug_mode == debug_mode::LUMINANCE) {
+					ImGui::Spacing();
+					ImGui::Text("Luminance False Color Legend:");
+
+					//lambda function to draw small color squares with infos
+					auto ColorLabel = [](const char* label, ImVec4 color) {
+						ImGui::ColorButton(label, color, ImGuiColorEditFlags_NoTooltip, ImVec2(20, 20));
+						ImGui::SameLine();
+						ImGui::Text("%s", label);
+						};
+
+					ColorLabel("100%+ (Clipping)", ImVec4(1.0f, 1.0f, 1.0f, 1.0f));
+					ColorLabel("95%-100% (Near Clip)", ImVec4(1.0f, 0.0f, 0.0f, 1.0f));
+					ColorLabel("70%-95% (Highlights)", ImVec4(1.0f, 1.0f, 0.0f, 1.0f));
+					ColorLabel("40%-70% (Midtones)", ImVec4(0.5f, 0.5f, 0.5f, 1.0f));
+					ColorLabel("10%-40% (Shadow Detail)", ImVec4(0.0f, 0.5f, 0.0f, 1.0f));
+					ColorLabel("2%-10% (Deep Shadows)", ImVec4(0.0f, 0.0f, 1.0f, 1.0f));
+					ColorLabel("0%-2% (Black Out)", ImVec4(0.1f, 0.0f, 0.2f, 1.0f));
+				}
 
 				ImGui::Spacing();
 				ImGui::Separator();
 
-				needs_update |= ImGui::Checkbox("ACES Tone Mapping", &my_post.use_aces_tone_mapping);
-				needs_update |= ImGui::Checkbox("Auto Exposure", &my_post.use_auto_exposure);
-				needs_update |= ImGui::SliderFloat("Exposure", &my_post.exposure, 0.0f, 5.0f);
+				my_post.needs_update |= ImGui::Checkbox("ACES Tone Mapping", &my_post.use_aces_tone_mapping);
+				my_post.needs_update |= ImGui::Checkbox("Auto Exposure", &my_post.use_auto_exposure);
+				if (my_post.use_auto_exposure) {
+					ImGui::Indent();
+					//slider in "stops"(EV) units - (+2)lighten or (-2)darken
+					my_post.needs_update |= ImGui::SliderFloat("Exposure Compensation", &my_post.exposure_compensation_stops, -5.0f, 5.0f, "%.1f EV");
+					ImGui::Unindent();
+				} else {
+					my_post.needs_update |= ImGui::SliderFloat("Manual Exposure", &my_post.exposure, 0.0f, 5.0f);
+				}
 
 				ImGui::SeparatorText("Color Grade");
-				needs_update |= ImGui::SliderFloat("Contrast", &my_post.contrast, 0.5f, 2.0f);
-				needs_update |= ImGui::SliderFloat("Saturation", &my_post.saturation, 0.0f, 2.0f);
-				needs_update |= ImGui::ColorEdit3("Color Balance", (float*)&my_post.color_balance);
-				needs_update |= ImGui::SliderFloat("Hue Shift", &my_post.hue_shift, -180.0f, 180.0f);
+				my_post.needs_update |= ImGui::SliderFloat("Contrast", &my_post.contrast, 0.5f, 2.0f);
+				my_post.needs_update |= ImGui::SliderFloat("Saturation", &my_post.saturation, 0.0f, 2.0f);
+				my_post.needs_update |= ImGui::ColorEdit3("Color Balance", (float*)&my_post.color_balance);
+				my_post.needs_update |= ImGui::SliderFloat("Hue Shift", &my_post.hue_shift, -180.0f, 180.0f);
 
 				ImGui::SeparatorText("Effects");
-				ImGui::SliderFloat("Vignette", &my_post.vignette_intensity, 0.0f, 1.0f);
+				if (ImGui::SliderFloat("Vignette", &my_post.vignette_intensity, 0.0f, 1.0f)) {
+					my_post.needs_update = true;
+				}
 
 				if (ImGui::CollapsingHeader("Bloom Settings")) {
-					needs_update |= ImGui::Checkbox("Enable Bloom", &my_post.use_bloom);
-					needs_update |= ImGui::SliderFloat("Threshold", &my_post.bloom_threshold, 0.0f, 5.0f);
-					needs_update |= ImGui::SliderFloat("Intensity##Bloom", &my_post.bloom_intensity, 0.0f, 5.0f);
-					needs_update |= ImGui::SliderInt("Radius", &my_post.bloom_radius, 1, 15);
+					bool changed = false;
+					changed |= ImGui::Checkbox("Enable Bloom", &my_post.use_bloom);
+
+					if (my_post.use_bloom) {
+						ImGui::Indent();
+						changed |= ImGui::SliderFloat("Threshold", &my_post.bloom_threshold, 0.5f, 5.0f, "%.2f");
+						changed |= ImGui::SliderFloat("Intensity", &my_post.bloom_intensity, 0.0f, 2.0f, "%.2f");
+						changed |= ImGui::SliderInt("Radius", &my_post.bloom_radius, 1, 20);
+						ImGui::Unindent();
+					}
+					if (changed) {
+						my_post.needs_update = true; //flag to recalculate post-processing
+					}
 				}
 				//sharpening
 				if (ImGui::CollapsingHeader("Sharpening")) {
-					needs_update |= ImGui::Checkbox("Enable Sharpen", &my_post.use_sharpening);
+					if (ImGui::Checkbox("Enable Sharpen", &my_post.use_sharpening)) {
+						my_post.needs_update = true;
+					}
+
 					float sharp_f = static_cast<float>(my_post.sharpen_amount);
 					if (ImGui::SliderFloat("Amount", &sharp_f, 0.0f, 1.0f)) {
 						my_post.sharpen_amount = static_cast<double>(sharp_f);
-						needs_update = true;
+						my_post.needs_update = true;
 					}
 				}
 				//update the rendered image preview only if settings changed and not currently rendering
-				if (needs_update) {
+				if (my_post.needs_update && !is_rendering) {
 					cam.update_post_processing(my_post);
 				}
 				ImGui::EndTabItem();
@@ -407,10 +448,10 @@ int main(int argc, char* argv[]) {
 			//stop render button
 			ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.6f, 0.1f, 0.1f, 1.0f)); //red color
 			if (ImGui::Button("Stop Render", ImVec2(-1, 0))) {
-				is_active_session = false;
+				is_active_session = false; //stop the render loop in cam.render()
 				is_rendering = false;
 				if (render_thread.joinable()) {
-					render_thread.detach(); //detach old thread
+					render_thread.join(); //wait till the end
 				}
 			}
 			ImGui::PopStyleColor();
@@ -455,14 +496,30 @@ int main(int argc, char* argv[]) {
 
 		// - WINDOW 2: RENDER PREVIEW -
 		ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0, 0)); //remove padding for full image display
-		ImGuiWindowFlags preview_flags = ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse; //NoScrollbar i NoScrollWithMouse
+		ImGuiWindowFlags preview_flags = ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse; //NoScrollbar and NoScrollWithMouse
 		if (ImGui::Begin("Render Preview", nullptr, preview_flags)) {
 			static bool last_rendering_state = false;
+			static auto last_preview_update = std::chrono::steady_clock::now();
+
 			bool rendering_active = is_rendering.load();
 			bool just_finished = (last_rendering_state == true && rendering_active == false);
-			bool has_data = !cam.render_accumulator.empty();
 
-			if (just_finished || (has_data && rendered_texture == 0) || rendering_active || (needs_update && !rendering_active)) {
+			//check if e.i. 100ms pasted from the last buffer copy
+			auto now = std::chrono::steady_clock::now();
+			auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(now - last_preview_update).count();
+			bool time_to_update = (elapsed > 100); // 100ms = 10 FPS
+
+			bool update_triggered_by_ui = my_post.needs_update;
+			if (just_finished || (rendering_active && (time_to_update || update_triggered_by_ui)) || (my_post.needs_update && !rendering_active)) {
+				
+				if (update_triggered_by_ui) {
+					my_post.needs_update = false;
+				}
+				//update timer only while rendering
+				if (rendering_active) {
+					last_preview_update = now;
+				}
+
 				if (rendered_texture != 0) {
 					glDeleteTextures(1, &rendered_texture);
 				}
@@ -476,24 +533,35 @@ int main(int argc, char* argv[]) {
 					if (actual_size > 0 && (actual_size % cam.image_width == 0)) {
 						int current_w = cam.image_width;
 						int current_h = (int)(actual_size / current_w);
-
 						std::vector<color> processed_preview(actual_size);
-						for (size_t i = 0; i < actual_size; ++i) {
-							size_t x = i % current_w;
-							size_t y = i / current_w;
 
-							//use a copy (buffer-copy) to avoid error out of range
-							processed_preview[i] = my_post.process(buffer_copy[i], (float)x / current_w, (float)y / current_h);
+						//calculate autoexposure once per frame
+						double current_exposure = my_post.exposure;
+						if (my_post.use_auto_exposure) {
+							// Ważne: liczymy średnią tylko z aktualnie wyrenderowanych pikseli!
+							current_exposure = my_post.calculate_auto_exposure(buffer_copy);
+						}
+
+						for (size_t i = 0; i < actual_size; ++i) {
+							float u = (float)(i % current_w) / (current_w - 1);
+							float v = (float)(i / current_w) / (current_h - 1);
+
+							//process post.process without bloom effect
+							processed_preview[i] = my_post.process(buffer_copy[i] * current_exposure, u, v);
 						}
 						rendered_texture = create_texture_from_buffer(processed_preview, current_w, current_h);
 					}
 				} else {
-					//final image - apply post-processing to the full render accumulator
+					//final image (with bloom and sharpening)
+					if (my_post.needs_update) {
+						cam.update_post_processing(my_post);
+						my_post.needs_update = false; //reset the flag
+					}
+
 					if (!cam.final_framebuffer.empty()) {
 						rendered_texture = create_texture_from_buffer(cam.final_framebuffer, cam.image_width, cam.image_height);
 					}
 				}
-				needs_update = false;
 			}
 
 			//display the texture with automatic scaling (fit the window size)
@@ -509,8 +577,7 @@ int main(int argc, char* argv[]) {
 					//image is wider than window -> fit to width
 					display_w = avail_size.x;
 					display_h = avail_size.x / image_aspect;
-				}
-				else {
+				} else {
 					//image is higher than window -> fit to height
 					display_h = avail_size.y;
 					display_w = avail_size.y * image_aspect;
@@ -524,12 +591,12 @@ int main(int argc, char* argv[]) {
 				ImGui::SetCursorPos(ImVec2(offset_x, offset_y));
 				//display the image 
 				ImGui::Image((ImTextureID)(intptr_t)rendered_texture, ImVec2(display_w, display_h));
-			}
-			else {
+			} else {
 				ImGui::Text("Ready to render...");
 			}
 			last_rendering_state = rendering_active;
 		}
+
 		ImGui::End();
 		ImGui::PopStyleVar(); //restore window padding
 
@@ -541,13 +608,26 @@ int main(int argc, char* argv[]) {
 		ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
 		SDL_GL_SwapWindow(window);
 	}
-
-	//CLEAN UP IMGUI AND SDL
+	//cleaunp section
 	//
+	//stop render and wait for thread 
+	is_rendering = false;
+	is_active_session = false;
+
+	if (render_thread.joinable()) {
+		render_thread.join(); // wait till thread ends
+	}
+
+	//remove texture from GPU
+	if (rendered_texture != 0) {
+		glDeleteTextures(1, &rendered_texture);
+	}
+	
 	//ImGui shutdown
 	ImGui_ImplOpenGL3_Shutdown();
 	ImGui_ImplSDL3_Shutdown();
 	ImGui::DestroyContext();
+	
 	//OpenGL and SDL shutdown
 	SDL_GL_DestroyContext(gl_context);
 	SDL_DestroyWindow(window);
