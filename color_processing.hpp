@@ -74,31 +74,42 @@ public:
 		if (std::abs(contrast - 1.0f) > 0.001f) {
 			c = apply_contrast(c, contrast);
 		}
-		//3. HSV operations
-		//clamp for HSV
-		color safe_hsv_input = color(
-			std::clamp(static_cast<float>(c.x()), 0.0f, 1.0f),
-			std::clamp(static_cast<float>(c.y()), 0.0f, 1.0f),
-			std::clamp(static_cast<float>(c.z()), 0.0f, 1.0f)
-		);
-		vec3 hsv = rgb_to_hsv(safe_hsv_input);
-		//4. hue shift and saturation
-		hsv[0] = std::fmod(hsv[0] + hue_shift, 360.0f); //hue shift
-		if (hsv[0] < 0) {
-			hsv[0] += 360.0f;
-		}
-		hsv[1] = std::clamp(static_cast<float>(hsv[1] * saturation), 0.0f, 1.0f); //saturation
-		c = hsv_to_rgb(hsv);
-		//5. tone mapping apply_aces (0-1 range)
-		if (use_aces_tone_mapping) {
-			c = apply_aces(c);
-		}
 		//8. vignette effect
 		if (vignette_intensity > 0.0f) {
 			float dist = std::sqrt((u - 0.5f) * (u - 0.5f) + (v - 0.5f) * (v - 0.5f));
 			float vig = std::clamp(1.0f - dist * vignette_intensity, 0.0f, 1.0f);
 			c *= static_cast<double>(vig);
 		}
+		//3. HSV operations
+		if (std::abs(saturation - 1.0f) > 0.001f || std::abs(hue_shift) > 0.001f) {
+			double original_luma = c.x() * 0.2126 + c.y() * 0.7152 + c.z() * 0.0722;
+
+			color safe_hsv_input = color(
+				std::clamp(c.x(), 0.0, 1.0),
+				std::clamp(c.y(), 0.0, 1.0),
+				std::clamp(c.z(), 0.0, 1.0)
+			);
+			vec3 hsv = rgb_to_hsv(safe_hsv_input);
+
+			hsv[0] = std::fmod(hsv[0] + hue_shift, 360.0f);
+			if (hsv[0] < 0) hsv[0] += 360.0f;
+			hsv[1] = std::clamp(static_cast<float>(hsv[1] * saturation), 0.0f, 1.0f);
+
+			color rgb_shifted = hsv_to_rgb(hsv);
+
+			// Przywracamy energię HDR po operacjach HSV
+			if (original_luma > 1.0) {
+				c = rgb_shifted * original_luma;
+			}
+			else {
+				c = rgb_shifted;
+			}
+		}
+		//5. tone mapping apply_aces (0-1 range)
+		if (use_aces_tone_mapping) {
+			c = apply_aces(c);
+		}
+
 		//9. flags debug modes RGB/Luminance
 		if (current_debug_mode != debug_mode::NONE) {
 			apply_debug_view(c);
@@ -221,40 +232,40 @@ private:
 
 	color apply_debug_view(color c) const {
 		switch (current_debug_mode) {
-			case debug_mode::RED: { 
-				return color(c.x(), 0, 0);
+		case debug_mode::RED: {
+			return color(c.x(), 0, 0);
+		}
+		case debug_mode::GREEN: {
+			return color(0, c.y(), 0);
+		}
+		case debug_mode::BLUE: {
+			return color(0, 0, c.z());
+		}
+		case debug_mode::LUMINANCE: {
+			double lum = c.luminance();
+			if (lum >= 1.0) {
+				return color(1, 1, 1);
 			}
-			case debug_mode::GREEN: { 
-				return color(0, c.y(), 0); 
+			if (lum > 0.95) {
+				return color(1, 0, 0);
 			}
-			case debug_mode::BLUE: { 
-				return color(0, 0, c.z()); 
+			if (lum > 0.70) {
+				return color(1, 1, 0);
 			}
-			case debug_mode::LUMINANCE: {
-				double lum = c.luminance();
-				if (lum >= 1.0) {
-					return color(1, 1, 1);
-				}
-				if (lum > 0.95) {
-					return color(1, 0, 0);
-				}
-				if (lum > 0.70) {
-					return color(1, 1, 0);
-				}
-				if (lum > 0.40) {
-					return color(0.5, 0.5, 0.5);
-				}
-				if (lum > 0.10) {
-					return color(0, 0.5, 0);
-				}
-				if (lum > 0.02) {
-					return color(0, 0, 1);
-				}
-				else {
-					return color(0.1, 0, 0.2);
-				}
+			if (lum > 0.40) {
+				return color(0.5, 0.5, 0.5);
 			}
-			default: return c;
+			if (lum > 0.10) {
+				return color(0, 0.5, 0);
+			}
+			if (lum > 0.02) {
+				return color(0, 0, 1);
+			}
+			else {
+				return color(0.1, 0, 0.2);
+			}
+		}
+		default: return c;
 		}
 	}
 

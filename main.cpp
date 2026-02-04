@@ -134,32 +134,39 @@ int main(int argc, char* argv[]) {
 
 				//image resolution and aspect ratio
 				ImGui::SeparatorText("Resolution & Aspect");
+				bool rendering = is_rendering.load();
+				//begin blockage for ratio while rendering
+				if (rendering) {
+					ImGui::BeginDisabled();
+				}
 				if (ImGui::InputInt("Image Width", &cam.image_width)) {
 					if (cam.image_width < 100) {
 						cam.image_width = 100;
 					}
-					should_restart = true; //always restart while changing resolution
 				}
 				//slider for aspect ratio
 				static float aspect = 1.777f; // 16/9
 				if (ImGui::SliderFloat("Aspect Ratio", &aspect, 0.5f, 2.5f, "%.3f")) {
 					cam.aspect_ratio = (double)aspect;
-					should_restart = true;
 				}
 				//quick buttons for some standard aspect ratios
 				if (ImGui::Button("16:9")) {
-					aspect = 1.777f; cam.aspect_ratio = 16.0 / 9.0;
-					should_restart = true;
+					aspect = 1.777f; 
+					cam.aspect_ratio = 16.0 / 9.0;
 				}
 				ImGui::SameLine();
 				if (ImGui::Button("4:3")) {
-					aspect = 1.333f; cam.aspect_ratio = 4.0 / 3.0;
-					should_restart = true;
+					aspect = 1.333f; 
+					cam.aspect_ratio = 4.0 / 3.0;
 				}
 				ImGui::SameLine();
 				if (ImGui::Button("1:1")) {
-					aspect = 1.000f; cam.aspect_ratio = 1.0;
-					should_restart = true;
+					aspect = 1.000f; 
+					cam.aspect_ratio = 1.0;
+				}
+				//unlock blockage
+				if (rendering) {
+					ImGui::EndDisabled();
 				}
 
 				ImGui::SeparatorText("Position & Orientation");
@@ -349,7 +356,7 @@ int main(int argc, char* argv[]) {
 				int current_mode = (int)my_post.current_debug_mode;
 				if (ImGui::Combo("Debug Mode", &current_mode, debug_items, IM_ARRAYSIZE(debug_items))) {
 					my_post.current_debug_mode = (debug_mode)current_mode;
-					needs_update = true; //setting changed
+					my_post.needs_update = true; // Zmień na my_post.needs_update
 				}
 				//display legend only if LUMINANCE debug mode on
 				if (my_post.current_debug_mode == debug_mode::LUMINANCE) {
@@ -424,10 +431,11 @@ int main(int argc, char* argv[]) {
 						my_post.needs_update = true;
 					}
 				}
-				//update the rendered image preview only if settings changed and not currently rendering
-				if (my_post.needs_update && !is_rendering) {
-					cam.update_post_processing(my_post);
-				}
+
+				////update the rendered image preview only if settings changed and not currently rendering
+				//if (my_post.needs_update && !is_rendering) {
+				//	cam.update_post_processing(my_post);
+				//}
 				ImGui::EndTabItem();
 			}
 			ImGui::EndTabBar();
@@ -442,7 +450,8 @@ int main(int argc, char* argv[]) {
 
 			if (is_rendering) {
 				ImGui::TextColored(ImVec4(1.0f, 1.0f, 0.0f, 1.0f), "Rendering: %.1f%%", progress * 100.0f);
-			} else {
+			}
+			else {
 				ImGui::TextColored(ImVec4(0.0f, 1.0f, 0.0f, 1.0f), "Render Finished (100%)");
 			}
 			//stop render button
@@ -455,7 +464,8 @@ int main(int argc, char* argv[]) {
 				}
 			}
 			ImGui::PopStyleColor();
-		} else {
+		}
+		else {
 			//start render button
 			ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.1f, 0.4f, 0.1f, 1.0f)); //green color
 			if (ImGui::Button("Render", ImVec2(-1, 0))) {
@@ -489,7 +499,7 @@ int main(int argc, char* argv[]) {
 				if (is_rendering.load() && cam.lines_rendered >= cam.image_height) {
 					is_rendering = false;
 				}
-			});
+				});
 		}
 
 		ImGui::End();
@@ -502,70 +512,48 @@ int main(int argc, char* argv[]) {
 			static auto last_preview_update = std::chrono::steady_clock::now();
 
 			bool rendering_active = is_rendering.load();
+			//crucial moment when progress bar finished 
 			bool just_finished = (last_rendering_state == true && rendering_active == false);
 
 			//check if e.i. 100ms pasted from the last buffer copy
 			auto now = std::chrono::steady_clock::now();
 			auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(now - last_preview_update).count();
-			bool time_to_update = (elapsed > 100); // 100ms = 10 FPS
+			bool time_to_update = (elapsed > 150); // 150ms = 10 FPS
 
-			bool update_triggered_by_ui = my_post.needs_update;
-			if (just_finished || (rendering_active && (time_to_update || update_triggered_by_ui)) || (my_post.needs_update && !rendering_active)) {
+
+
+			if (just_finished || (rendering_active && time_to_update) || my_post.needs_update) {
 				
-				if (update_triggered_by_ui) {
-					my_post.needs_update = false;
-				}
-				//update timer only while rendering
-				if (rendering_active) {
-					last_preview_update = now;
-				}
+				//lock the size(thread-safe mindset)
+				int locked_w = cam.image_width;
+				int locked_h = cam.image_height;
 
-				if (rendered_texture != 0) {
-					glDeleteTextures(1, &rendered_texture);
-				}
-				//update the texture from the render accumulator
-				if (rendering_active) {
-					//copy local buffer to avoid threading issues
-					std::vector<color> buffer_copy = cam.render_accumulator;
-					//get actual buffer size during rendering (to handle partial renders correctly)
-					size_t actual_size = buffer_copy.size();
+				// Robimy kopię rozmiaru i bufora RAZ na początku bloku
+				std::vector<color> temp_data = cam.render_accumulator;
 
-					if (actual_size > 0 && (actual_size % cam.image_width == 0)) {
-						int current_w = cam.image_width;
-						int current_h = (int)(actual_size / current_w);
-						std::vector<color> processed_preview(actual_size);
+				// WARUNEK STABILNOŚCI:
+				// Jeśli rozmiar bufora nie zgadza się IDEALNIE z wymiarami, pomijamy klatkę.
+				// To chroni przed crashem, gdy wpisujesz "600" i masz "6" w polu tekstowym.
+				if (!temp_data.empty() && temp_data.size() == (size_t)locked_w * locked_h) {
 
-						//calculate autoexposure once per frame
-						double current_exposure = my_post.exposure;
-						if (my_post.use_auto_exposure) {
-							// Ważne: liczymy średnią tylko z aktualnie wyrenderowanych pikseli!
-							current_exposure = my_post.calculate_auto_exposure(buffer_copy);
-						}
+					if (rendered_texture != 0) glDeleteTextures(1, &rendered_texture);
 
-						for (size_t i = 0; i < actual_size; ++i) {
-							float u = (float)(i % current_w) / (current_w - 1);
-							float v = (float)(i / current_w) / (current_h - 1);
+					cam.final_framebuffer = temp_data;
 
-							//process post.process without bloom effect
-							processed_preview[i] = my_post.process(buffer_copy[i] * current_exposure, u, v);
-						}
-						rendered_texture = create_texture_from_buffer(processed_preview, current_w, current_h);
-					}
-				} else {
-					//final image (with bloom and sharpening)
-					if (my_post.needs_update) {
-						cam.update_post_processing(my_post);
-						my_post.needs_update = false; //reset the flag
-					}
+					// Wywołujemy post-processing
+					cam.update_post_processing(my_post, locked_w, locked_h);
 
 					if (!cam.final_framebuffer.empty()) {
-						rendered_texture = create_texture_from_buffer(cam.final_framebuffer, cam.image_width, cam.image_height);
+						rendered_texture = create_texture_from_buffer(cam.final_framebuffer, locked_w, locked_h);
 					}
+
+					if (rendering_active) last_preview_update = now;
 				}
+				my_post.needs_update = false;
 			}
 
 			//display the texture with automatic scaling (fit the window size)
-			if (rendered_texture != 0) {
+			if (rendered_texture != 0 && cam.image_height > 0) {
 				ImVec2 avail_size = ImGui::GetContentRegionAvail();
 				//add automatic scaling to fit the window
 				float image_aspect = (float)cam.image_width / (float)cam.image_height;
@@ -577,7 +565,8 @@ int main(int argc, char* argv[]) {
 					//image is wider than window -> fit to width
 					display_w = avail_size.x;
 					display_h = avail_size.x / image_aspect;
-				} else {
+				}
+				else {
 					//image is higher than window -> fit to height
 					display_h = avail_size.y;
 					display_w = avail_size.y * image_aspect;
@@ -591,7 +580,8 @@ int main(int argc, char* argv[]) {
 				ImGui::SetCursorPos(ImVec2(offset_x, offset_y));
 				//display the image 
 				ImGui::Image((ImTextureID)(intptr_t)rendered_texture, ImVec2(display_w, display_h));
-			} else {
+			}
+			else {
 				ImGui::Text("Ready to render...");
 			}
 			last_rendering_state = rendering_active;
@@ -622,12 +612,12 @@ int main(int argc, char* argv[]) {
 	if (rendered_texture != 0) {
 		glDeleteTextures(1, &rendered_texture);
 	}
-	
+
 	//ImGui shutdown
 	ImGui_ImplOpenGL3_Shutdown();
 	ImGui_ImplSDL3_Shutdown();
 	ImGui::DestroyContext();
-	
+
 	//OpenGL and SDL shutdown
 	SDL_GL_DestroyContext(gl_context);
 	SDL_DestroyWindow(window);

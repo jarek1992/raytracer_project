@@ -52,43 +52,51 @@ public:
 	std::vector<color> final_framebuffer; //image after post-processing (filters applied)
 	std::atomic<int> lines_rendered{ 0 }; //atomic counter for rendered lines
 
-	void update_post_processing(const post_processor& post) {
+	void update_post_processing(const post_processor& post, int w, int h) {
+		//copy HDR datas before calculating
 		if (render_accumulator.empty()) {
 			return;
 		}
-		//step 1: copy raw data to final framebuffer 
-		final_framebuffer.resize(render_accumulator.size());
+		final_framebuffer = render_accumulator;
 
-		//step 2: bloom buffer(HDR)
-		std::vector<color> bloom_overlay(render_accumulator.size(), color(0.0, 0.0, 0.0));
+		size_t total = final_framebuffer.size();
 
+		//check buffer size 
+		if (total != static_cast<size_t>(w) * h) {
+			return;
+		}
+
+		// 1. Bloom & Exposure (Używamy parametrów 'w' i 'h')
 		if (post.use_bloom) {
+			std::vector<color> bloom_overlay(total, color(0.0, 0.0, 0.0));
 			bloom_filter bloom(post.bloom_threshold, post.bloom_intensity, post.bloom_radius);
-			bloom.generate_bloom_overlay(render_accumulator, bloom_overlay, image_width, image_height, post.exposure);
-		}
+			bloom.generate_bloom_overlay(final_framebuffer, bloom_overlay, w, h, post.exposure);
 
-		//step 3: apply post-processing effects
-		for (int j = 0; j < image_height; ++j) {
-			for (int i = 0; i < image_width; ++i) {
-				int idx = j * image_width + i;
-
-				//raw color * exposure
-				color c = render_accumulator[idx] * post.exposure;
-				//add bloom before ACES
-				if (post.use_bloom) {
-					c += bloom_overlay[idx];
-				}
-				//calculate normalized u,v (0.0 - 1.0 range)
-				float u = float(i) / (image_width - 1);
-				float v = float(j) / (image_height - 1);
-				//process
-				final_framebuffer[idx] = post.process(c, u, v);
+			for (size_t i = 0; i < total; ++i) {
+				final_framebuffer[i] = (final_framebuffer[i] * post.exposure) + bloom_overlay[i];
 			}
+		} else {
+			for (size_t i = 0; i < total; ++i) final_framebuffer[i] *= post.exposure;
 		}
 
-		//step 4: apply sharpening and bloom if enabled
+		// 2. Sharpening (Używamy parametrów 'w' i 'h')
 		if (post.use_sharpening) {
-			post.apply_sharpening(final_framebuffer, image_width, image_height, post.sharpen_amount);
+			post.apply_sharpening(final_framebuffer, w, h, post.sharpen_amount);
+		}
+
+		// 3. Efekty końcowe (Color Balance, ACES, Gamma)
+		for (int j = 0; j < h; ++j) {
+			for (int i = 0; i < w; ++i) {
+				int idx = j * w + i;
+
+				// Ostateczny bezpiecznik przed crashem
+				if (idx >= (int)total) break;
+
+				float u = (w > 1) ? float(i) / (w - 1) : 0.5f;
+				float v = (h > 1) ? float(j) / (h - 1) : 0.5f;
+
+				final_framebuffer[idx] = post.process(final_framebuffer[idx], u, v);
+			}
 		}
 	}
 
@@ -124,7 +132,8 @@ public:
 			std::cerr << "\n[Auto-Exposure] Average Luminance: " << stats.average_luminance << "\n";
 			post.apply_auto_exposure(stats);
 			std::cerr << "[Auto-Exposure] New Exposure Value: " << post.exposure << "\n";
-		} else {
+		}
+		else {
 			std::cerr << "\n[Exposure] Manual mode active. Value: " << post.exposure << "\n";
 		}
 
@@ -152,7 +161,7 @@ public:
 		}
 
 		// - 5. COMPOSE FINAL FRAMEBUFFER WITH POST-PROCESSING -
-		update_post_processing(post);
+		std::cerr << "[Render] Finished. Finalizing buffers...\n";
 
 
 		//// - 1. INITIALIZE - 
@@ -411,7 +420,8 @@ private:
 								double depth_val = rec.t / z_depth_max_dist;
 								double z_depth = 1.0 - std::clamp(depth_val, 0.0, 1.0);
 								pixel_zdepth += color(z_depth, z_depth, z_depth);
-							} else {
+							}
+							else {
 								//backgrounds for passes aux(albedo, normals, zdepth)
 								pixel_albedo += color(0.0, 0.0, 0.0);
 								pixel_normal += color(0.5, 0.5, 1.0);
@@ -446,12 +456,14 @@ private:
 
 									if (is_specular) {
 										pixel_reflection += attenuation * scattered_color;
-									} else if (dot(scattered.direction(), rec_l.normal) < 0) {
+									}
+									else if (dot(scattered.direction(), rec_l.normal) < 0) {
 										//if not mirror check if glass 
 										pixel_refraction += attenuation * scattered_color;
 									}
 								}
-							} else {
+							}
+							else {
 								//backgrounds for reflection/refraction
 								pixel_reflection += color(0.0, 0.0, 0.0);
 								pixel_refraction += color(0.0, 0.0, 0.0);
@@ -512,7 +524,8 @@ private:
 		if (render_flag.load()) {
 			//100% only if we actually reached the end without cancellation
 			std::cerr << "\rProgress : 100% (" << image_height << "/" << image_height << " lines)          \n";
-		} else {
+		}
+		else {
 			//inform about render cancellation
 			std::cerr << "\rRender cancelled/restarting...                                         \n";
 		}
