@@ -132,6 +132,11 @@ int main(int argc, char* argv[]) {
 					vup_buf[2] = cam.vup.z();
 				}
 
+
+
+
+
+
 				//image resolution and aspect ratio
 				ImGui::SeparatorText("Resolution & Aspect");
 				bool rendering = is_rendering.load();
@@ -144,30 +149,58 @@ int main(int argc, char* argv[]) {
 						cam.image_width = 100;
 					}
 				}
-				//slider for aspect ratio
-				static float aspect = 1.777f; // 16/9
-				if (ImGui::SliderFloat("Aspect Ratio", &aspect, 0.5f, 2.5f, "%.3f")) {
-					cam.aspect_ratio = (double)aspect;
+				//flag for customized image ratio
+				static bool custom_ratio = false;
+				if (ImGui::Checkbox("Custom Resolution (Unlock Height)", &custom_ratio)) {
+					cam.image_height = static_cast<int>(cam.image_width / cam.aspect_ratio);
 				}
-				//quick buttons for some standard aspect ratios
-				if (ImGui::Button("16:9")) {
-					aspect = 1.777f; 
-					cam.aspect_ratio = 16.0 / 9.0;
-				}
-				ImGui::SameLine();
-				if (ImGui::Button("4:3")) {
-					aspect = 1.333f; 
-					cam.aspect_ratio = 4.0 / 3.0;
-				}
-				ImGui::SameLine();
-				if (ImGui::Button("1:1")) {
-					aspect = 1.000f; 
-					cam.aspect_ratio = 1.0;
+				if (!custom_ratio) {
+					//slider for aspect ratio
+					static float aspect = 1.777f; // 16/9
+					if (ImGui::SliderFloat("Aspect Ratio", &aspect, 0.5f, 2.5f, "%.3f")) {
+						cam.aspect_ratio = (double)aspect;
+					}
+					//quick buttons for some standard aspect ratios
+					if (ImGui::Button("16:9")) {
+						aspect = 1.777f;
+						cam.aspect_ratio = 16.0 / 9.0;
+					}
+					ImGui::SameLine();
+					if (ImGui::Button("4:3")) {
+						aspect = 1.333f;
+						cam.aspect_ratio = 4.0 / 3.0;
+					}
+					ImGui::SameLine();
+					if (ImGui::Button("1:1")) {
+						aspect = 1.000f;
+						cam.aspect_ratio = 1.0;
+					}
+
+					//calculate image height automatically
+					cam.image_height = static_cast<int>(cam.image_width / cam.aspect_ratio);
+					ImGui::Text("Locked Height: %d", cam.image_height);
+				} else {
+					//custom mode: height is unlocked
+					if (ImGui::InputInt("Image Height", &cam.image_height)) {
+						if (cam.image_height < 100) { 
+							cam.image_height = 100; 
+						}
+
+						//update aspect ratio
+						cam.aspect_ratio = (double)cam.image_width / cam.image_height;
+					}
+					ImGui::TextDisabled("Current Ratio: %.3f", cam.aspect_ratio);
 				}
 				//unlock blockage
 				if (rendering) {
 					ImGui::EndDisabled();
 				}
+
+
+
+
+
+
 
 				ImGui::SeparatorText("Position & Orientation");
 				//look from

@@ -310,19 +310,25 @@ private:
 	constexpr static double tmax = std::numeric_limits<double>::infinity(); //max distance
 
 	void initialize() {
-		//calculate the image height , and ensure that it's at least 1
-		image_height = int(image_width / aspect_ratio);
-		image_height = (image_height < 1) ? 1 : image_height;
+		//ensure that it's at least 1 unit for ratio
+		if (image_width < 1) { 
+			image_width = 1; 
+		}
+		if (image_height < 1) { 
+			image_height = 1; 
+		}
+		//update aspect ratio 
+		aspect_ratio = double(image_width) / image_height;
 
 		pixel_samples_scale = 1.0 / samples_per_pixel;
-
 		center = lookfrom; //center of the camera source
 
 		//determine viewport dimensions
 		auto theta = degrees_to_radians(vfov);
 		auto h = std::tan(theta / 2);
+
 		auto viewport_height = 2 * h * focus_dist;
-		auto viewport_width = viewport_height * (double(image_width) / image_height);
+		auto viewport_width = viewport_height * aspect_ratio;
 
 		//calculate the u,v,w unit basis vectors for the camera coordinate frame
 		w = unit_vector(lookfrom - lookat);
