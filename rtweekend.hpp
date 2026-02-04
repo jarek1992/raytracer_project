@@ -77,6 +77,12 @@ inline color linear_to_gamma(color linear_color) {
 	);
 }
 
+inline double smoothstep(double edge0, double edge1, double x) {
+	//scaling, clamping and calculating 3x^2 - 2x^3
+	x = std::clamp((x - edge0) / (edge1 - edge0), 0.0, 1.0);
+	return x * x * (3 - 2 * x);
+}
+
 #include "color.hpp"
 #include "interval.hpp"
 #include "ray.hpp"

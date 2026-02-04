@@ -132,15 +132,10 @@ int main(int argc, char* argv[]) {
 					vup_buf[2] = cam.vup.z();
 				}
 
-
-
-
-
-
 				//image resolution and aspect ratio
 				ImGui::SeparatorText("Resolution & Aspect");
 				bool rendering = is_rendering.load();
-				//begin blockage for ratio while rendering
+				//blockage for aspect ratio while rendering
 				if (rendering) {
 					ImGui::BeginDisabled();
 				}
@@ -191,16 +186,10 @@ int main(int argc, char* argv[]) {
 					}
 					ImGui::TextDisabled("Current Ratio: %.3f", cam.aspect_ratio);
 				}
-				//unlock blockage
+				//unlock blockage for aspect ratio section
 				if (rendering) {
 					ImGui::EndDisabled();
 				}
-
-
-
-
-
-
 
 				ImGui::SeparatorText("Position & Orientation");
 				//look from
@@ -289,6 +278,12 @@ int main(int argc, char* argv[]) {
 				static float rot_deg = -45.0f;
 				static float tilt_deg = -4.0f;
 
+				static float sun_col[3] = { 
+					(float)env.sun_color.x(), 
+					(float)env.sun_color.y(), 
+					(float)env.sun_color.z() 
+				};
+
 				//desychronization and crash prevention
 				if (!ImGui::IsAnyItemActive()) {
 					sun_dir_buf[0] = env.sun_direction.x();
@@ -344,7 +339,6 @@ int main(int argc, char* argv[]) {
 				if (env.mode == EnvironmentSettings::PHYSICAL_SUN) {
 					ImGui::TextColored(ImVec4(1.0f, 0.9f, 0.4f, 1.0f), "Physical Sun & Sky");
 					//sun color
-					float sun_col[3] = { (float)env.sun_color.x(), (float)env.sun_color.y(), (float)env.sun_color.z() };
 					if (ImGui::ColorEdit3("Sun Color", sun_col)) {
 						env.sun_color = color(sun_col[0], sun_col[1], sun_col[2]);
 						should_restart = true;
@@ -357,7 +351,7 @@ int main(int argc, char* argv[]) {
 					}
 					//sun size
 					float sun_size_f = static_cast<float>(env.sun_size);
-					if (ImGui::SliderFloat("Sun Size", &sun_size_f, 100.0f, 10000.0f)) {
+					if (ImGui::SliderFloat("Sun Size", &sun_size_f, 0.0f, 10.0f)) {
 						env.sun_size = static_cast<double>(sun_size_f);
 						should_restart = true;
 					}

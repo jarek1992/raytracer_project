@@ -75,7 +75,8 @@ public:
 			for (size_t i = 0; i < total; ++i) {
 				final_framebuffer[i] = (final_framebuffer[i] * post.exposure) + bloom_overlay[i];
 			}
-		} else {
+		}
+		else {
 			for (size_t i = 0; i < total; ++i) final_framebuffer[i] *= post.exposure;
 		}
 
@@ -311,11 +312,11 @@ private:
 
 	void initialize() {
 		//ensure that it's at least 1 unit for ratio
-		if (image_width < 1) { 
-			image_width = 1; 
+		if (image_width < 1) {
+			image_width = 1;
 		}
-		if (image_height < 1) { 
-			image_height = 1; 
+		if (image_height < 1) {
+			image_height = 1;
 		}
 		//update aspect ratio 
 		aspect_ratio = double(image_width) / image_height;
@@ -743,7 +744,7 @@ private:
 		return vec3(random_double() - 0.5, random_double() - 0.5, 0);
 	}
 
-	//returns a random point in thecamera defocus disk
+	//returns a random point in the camera defocus disk
 	point3 defocus_disk_sample() const {
 		auto p = random_in_unit_disk();
 		return center + (p[0] * defocus_disk_u) + (p[1] * defocus_disk_v);
@@ -778,24 +779,46 @@ private:
 			return env.hdr_texture->value(phi / (2 * pi), theta / pi, point3(0.0, 0.0, 0.0)) * env.intensity;
 		}
 		//physcial sun model
-		double sun_height = env.sun_direction.y();
-		double day_factor = std::clamp(sun_height * 4.0, 0.0, 1.0);
-		double sunset_factor = std::clamp(1.0 - std::abs(sun_height - 0.1) * 5.0, 0.0, 1.0);
-
-		color zenit_color = color(0.1, 0.2, 0.5) * (1.0 - day_factor) + color(0.4, 0.6, 1.0) * day_factor;
-		color horizon_color = color(0.1, 0.05, 0.01) * (1.0 - day_factor) + color(0.8, 0.9, 1.0) * day_factor;
-		horizon_color = horizon_color * (1.0 - sunset_factor) + color(1.0, 0.4, 0.1) * sunset_factor;
-
-		auto a = 0.5 * (unit_dir.y() + 1.0);
-		env_color = (1.0 - a) * horizon_color + a * zenit_color;
-
-		double sun_focus = dot(unit_dir, env.sun_direction);
-		if (sun_focus > 0.0 && sun_height > -0.1) {
-			color current_sun_color = env.sun_color * (1.0 - sunset_factor) + color(1.0, 0.3, 0.1) * sunset_factor;
-			double visibility = std::clamp(sun_height * 10.0 + 0.5, 0.0, 1.0);
-			env_color += current_sun_color * std::pow(sun_focus, env.sun_size) * env.sun_intensity * visibility;
+		//
+		// normalize sun direction locally 
+		vec3 sun_dir = unit_vector(env.sun_direction);
+		//day and night parameters
+		double sun_height = sun_dir.y();
+		double day_factor = std::clamp(sun_height * 2.0 + 0.5, 0.0, 1.0);
+		double sunset_factor = std::clamp(1.0 - std::abs(sun_height) * 10.0, 0.0, 1.0);
+		//sky colors
+		color zenit_color = color(0.05, 0.1, 0.3) * (1.0 - day_factor) + color(0.4, 0.6, 1.0) * day_factor;
+		color horizon_color = color(0.2, 0.1, 0.05) * (1.0 - day_factor) + color(0.7, 0.8, 1.0) * day_factor;
+		//sunset horizon
+		horizon_color = horizon_color * (1.0 - sunset_factor) + color(1.0, 0.4, 0.2) * sunset_factor;
+		//sky gradient
+		auto a = unit_dir.y();
+		color sky_color;
+		if (a > 0) {
+			sky_color = (1.0 - a) * horizon_color + a * zenit_color;
 		}
-		return env_color * env.intensity;
+		else {
+			// Dla dołu (pod horyzontem) dajemy ciemniejszy kolor horyzontu
+			sky_color = horizon_color * 0.2;
+		}
+		color final_color = sky_color * env.intensity;
+
+		//sun disc(physical)
+		double sun_focus = dot(unit_dir, sun_dir);
+		//sun_size parameter in UI 0.1(small) - 2.0(big)
+		// Próg tarczy słońca (używamy Twojego sun_size)
+		// Zakładamy, że w UI sun_size to np. 1.0 (małe) do 10.0 (duże)
+		double sun_threshold = 1.0 - (env.sun_size * 0.001);
+
+		if (sun_focus > sun_threshold && sun_height > -0.1) {
+			color s_color = env.sun_color * (1.0 - sunset_factor) + color(1.0, 0.3, 0.1) * sunset_factor;
+			double visibility = std::clamp(sun_height * 5.0 + 0.1, 0.0, 1.0);
+
+			//antyaliasing sun edges
+			double alpha = smoothstep(sun_threshold, sun_threshold + 0.0002, sun_focus);
+			final_color += s_color * env.sun_intensity * visibility * alpha;
+		}
+		return final_color;
 	}
 
 	//intersection radius with sphere
@@ -828,8 +851,7 @@ private:
 				if (i > 10 && accumulated_attenuation.length() < 0.00001) {
 					break;
 				}
-			}
-			else {
+			} else {
 				//material absorbed the ray, no more light is gathered
 				break;
 			}
