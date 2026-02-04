@@ -77,10 +77,23 @@ inline color linear_to_gamma(color linear_color) {
 	);
 }
 
+//antyaliasing edges
 inline double smoothstep(double edge0, double edge1, double x) {
 	//scaling, clamping and calculating 3x^2 - 2x^3
 	x = std::clamp((x - edge0) / (edge1 - edge0), 0.0, 1.0);
 	return x * x * (3 - 2 * x);
+}
+
+//convert spherical coordinates(degrees) to directional vectors
+inline vec3 direction_from_spherical(double elevation_deg, double azimuth_deg) {
+	double phi = degrees_to_radians(azimuth_deg);
+	double theta = degrees_to_radians(90.0 - elevation_deg); //90.0 degrees is zenith (top)
+
+	return vec3(
+		std::sin(theta) * std::cos(phi),
+		std::cos(theta),
+		std::sin(theta) * std::sin(phi)
+	);
 }
 
 #include "color.hpp"
