@@ -174,11 +174,12 @@ int main(int argc, char* argv[]) {
 					//calculate image height automatically
 					cam.image_height = static_cast<int>(cam.image_width / cam.aspect_ratio);
 					ImGui::Text("Locked Height: %d", cam.image_height);
-				} else {
+				}
+				else {
 					//custom mode: height is unlocked
 					if (ImGui::InputInt("Image Height", &cam.image_height)) {
-						if (cam.image_height < 100) { 
-							cam.image_height = 100; 
+						if (cam.image_height < 100) {
+							cam.image_height = 100;
 						}
 
 						//update aspect ratio
@@ -278,10 +279,10 @@ int main(int argc, char* argv[]) {
 				static float rot_deg = -45.0f;
 				static float tilt_deg = -4.0f;
 
-				static float sun_col[3] = { 
-					(float)env.sun_color.x(), 
-					(float)env.sun_color.y(), 
-					(float)env.sun_color.z() 
+				static float sun_col[3] = {
+					(float)env.sun_color.x(),
+					(float)env.sun_color.y(),
+					(float)env.sun_color.z()
 				};
 
 				//desychronization and crash prevention
@@ -335,13 +336,28 @@ int main(int argc, char* argv[]) {
 						should_restart = true;
 					}
 				}
+			
+				
+				
 				//physical Sun mode settings
 				if (env.mode == EnvironmentSettings::PHYSICAL_SUN) {
 					ImGui::TextColored(ImVec4(1.0f, 0.9f, 0.4f, 1.0f), "Physical Sun & Sky");
 					//sun color
+					//checkbox for sun color blockage 
+					if (ImGui::Checkbox("Auto Sun Color (Atmospheric)", &env.auto_sun_color)) {
+						should_restart = true;
+					}
+					//visual blockage for ColorEdit
+					if (env.auto_sun_color) {
+						ImGui::BeginDisabled();
+					}
 					if (ImGui::ColorEdit3("Sun Color", sun_col)) {
 						env.sun_color = color(sun_col[0], sun_col[1], sun_col[2]);
 						should_restart = true;
+					}
+					//end sun color blockage
+					if (env.auto_sun_color) {
+						ImGui::EndDisabled();
 					}
 					//sun intensity
 					float sun_int_f = static_cast<float>(env.sun_intensity);
@@ -355,8 +371,68 @@ int main(int argc, char* argv[]) {
 						env.sun_size = static_cast<double>(sun_size_f);
 						should_restart = true;
 					}
+
+					ImGui::Separator();
+
+					//mode switch 
+					static bool use_astro = false;
+					ImGui::Checkbox("Use daylight System (time/data)", &use_astro);
+
+					if (use_astro) {
+						//static variable for converter
+						static float sun_time = 12.0f; //0-24 hours
+						static int sun_day = 172; //day of the year (1-365, 172 is the summer solstice)
+						static float latitude = 52.0f; //latitude (set as default Poland 52)
+
+						bool astro_changed = false;
+						astro_changed |= ImGui::SliderFloat("Hour", &sun_time, 0.0f, 24.0f, "%.2f h");
+						astro_changed |= ImGui::SliderInt("Day", &sun_day, 1, 365);
+						astro_changed |= ImGui::SliderFloat("Latitude", &latitude, -90.0f, 90.0f, "%.1f deg");
+
+						if (astro_changed) {
+							//astronomical maths
+							double declination = 23.45 * std::sin(degrees_to_radians(360.0 / 365.0 * (sun_day - 81)));
+							double hour_angle = (sun_time - 12.0) * 15.0;
+							double lat_rad = degrees_to_radians(latitude);
+							double dec_rad = degrees_to_radians(declination);
+							double ha_rad = degrees_to_radians(hour_angle);
+
+							double sin_el = std::sin(lat_rad) * std::sin(dec_rad) +
+								std::cos(lat_rad) * std::cos(dec_rad) * std::cos(ha_rad);
+							double elevation = radians_to_degrees(std::asin(std::clamp(sin_el, -1.0, 1.0)));
+
+							double cos_az = (std::sin(dec_rad) - std::sin(lat_rad) * sin_el) /
+								(std::cos(lat_rad) * std::cos(std::asin(sin_el)));
+							double azimuth = radians_to_degrees(std::acos(std::clamp(cos_az, -1.0, 1.0)));
+							if (hour_angle > 0) { 
+								azimuth = 360.0 - azimuth; 
+							}
+							//update directional vector
+							env.sun_direction = direction_from_spherical(elevation, azimuth);
+
+							//automatic sun color
+							if (env.auto_sun_color) {
+								double s_height = env.sun_direction.y();
+								//higher the sun more red less blue
+								double warm_factor = std::clamp(1.0 - s_height * 2.0, 0.0, 1.0);
+								env.sun_color = color(1.0, 0.9 - warm_factor * 0.6, 0.8 - warm_factor * 0.7);
+
+								//update color buffer 
+								sun_col[0] = (float)env.sun_color.x();
+								sun_col[1] = (float)env.sun_color.y();
+								sun_col[2] = (float)env.sun_color.z();
+							}
+
+							//synchronize buffer
+							sun_dir_buf[0] = env.sun_direction.x();
+							sun_dir_buf[1] = env.sun_direction.y();
+							sun_dir_buf[2] = env.sun_direction.z();
+
+							should_restart = true;
+						}
+					}
 					//sun direction
-					ImGui::Text("Sun Direction");
+					ImGui::Text("Sun Direction (Manual)");
 					if (ImGui::InputScalarN("##sun_dir_input", ImGuiDataType_Double, sun_dir_buf, 3)) {
 						env.sun_direction = vec3(sun_dir_buf[0], sun_dir_buf[1], sun_dir_buf[2]);
 						should_restart = true;
@@ -416,7 +492,8 @@ int main(int argc, char* argv[]) {
 					//slider in "stops"(EV) units - (+2)lighten or (-2)darken
 					my_post.needs_update |= ImGui::SliderFloat("Exposure Compensation", &my_post.exposure_compensation_stops, -5.0f, 5.0f, "%.1f EV");
 					ImGui::Unindent();
-				} else {
+				}
+				else {
 					my_post.needs_update |= ImGui::SliderFloat("Manual Exposure", &my_post.exposure, 0.0f, 5.0f);
 				}
 
@@ -550,7 +627,7 @@ int main(int argc, char* argv[]) {
 
 
 			if (just_finished || (rendering_active && time_to_update) || my_post.needs_update) {
-				
+
 				//lock the size(thread-safe mindset)
 				int locked_w = cam.image_width;
 				int locked_h = cam.image_height;

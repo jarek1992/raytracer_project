@@ -21,6 +21,8 @@ struct EnvironmentSettings {
 	//physical sun settings
 	vec3 sun_direction = unit_vector(vec3(1.0, 0.5, -0.5));
 	color sun_color = color(1.0, 1.0, 1.0);
+	bool auto_sun_color = true;
 	double sun_intensity = 1.0;
 	double sun_size = 1;
+
 };
