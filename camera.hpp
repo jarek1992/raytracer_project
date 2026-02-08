@@ -785,13 +785,14 @@ private:
 		vec3 sun_dir = unit_vector(env.sun_direction);
 		//day and night parameters
 		double sun_height = sun_dir.y();
+		double adjusted_height = sun_height - 0.05;
 		//sun height 0.0 -> exposure 1.0, 
 		//sun height -0.15 -> exposure 0.0
-		double sky_exposure = std::clamp(sun_height * 5.0 + 0.1, 0.0, 1.0);
-		double day_factor = std::clamp(sun_height * 8.0, 0.0, 1.0);
+		double sky_exposure = std::clamp(adjusted_height * 8.0 + 1.4, 0.0, 1.0);
+		double day_factor = std::clamp(adjusted_height * 10.0 + 1.1, 0.0, 1.0);
 
-		double sunset_intensity = std::clamp(1.0 - std::abs(sun_height + 0.02) * 20.0, 0.0, 1.0);
-		double sunset_factor = (sun_height > -0.05) ? sunset_intensity : 0.0;
+		double sunset_intensity = std::clamp(1.0 - std::abs(adjusted_height + 0.05) * 30.0, 0.0, 1.0);
+		double sunset_factor = (adjusted_height > -0.1) ? sunset_intensity : 0.0;
 		//tone down sunset below horizon
 		if (sun_height < 0) { 
 			sunset_factor *= (sun_height * 10.0 + 1.0);
@@ -799,10 +800,10 @@ private:
 		sunset_factor = std::clamp(sunset_factor, 0.0, 1.0);
 		
 		//sky colors
-		color zenit_color = color(0.01, 0.03, 0.1) * (1.0 - day_factor) + color(0.15, 0.45, 1.0) * day_factor;
+		color zenit_color = color(0.01, 0.03, 0.1) * (1.0 - day_factor) + color(0.2, 0.5, 1.0) * day_factor;
 		color horizon_color = color(0.05, 0.02, 0.01) * (1.0 - day_factor) + color(0.6, 0.8, 1.0) * day_factor;
 		//sunset horizon
-		horizon_color = horizon_color * (1.0 - sunset_factor) + color(1.0, 0.4, 0.2) * sunset_factor;
+		horizon_color = horizon_color * (1.0 - sunset_factor) + color(1.0, 0.35, 0.1) * sunset_factor;
 		//sky gradient
 		auto a = unit_dir.y();
 		color sky_color;
@@ -813,7 +814,7 @@ private:
 			// Dla dołu (pod horyzontem) dajemy ciemniejszy kolor horyzontu
 			sky_color = horizon_color * 0.1;
 		}
-		color final_color = sky_color * env.intensity * sky_exposure;
+		color final_color = sky_color * (env.intensity * 1.5) * sky_exposure;
 
 		//sun disc(physical)
 		double sun_focus = dot(unit_dir, sun_dir);
@@ -822,9 +823,9 @@ private:
 		// Zakładamy, że w UI sun_size to np. 1.0 (małe) do 10.0 (duże)
 		double sun_threshold = 1.0 - (env.sun_size * 0.001);
 
-		if (sun_focus > sun_threshold && sun_height > -0.05) {
+		if (sun_focus > sun_threshold && adjusted_height > -0.1) {
 			color s_color = env.sun_color * (1.0 - sunset_factor) + color(1.0, 0.3, 0.1) * sunset_factor;
-			double visibility = std::clamp(sun_height * 10.0, 0.0, 1.0);
+			double visibility = std::clamp(sun_height * 5.0 + 1.0, 0.0, 1.0);
 			//antyaliasing sun edges
 			double alpha = smoothstep(sun_threshold, sun_threshold + 0.0002, sun_focus);
 

@@ -415,7 +415,7 @@ int main(int argc, char* argv[]) {
 								double s_height = env.sun_direction.y();
 								//higher the sun more red less blue
 								double warm_factor = std::clamp(1.0 - s_height * 2.0, 0.0, 1.0);
-								env.sun_color = color(1.0, 0.9 - warm_factor * 0.6, 0.8 - warm_factor * 0.7);
+								env.sun_color = color(1.0, 0.9 - warm_factor * 0.6, 0.8 - warm_factor * 0.8);
 
 								//update color buffer 
 								sun_col[0] = (float)env.sun_color.x();
