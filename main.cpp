@@ -457,6 +457,18 @@ int main(int argc, char* argv[]) {
 			}
 			//post-processing tab
 			if (ImGui::BeginTabItem("Post-Process")) {
+				//buffers definition
+				static float col_bal[3] = { 
+					(float)my_post.color_balance.x(),
+					(float)my_post.color_balance.y(),
+					(float)my_post.color_balance.z()
+				};
+				//synchronization 
+				if (!ImGui::IsItemActive()) {
+					col_bal[0] = (float)my_post.color_balance.x();
+					col_bal[1] = (float)my_post.color_balance.y();
+					col_bal[2] = (float)my_post.color_balance.z();
+				}
 
 				ImGui::SeparatorText("Debug Views");
 				const char* debug_items[] = { "NONE", "RED", "GREEN", "BLUE", "LUMINANCE" };
@@ -503,7 +515,11 @@ int main(int argc, char* argv[]) {
 				ImGui::SeparatorText("Color Grade");
 				my_post.needs_update |= ImGui::SliderFloat("Contrast", &my_post.contrast, 0.5f, 2.0f);
 				my_post.needs_update |= ImGui::SliderFloat("Saturation", &my_post.saturation, 0.0f, 2.0f);
-				my_post.needs_update |= ImGui::ColorEdit3("Color Balance", (float*)&my_post.color_balance);
+
+				if (ImGui::ColorEdit3("Color Balance", col_bal)) {
+					my_post.color_balance = vec3(col_bal[0], col_bal[1], col_bal[2]);
+					my_post.needs_update = true;
+				}
 				my_post.needs_update |= ImGui::SliderFloat("Hue Shift", &my_post.hue_shift, -180.0f, 180.0f);
 
 				ImGui::SeparatorText("Effects");
