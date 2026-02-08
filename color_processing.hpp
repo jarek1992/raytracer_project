@@ -157,23 +157,6 @@ public:
 		return stats;
 	}
 
-	//auto-exposure for progressive render display
-	double calculate_auto_exposure(const std::vector<color>& buffer) const {
-		if (buffer.empty()) {
-			return exposure;
-		}
-		double total_lum = 0.0;
-		for (const auto& c : buffer) {
-			total_lum += c.luminance();
-		}
-		double avg_lum = total_lum / buffer.size();
-		if (avg_lum < 0.001) {
-			avg_lum = 0.001;
-		}
-		double auto_exp = (target_luminance / avg_lum) * std::pow(2.0, exposure_compensation_stops);
-		return std::clamp(auto_exp, 0.01, 20.0);
-	}
-
 	//auto-exposure applied to final render
 	double apply_auto_exposure(const image_statistics& stats) const {
 		if (!use_auto_exposure) {

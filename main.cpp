@@ -174,8 +174,7 @@ int main(int argc, char* argv[]) {
 					//calculate image height automatically
 					cam.image_height = static_cast<int>(cam.image_width / cam.aspect_ratio);
 					ImGui::Text("Locked Height: %d", cam.image_height);
-				}
-				else {
+				} else {
 					//custom mode: height is unlocked
 					if (ImGui::InputInt("Image Height", &cam.image_height)) {
 						if (cam.image_height < 100) {
@@ -518,7 +517,7 @@ int main(int argc, char* argv[]) {
 
 					if (my_post.use_bloom) {
 						ImGui::Indent();
-						changed |= ImGui::SliderFloat("Threshold", &my_post.bloom_threshold, 0.5f, 5.0f, "%.2f");
+						changed |= ImGui::SliderFloat("Threshold", &my_post.bloom_threshold, 0.0f, 5.0f, "%.2f");
 						changed |= ImGui::SliderFloat("Intensity", &my_post.bloom_intensity, 0.0f, 2.0f, "%.2f");
 						changed |= ImGui::SliderInt("Radius", &my_post.bloom_radius, 1, 20);
 						ImGui::Unindent();

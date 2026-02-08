@@ -75,14 +75,20 @@ public:
 			current_ev = post.exposure; //get value in manual mode from slider
 		}
 
+		// NAJPIERW nakładamy ekspozycję na bazowy obraz
+		for (size_t i = 0; i < total; ++i) {
+			final_framebuffer[i] *= current_ev;
+		}
+
 		// 1. Bloom & Exposure (Używamy parametrów 'w' i 'h')
 		if (post.use_bloom) {
 			std::vector<color> bloom_overlay(total, color(0.0, 0.0, 0.0));
 			bloom_filter bloom(post.bloom_threshold, post.bloom_intensity, post.bloom_radius);
-			bloom.generate_bloom_overlay(final_framebuffer, bloom_overlay, w, h, static_cast<float>(current_ev));
+
+			bloom.generate_bloom_overlay(final_framebuffer, bloom_overlay, w, h, 1.0f);
 
 			for (size_t i = 0; i < total; ++i) {
-				final_framebuffer[i] = (final_framebuffer[i] * current_ev) + bloom_overlay[i];
+				final_framebuffer[i] += bloom_overlay[i];
 			}
 		} else {
 			for (size_t i = 0; i < total; ++i) final_framebuffer[i] *= current_ev;
