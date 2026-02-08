@@ -336,9 +336,7 @@ int main(int argc, char* argv[]) {
 						should_restart = true;
 					}
 				}
-			
-				
-				
+		
 				//physical Sun mode settings
 				if (env.mode == EnvironmentSettings::PHYSICAL_SUN) {
 					ImGui::TextColored(ImVec4(1.0f, 0.9f, 0.4f, 1.0f), "Physical Sun & Sky");
@@ -432,6 +430,10 @@ int main(int argc, char* argv[]) {
 						}
 					}
 					//sun direction
+					if (use_astro) {
+						ImGui::BeginDisabled();
+					}
+
 					ImGui::Text("Sun Direction (Manual)");
 					if (ImGui::InputScalarN("##sun_dir_input", ImGuiDataType_Double, sun_dir_buf, 3)) {
 						env.sun_direction = vec3(sun_dir_buf[0], sun_dir_buf[1], sun_dir_buf[2]);
@@ -445,8 +447,11 @@ int main(int argc, char* argv[]) {
 						sun_dir_buf[0] = env.sun_direction.x();
 						sun_dir_buf[1] = env.sun_direction.y();
 						sun_dir_buf[2] = env.sun_direction.z();
-
 						should_restart = true;
+					}
+					if (use_astro) {
+						ImGui::EndDisabled();
+						ImGui::TextDisabled("(Controlled by Daylight System)");
 					}
 				}
 				ImGui::EndTabItem();
@@ -492,8 +497,7 @@ int main(int argc, char* argv[]) {
 					//slider in "stops"(EV) units - (+2)lighten or (-2)darken
 					my_post.needs_update |= ImGui::SliderFloat("Exposure Compensation", &my_post.exposure_compensation_stops, -5.0f, 5.0f, "%.1f EV");
 					ImGui::Unindent();
-				}
-				else {
+				} else {
 					my_post.needs_update |= ImGui::SliderFloat("Manual Exposure", &my_post.exposure, 0.0f, 5.0f);
 				}
 
@@ -554,8 +558,7 @@ int main(int argc, char* argv[]) {
 
 			if (is_rendering) {
 				ImGui::TextColored(ImVec4(1.0f, 1.0f, 0.0f, 1.0f), "Rendering: %.1f%%", progress * 100.0f);
-			}
-			else {
+			} else {
 				ImGui::TextColored(ImVec4(0.0f, 1.0f, 0.0f, 1.0f), "Render Finished (100%)");
 			}
 			//stop render button
@@ -568,8 +571,7 @@ int main(int argc, char* argv[]) {
 				}
 			}
 			ImGui::PopStyleColor();
-		}
-		else {
+		} else {
 			//start render button
 			ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.1f, 0.4f, 0.1f, 1.0f)); //green color
 			if (ImGui::Button("Render", ImVec2(-1, 0))) {
@@ -624,10 +626,7 @@ int main(int argc, char* argv[]) {
 			auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(now - last_preview_update).count();
 			bool time_to_update = (elapsed > 150); // 150ms = 10 FPS
 
-
-
 			if (just_finished || (rendering_active && time_to_update) || my_post.needs_update) {
-
 				//lock the size(thread-safe mindset)
 				int locked_w = cam.image_width;
 				int locked_h = cam.image_height;
@@ -644,8 +643,17 @@ int main(int argc, char* argv[]) {
 
 					cam.final_framebuffer = temp_data;
 
+
+					// Musimy przeliczyć statystyki (średnią jasność) z TYCH danych, które właśnie skopiowaliśmy
+					// zanim wejdziemy w update_post_processing.
+					image_statistics stats = my_post.analyze_framebuffer(temp_data);
+
+
+
 					// Wywołujemy post-processing
 					cam.update_post_processing(my_post, locked_w, locked_h);
+
+
 
 					if (!cam.final_framebuffer.empty()) {
 						rendered_texture = create_texture_from_buffer(cam.final_framebuffer, locked_w, locked_h);
@@ -669,8 +677,7 @@ int main(int argc, char* argv[]) {
 					//image is wider than window -> fit to width
 					display_w = avail_size.x;
 					display_h = avail_size.x / image_aspect;
-				}
-				else {
+				} else {
 					//image is higher than window -> fit to height
 					display_h = avail_size.y;
 					display_w = avail_size.y * image_aspect;
@@ -684,8 +691,7 @@ int main(int argc, char* argv[]) {
 				ImGui::SetCursorPos(ImVec2(offset_x, offset_y));
 				//display the image 
 				ImGui::Image((ImTextureID)(intptr_t)rendered_texture, ImVec2(display_w, display_h));
-			}
-			else {
+			} else {
 				ImGui::Text("Ready to render...");
 			}
 			last_rendering_state = rendering_active;

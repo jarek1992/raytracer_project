@@ -176,13 +176,17 @@ public:
 
 	//auto-exposure applied to final render
 	double apply_auto_exposure(const image_statistics& stats) const {
-		double current_exp = exposure; // domyślna wartość
-
-		if (use_auto_exposure && stats.average_luminance > 0.001f) {
-			//add multiplier user_exposure_offset for user control
-			float raw_exposure = target_luminance / stats.average_luminance;
-			current_exp = raw_exposure * std::pow(2.0f, exposure_compensation_stops);
+		if (!use_auto_exposure) {
+			return std::clamp(static_cast<float>(exposure), 0.01f, 20.0f);
 		}
+
+		double current_exp;
+		// Jeśli obraz jest prawie czarny, używamy bardzo małej luminancji, 
+		// żeby nie dzielić przez zero, ale wciąż stosujemy kompensację!
+		double safe_luminance = std::max(static_cast<double>(stats.average_luminance), 0.0001);
+
+		double raw_exposure = target_luminance / safe_luminance;
+		current_exp = raw_exposure * std::pow(2.0, static_cast<double>(exposure_compensation_stops));
 
 		return std::clamp(static_cast<float>(current_exp), 0.01f, 20.0f);
 	}

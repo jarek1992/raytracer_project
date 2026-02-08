@@ -24,18 +24,18 @@ public:
 	double aspect_ratio = 1.0;  //ratio of image width over height
 	int image_width = 400;      //rendered image width in pixel count
 	int image_height = 225; //rendered image height
-	int samples_per_pixel = 10; //count of random smaples for each pixel
+	int samples_per_pixel = 30; //count of random smaples for each pixel
 	int max_depth = 10;         //max recursion depth
 	double sky_intesity = 1.0;    //intensity multiplier for sky color default 1.0
 
 	//camera settings
-	double vfov = 90; //vertical view angle (field of view)
-	point3 lookfrom = point3(0, 0, 0); //point where camera is looking from
-	point3 lookat = point3(0, 0, -1); //point where camera i s looking at
+	double vfov = 30; //vertical view angle (field of view)
+	point3 lookfrom = point3(10, 1.5, 0); //point where camera is looking from
+	point3 lookat = point3(0, 0, 0); //point where camera i s looking at
 	vec3 vup = vec3(0, 1, 0); //camera-relative "up" direction
 
 	//defocus blur
-	double defocus_angle = 0; //variation angle of rays through each pixel
+	double defocus_angle = 0.5; //variation angle of rays through each pixel
 	double focus_dist = 10; //distance from camera lookfrom point to plane of perfect focus
 
 	//denoiser flag
@@ -65,19 +65,27 @@ public:
 		if (total != static_cast<size_t>(w) * h) {
 			return;
 		}
+		//Wyliczenie aktualnej ekspozycj
+		double current_ev;
+		if (post.use_auto_exposure) {
+			// Analizujemy jasność skopiowanego bufora
+			image_statistics stats = post.analyze_framebuffer(final_framebuffer);
+			current_ev = post.apply_auto_exposure(stats);
+		} else {
+			current_ev = post.exposure; //get value in manual mode from slider
+		}
 
 		// 1. Bloom & Exposure (Używamy parametrów 'w' i 'h')
 		if (post.use_bloom) {
 			std::vector<color> bloom_overlay(total, color(0.0, 0.0, 0.0));
 			bloom_filter bloom(post.bloom_threshold, post.bloom_intensity, post.bloom_radius);
-			bloom.generate_bloom_overlay(final_framebuffer, bloom_overlay, w, h, post.exposure);
+			bloom.generate_bloom_overlay(final_framebuffer, bloom_overlay, w, h, static_cast<float>(current_ev));
 
 			for (size_t i = 0; i < total; ++i) {
-				final_framebuffer[i] = (final_framebuffer[i] * post.exposure) + bloom_overlay[i];
+				final_framebuffer[i] = (final_framebuffer[i] * current_ev) + bloom_overlay[i];
 			}
-		}
-		else {
-			for (size_t i = 0; i < total; ++i) final_framebuffer[i] *= post.exposure;
+		} else {
+			for (size_t i = 0; i < total; ++i) final_framebuffer[i] *= current_ev;
 		}
 
 		// 2. Sharpening (Używamy parametrów 'w' i 'h')
@@ -130,12 +138,12 @@ public:
 		// - 3. AUTO-EXPOSURE -
 		if (post.use_auto_exposure) {
 			image_statistics stats = post.analyze_framebuffer(render_accumulator);
+
+			double calculated_ev = post.apply_auto_exposure(stats);
+			post.exposure = static_cast<float>(calculated_ev);
+
 			std::cerr << "\n[Auto-Exposure] Average Luminance: " << stats.average_luminance << "\n";
-			post.apply_auto_exposure(stats);
-			std::cerr << "[Auto-Exposure] New Exposure Value: " << post.exposure << "\n";
-		}
-		else {
-			std::cerr << "\n[Exposure] Manual mode active. Value: " << post.exposure << "\n";
+			std::cerr << "[Auto-Exposure] New Exposure Value: " << calculated_ev << "\n";
 		}
 
 		// - 4. AI DENOISING AND POST-DENOISE SHARPENING -
