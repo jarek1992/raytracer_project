@@ -63,7 +63,9 @@ public:
 		auto distance_inside_boundary = (rec2.t - rec1.t) * ray_length;
 		auto hit_distance = neg_inv_density * log(random_double());
 
-		if (hit_distance > distance_inside_boundary) return false;
+		if (hit_distance > distance_inside_boundary) { 
+			return false; 
+		}
 
 		rec.t = rec1.t + hit_distance / ray_length;
 		rec.p = r.at(rec.t);

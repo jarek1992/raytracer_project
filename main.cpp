@@ -44,20 +44,31 @@ int main(int argc, char* argv[]) {
 	// - 1. LOADING MATERIALS FROM THE LIBRARY -
 	MaterialLibrary mat_lib;
 	load_materials(mat_lib); //from scene_management.hpp
-	// - 2. LOADING THE GEOMETRY -
-	hittable_list world = build_geometry(mat_lib); //from scene_management.hpp
-	// - 3. BVH ACCELERATION STRUCTURE -
-	hittable_list bvh_world;
-	bvh_world.add(make_shared<bvh_node>(world));
-	// - 4. CREATE ENVIRONMENT -
+
+	// - 2. OBJECT LOADER (.obj)  -
+	sceneAssetsLoader assets;
+
+	// - 3. CREATE CAMERA  -
+	camera cam;
+
+	// - 4. LOADING THE GEOMETRY -
+	hittable_list world = build_geometry(mat_lib,
+		assets,
+		cam.use_fog,
+		static_cast<double>(cam.fog_density),
+		color(cam.fog_color[0], cam.fog_color[1], cam.fog_color[2])); //from scene_management.hpp
+
+	// - 5. BVH ACCELERATION STRUCTURE -
+	shared_ptr<hittable> bvh_world = make_shared<bvh_node>(world);
+
+	// - 6. CREATE ENVIRONMENT -
 	EnvironmentSettings env;
 	//loading 
 	env.hdr_texture = make_shared<image_texture>("assets/sunny_rose_garden_2k.hdr", true);
 	env.mode = EnvironmentSettings::HDR_MAP;
 	env.intensity = 1.0;
-	// - 5. CREATE CAMERA  -
-	camera cam;
-	// - 6. POST-PROCESSING -
+
+	// - 7. POST-PROCESSING -
 	post_processor my_post;
 
 	// - WINDOW AND OPENGL INITIALIZATION FOR IMGUI DISPLAY OF THE RENDERED IMAGE -
@@ -174,7 +185,8 @@ int main(int argc, char* argv[]) {
 					//calculate image height automatically
 					cam.image_height = static_cast<int>(cam.image_width / cam.aspect_ratio);
 					ImGui::Text("Locked Height: %d", cam.image_height);
-				} else {
+				}
+				else {
 					//custom mode: height is unlocked
 					if (ImGui::InputInt("Image Height", &cam.image_height)) {
 						if (cam.image_height < 100) {
@@ -289,6 +301,11 @@ int main(int argc, char* argv[]) {
 					sun_dir_buf[0] = env.sun_direction.x();
 					sun_dir_buf[1] = env.sun_direction.y();
 					sun_dir_buf[2] = env.sun_direction.z();
+
+					sun_col[0] = (float)env.sun_color.x();
+					sun_col[1] = (float)env.sun_color.y();
+					sun_col[2] = (float)env.sun_color.z();
+
 				}
 
 				ImGui::SeparatorText("Sky Mode Selection");
@@ -310,6 +327,25 @@ int main(int argc, char* argv[]) {
 					env.intensity = static_cast<double>(intensity_f);
 					should_restart = true;
 				}
+
+
+				//environmental fog
+				if (ImGui::CollapsingHeader("Environmental Fog")) {
+					if (ImGui::Checkbox("Enable Fog", &cam.use_fog)) {
+						should_restart = true;
+					}
+					if (cam.use_fog) {
+						if (ImGui::SliderFloat("Density", &cam.fog_density, 0.0001f, 0.05f, "%.4f")) {
+							should_restart = true;
+						}
+						if (ImGui::ColorEdit3("Fog Color", cam.fog_color)) {
+							should_restart = true;
+						}
+					}
+				}
+
+
+
 				//HDRI mode settings
 				if (env.mode == EnvironmentSettings::HDR_MAP) {
 					if (!ImGui::IsAnyItemActive()) {
@@ -335,7 +371,7 @@ int main(int argc, char* argv[]) {
 						should_restart = true;
 					}
 				}
-		
+
 				//physical Sun mode settings
 				if (env.mode == EnvironmentSettings::PHYSICAL_SUN) {
 					ImGui::TextColored(ImVec4(1.0f, 0.9f, 0.4f, 1.0f), "Physical Sun & Sky");
@@ -401,8 +437,8 @@ int main(int argc, char* argv[]) {
 							double cos_az = (std::sin(dec_rad) - std::sin(lat_rad) * sin_el) /
 								(std::cos(lat_rad) * std::cos(std::asin(sin_el)));
 							double azimuth = radians_to_degrees(std::acos(std::clamp(cos_az, -1.0, 1.0)));
-							if (hour_angle > 0) { 
-								azimuth = 360.0 - azimuth; 
+							if (hour_angle > 0) {
+								azimuth = 360.0 - azimuth;
 							}
 							//update directional vector
 							env.sun_direction = direction_from_spherical(elevation, azimuth);
@@ -458,7 +494,7 @@ int main(int argc, char* argv[]) {
 			//post-processing tab
 			if (ImGui::BeginTabItem("Post-Process")) {
 				//buffers definition
-				static float col_bal[3] = { 
+				static float col_bal[3] = {
 					(float)my_post.color_balance.x(),
 					(float)my_post.color_balance.y(),
 					(float)my_post.color_balance.z()
@@ -508,7 +544,8 @@ int main(int argc, char* argv[]) {
 					//slider in "stops"(EV) units - (+2)lighten or (-2)darken
 					my_post.needs_update |= ImGui::SliderFloat("Exposure Compensation", &my_post.exposure_compensation_stops, -5.0f, 5.0f, "%.1f EV");
 					ImGui::Unindent();
-				} else {
+				}
+				else {
 					my_post.needs_update |= ImGui::SliderFloat("Manual Exposure", &my_post.exposure, 0.0f, 5.0f);
 				}
 
@@ -573,7 +610,8 @@ int main(int argc, char* argv[]) {
 
 			if (is_rendering) {
 				ImGui::TextColored(ImVec4(1.0f, 1.0f, 0.0f, 1.0f), "Rendering: %.1f%%", progress * 100.0f);
-			} else {
+			}
+			else {
 				ImGui::TextColored(ImVec4(0.0f, 1.0f, 0.0f, 1.0f), "Render Finished (100%)");
 			}
 			//stop render button
@@ -586,7 +624,8 @@ int main(int argc, char* argv[]) {
 				}
 			}
 			ImGui::PopStyleColor();
-		} else {
+		}
+		else {
 			//start render button
 			ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.1f, 0.4f, 0.1f, 1.0f)); //green color
 			if (ImGui::Button("Render", ImVec2(-1, 0))) {
@@ -604,23 +643,38 @@ int main(int argc, char* argv[]) {
 				render_thread.join();
 			}
 
+			hittable_list world = build_geometry(
+				mat_lib,
+				assets, 
+				cam.use_fog,
+				static_cast<double>(cam.fog_density), 
+				color(cam.fog_color[0], cam.fog_color[1], cam.fog_color[2])
+			);
+
+			// 3. Aktualizujemy BVH dla nowej geometrii (w tym mgły)
+			bvh_world = make_shared<bvh_node>(world);
+
+			// 4. Resetujemy akumulator i licznik próbek (zgodnie z wcześniejszą naprawą)
+			cam.reset_accumulator();
+
 			//prepare datas for a new render
 			cam.image_height = static_cast<int>(cam.image_width / cam.aspect_ratio);
 			if (cam.image_height < 1) {
 				cam.image_height = 1;
 			}
-			cam.lines_rendered = 0;
 
 			//launch the new thread
 			is_rendering = true;
 			render_thread = std::thread([&is_rendering, &cam, bvh_world, env, my_post]() {
-				cam.render(bvh_world, env, my_post, is_rendering);
+				cam.render(*bvh_world, env, my_post, is_rendering);
 
 				//finalize - only if render finished without interrupts
 				if (is_rendering.load() && cam.lines_rendered >= cam.image_height) {
 					is_rendering = false;
 				}
 				});
+
+			should_restart = false;
 		}
 
 		ImGui::End();
@@ -692,7 +746,8 @@ int main(int argc, char* argv[]) {
 					//image is wider than window -> fit to width
 					display_w = avail_size.x;
 					display_h = avail_size.x / image_aspect;
-				} else {
+				}
+				else {
 					//image is higher than window -> fit to height
 					display_h = avail_size.y;
 					display_w = avail_size.y * image_aspect;
@@ -706,7 +761,8 @@ int main(int argc, char* argv[]) {
 				ImGui::SetCursorPos(ImVec2(offset_x, offset_y));
 				//display the image 
 				ImGui::Image((ImTextureID)(intptr_t)rendered_texture, ImVec2(display_w, display_h));
-			} else {
+			}
+			else {
 				ImGui::Text("Ready to render...");
 			}
 			last_rendering_state = rendering_active;

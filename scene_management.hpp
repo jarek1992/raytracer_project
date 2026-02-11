@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 
 //basic types and material library
 #include "rtweekend.hpp"
@@ -22,6 +22,15 @@
 #include <memory>
 #include <vector>
 #include <string>
+
+struct sceneAssetsLoader {
+	shared_ptr<model> teapot;
+
+	sceneAssetsLoader() {
+		teapot = make_shared<model>("assets/models/teapot.obj", nullptr, 0.4);
+		//add more .obj models here...
+	}
+};
 
 //loading materials
 void load_materials(MaterialLibrary& mat_lib) {
@@ -76,7 +85,7 @@ void load_materials(MaterialLibrary& mat_lib) {
 }
 
 //build scene geometry
-hittable_list build_geometry(MaterialLibrary& mat_lib) {
+hittable_list build_geometry(MaterialLibrary& mat_lib, const sceneAssetsLoader& assets, bool use_fog, double fog_density, color fog_color) {
 	//global material library
 	hittable_list world;
 
@@ -87,12 +96,12 @@ hittable_list build_geometry(MaterialLibrary& mat_lib) {
 	// - 2. FREE STANDING GEOMETRIES (in the middle)
 	//
 	//teapot (loaded object .obj from the file)
-	auto teapot_base = make_shared<model>("assets/models/teapot.obj", nullptr, 0.4);
-	auto teapot_inst = make_shared<material_instance>(teapot_base, mat_lib.get("glass"));
+	auto teapot_inst = make_shared<material_instance>(assets.teapot, mat_lib.get("glass"));
 	auto rot_teapot_x = make_shared<rotate_x>(teapot_inst, -90.0);
 	auto rot_teapot_y = make_shared<rotate_y>(rot_teapot_x, 30.0);
 	auto teapot_final = make_shared<translate>(rot_teapot_y, point3(0.0, 1.0, -2.5));
 	world.add(teapot_final);
+
 	//sphere
 	auto big_sphere_geom = make_shared<sphere>(point3(0.0, 0.0, 0.0), 1.0, nullptr);
 	auto big_sphere_instance = make_shared<material_instance>(big_sphere_geom, mat_lib.get("scratched_mirror"));
@@ -186,9 +195,14 @@ hittable_list build_geometry(MaterialLibrary& mat_lib) {
 	auto light_instance = make_shared<material_instance>(light_geom, mat_lib.get("ceiling_light"));
 	world.add(make_shared<translate>(light_instance, point3(0.0, 15.0, 0.0)));*/
 
-	// - 5. ENVIRONMENTAL FOG
-	//auto fog_boundary = make_shared<sphere>(point3(0.0, 0.0, 0.0), 30.0, nullptr);
-	//world.add(make_shared<constant_medium>(fog_boundary, 0.1, color(0.0, 0.5, 1.0))); //fog density: 0.01 - delicate fog, 0.1 - dense fog
+	// - 5. environmental fog
+	if (use_fog) {
+		// Zwiększyłem promień do 50.0, żeby mgła nie ucinała się zbyt blisko kamery
+		auto fog_boundary = make_shared<sphere>(point3(0.0, 0.0, 0.0), 50.0, nullptr);
+		// Ważne: gęstość rzędu 0.1 jest ekstremalnie duża (nieprzenikniona ściana). 
+		// Wartości 0.001 - 0.02 dają najlepsze efekty wizualne.
+		world.add(make_shared<constant_medium>(fog_boundary, fog_density, fog_color));
+	}
 
 	return world;
 }

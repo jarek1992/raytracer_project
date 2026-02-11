@@ -16,7 +16,7 @@ public:
 		std::string warn, err;
 
 		if (!tinyobj::LoadObj(&attrib, &shapes, &materials, &warn, &err, filename.c_str())) {
-			std::cerr << "Can not load the model: " << warn << err << std::endl;
+			std::cerr << "Cannot load the model: " << warn << err << std::endl;
 			return;
 		}
 

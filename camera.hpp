@@ -25,6 +25,7 @@ public:
 	int image_width = 400;      //rendered image width in pixel count
 	int image_height = 225; //rendered image height
 	int samples_per_pixel = 30; //count of random smaples for each pixel
+	int current_samples_count = 0; // Licznik aktualnie obliczonych próbek
 	int max_depth = 10;         //max recursion depth
 	double sky_intesity = 1.0;    //intensity multiplier for sky color default 1.0
 
@@ -41,6 +42,11 @@ public:
 	//denoiser flag
 	bool use_denoiser = true;
 
+	//volumetric fog
+	bool use_fog = false;
+	float fog_density = 0.005f;
+	float fog_color[3] = { 0.5f, 0.7f, 1.0f };
+
 	//render passes
 	bool use_albedo_buffer = false;
 	bool use_normal_buffer = false;
@@ -49,6 +55,14 @@ public:
 	bool use_refraction = false;
 
 	std::vector<color> render_accumulator; //raw image (no filters applied)
+	
+	//create all the necessary buffers
+	std::vector<color> albedo_buffer;
+	std::vector<color> normal_buffer;
+	std::vector<color> z_depth_buffer;
+	std::vector<color> reflection_buffer;
+	std::vector<color> refraction_buffer;
+
 	std::vector<color> final_framebuffer; //image after post-processing (filters applied)
 	std::atomic<int> lines_rendered{ 0 }; //atomic counter for rendered lines
 
@@ -115,21 +129,37 @@ public:
 		}
 	}
 
+	void reset_accumulator() {
+		size_t required_size = static_cast<size_t>(image_width) * image_height;
+
+		//auxiliary function for safe buffer preparation
+		auto prepare_buffer = [&](std::vector<color>& buf) {
+			if (buf.size() != required_size) {
+				buf.resize(required_size, color(0.0, 0.0, 0.0));
+			} else {
+				std::fill(buf.begin(), buf.end(), color(0.0, 0.0, 0.0));
+			}
+		};
+
+		prepare_buffer(render_accumulator);
+		prepare_buffer(albedo_buffer);
+		prepare_buffer(normal_buffer);
+		prepare_buffer(z_depth_buffer);
+		prepare_buffer(reflection_buffer);
+		prepare_buffer(refraction_buffer);
+
+		// 2. Zerujemy licznik próbkowania (aby zacząć od 1. próbki)
+		current_samples_count = 0;
+		// 3. Opcjonalnie zerujemy postęp linii
+		lines_rendered = 0;
+	}
+
 	//render
 	void render(const hittable& world, const EnvironmentSettings& env, const post_processor& post, std::atomic<bool>& render_flag) {
 		// - 1. INITIALIZE - 
 		initialize();
 
 		// - 2. MULTITHREADING  -
-		//initialize render_accumulator for ImGui display
-		render_accumulator.assign(static_cast<size_t>(image_width) * image_height, color(0.0, 0.0, 0.0));
-		//create all the necessary buffers
-		std::vector<color> albedo_buffer(static_cast<size_t>(image_width) * image_height);
-		std::vector<color> normal_buffer(static_cast<size_t>(image_width) * image_height);
-		std::vector<color> z_depth_buffer(static_cast<size_t>(image_width) * image_height);
-		std::vector<color> reflection_buffer(static_cast<size_t>(image_width) * image_height);
-		std::vector<color> refraction_buffer(static_cast<size_t>(image_width) * image_height);
-
 		//transfer reference to is_rendering so threads can check if they should stop working
 		execute_render_threads(world, env, render_accumulator,
 			albedo_buffer, normal_buffer, z_depth_buffer,
@@ -176,139 +206,7 @@ public:
 		}
 
 		// - 5. COMPOSE FINAL FRAMEBUFFER WITH POST-PROCESSING -
-		std::cerr << "[Render] Finished. Finalizing buffers...\n";
-
-
-		//// - 1. INITIALIZE - 
-		//initialize();
-		////timer for render start
-		//auto start_time = std::chrono::high_resolution_clock::now();
-		//// - 2. MULTITHREADING  -
-		////initialize render_accumulator for ImGui display 
-		//render_accumulator.assign(static_cast<size_t>(image_width) * image_height, color(0.0, 0.0, 0.0));
-		////create all the necessary buffers
-		//std::vector<color> albedo_buffer(static_cast<size_t>(image_width) * image_height);
-		//std::vector<color> normal_buffer(static_cast<size_t>(image_width) * image_height);
-		//std::vector<color> z_depth_buffer(static_cast<size_t>(image_width) * image_height);
-		//std::vector<color> reflection_buffer(static_cast<size_t>(image_width) * image_height);
-		//std::vector<color> refraction_buffer(static_cast<size_t>(image_width) * image_height);
-		//execute_render_threads(world, env, final_framebuffer,
-		//	albedo_buffer, normal_buffer, z_depth_buffer,
-		//	reflection_buffer, refraction_buffer, post.z_depth_max_dist);
-		////remember the diagnostic selection and clean immediately
-		//debug_mode user_diagnostic = post.current_debug_mode;
-		//post.current_debug_mode = debug_mode::NONE;
-		//// - 2.5 AUTO-EXPOSURE -
-		//if (post.use_auto_exposure) {
-		//	image_statistics stats = post.analyze_framebuffer(final_framebuffer);
-		//	std::cerr << "\n[Auto-Exposure] Average Luminance: " << stats.average_luminance << "\n";
-		//	post.apply_auto_exposure(stats);
-		//	std::cerr << "[Auto-Exposure] New Exposure Value: " << post.exposure << "\n";
-		//} else {
-		//	std::cerr << "\n[Exposure] Manual mode active. Value: " << post.exposure << "\n";
-		//}
-		//// - 3. SAVE RAW RENDER RGB -
-		////always save raw render without aces tone mapping
-		//process_framebuffer_to_image(final_framebuffer, "image_RGB_raw.png", post, true);
-		//// - 4. AI DENOISING AND POST-DENOISE SHARPENING -
-		//if (use_denoiser) {
-		//	std::cerr << "\n[OIDN] Starting Multi-Pass Denoising...\n";
-		//	//a. denoise all the necessary passes (linear hdr)
-		//	// 
-		//	//beauty pass
-		//	apply_denoising(image_width, image_height, final_framebuffer, albedo_buffer, normal_buffer);
-
-		//	//reflection pass
-		//	if (use_reflection) {
-		//		std::cerr << "[OIDN] Denoising Reflection Pass...\n";
-		//		apply_denoising(image_width, image_height, reflection_buffer, albedo_buffer, normal_buffer);
-		//		if (post.use_sharpening) {
-		//			post.apply_sharpening(reflection_buffer, image_width, image_height, post.sharpen_amount);
-		//		}
-		//	}
-
-		//	//refraction pass
-		//	if (use_refraction) {
-		//		std::cerr << "[OIDN] Denoising Refraction Pass...\n";
-		//		apply_denoising(image_width, image_height, refraction_buffer, albedo_buffer, normal_buffer);
-		//		if (post.use_sharpening) {
-		//			post.apply_sharpening(refraction_buffer, image_width, image_height, post.sharpen_amount);
-		//		}
-		//	}
-		//	//b. save denoised and shapened images
-		//	process_framebuffer_to_image(final_framebuffer, "image_RGB_denoised.png", post, false);
-		//	std::cerr << "[OIDN] All processes finished.\n";
-		//} else {
-		//	std::cerr << "\nDenoising is DISABLED. Skipping..." << std::endl;
-		//}
-		//// - 5. DIAGNOSTICS OUTPUTS RGB channels-
-		//if (user_diagnostic != debug_mode::NONE) {
-		//	std::string debug_filename = "debug_output.png";
-		//	switch (user_diagnostic) {
-		//	case debug_mode::RED: {
-		//		debug_filename = "image_RED_channel.png";
-		//		break;
-		//	}
-		//	case debug_mode::GREEN: {
-		//		debug_filename = "image_GREEN_channel.png";
-		//		break;
-		//	}
-		//	case debug_mode::BLUE: {
-		//		debug_filename = "image_BLUE_channel.png";
-		//		break;
-		//	}
-		//	case debug_mode::LUMINANCE: {
-		//		debug_filename = "image_LUMINANCE_channel.png";
-		//		break;
-		//	}
-		//	default:
-		//		break;
-		//	}
-		//	//restore user choice
-		//	post.current_debug_mode = user_diagnostic;
-		//	process_framebuffer_to_image(final_framebuffer, debug_filename, post, true);
-		//	post.current_debug_mode = debug_mode::NONE; //reset
-		//}
-		//// - 6. BLOOM EFFECT -
-		//if (post.use_bloom) {
-		//	std::cerr << "\n[Post-Processing] Applying Bloom (Threshold: " << post.bloom_threshold << ")...";
-		//	bloom_filter bloom(post.bloom_threshold, post.bloom_intensity, post.bloom_radius);
-		//	bloom.apply(final_framebuffer, image_width, image_height);
-		//	std::cerr << "Bloom Effect applied." << std::endl;
-		//} else {
-		//	std::cerr << "\nBloom Effect is DISABLED. Skipping..." << std::endl;
-		//}
-		//// - 7. POST-DENOISE SHARPENING -
-		//if (post.use_sharpening) {
-		//	std::cerr << "[Post-Processing] Applying Sharpening (Amount: " << post.sharpen_amount << ")...";
-		//	post.apply_sharpening(final_framebuffer, image_width, image_height, post.sharpen_amount);
-		//	std::cerr << "Sharpening applied." << std::endl;
-		//}
-		//// - 8. FINAL RENDER WTIH TONE MAPPING -
-		//process_framebuffer_to_image(final_framebuffer, "image_RGB_final.png", post, false);
-		//// - 9. RENDER PASSES (save) -
-		////render passes without tone mapping
-		//if (use_albedo_buffer) {
-		//	process_framebuffer_to_image(albedo_buffer, "image_albedo.png", post, true, true);
-		//}
-		//if (use_normal_buffer) {
-		//	process_framebuffer_to_image(normal_buffer, "image_normals.png", post, true, true);
-		//}
-		//if (use_z_depth_buffer) {
-		//	process_framebuffer_to_image(z_depth_buffer, "image_zdepth.png", post, true, false);
-		//}
-		//if (use_reflection) {
-		//	process_framebuffer_to_image(reflection_buffer, "image_reflection.png", post, true);
-		//}
-		//if (use_refraction) {
-		//	process_framebuffer_to_image(refraction_buffer, "image_refraction.png", post, true);
-		//}
-		////timer for render end
-		//auto end_time = std::chrono::high_resolution_clock::now();
-		//std::chrono::duration<double> elapsed = end_time - start_time;
-		//std::cerr << "\r[########################################] 100% (" << image_height << "/" << image_height << " lines)\n";
-		//std::cerr << "\nRender finished in " << std::fixed << std::setprecision(2) << elapsed.count() << " seconds.\n";
-		//std::cerr << "All the passes saved\n";
+		std::cerr << "Render finished. Finalizing buffers...\n";
 	}
 
 private:
