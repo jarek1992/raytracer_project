@@ -55,7 +55,7 @@ public:
 	bool use_refraction = false;
 
 	std::vector<color> render_accumulator; //raw image (no filters applied)
-	
+
 	//create all the necessary buffers
 	std::vector<color> albedo_buffer;
 	std::vector<color> normal_buffer;
@@ -85,7 +85,8 @@ public:
 			// Analizujemy jasność skopiowanego bufora
 			image_statistics stats = post.analyze_framebuffer(final_framebuffer);
 			current_ev = post.apply_auto_exposure(stats);
-		} else {
+		}
+		else {
 			current_ev = post.exposure; //get value in manual mode from slider
 		}
 
@@ -104,7 +105,8 @@ public:
 			for (size_t i = 0; i < total; ++i) {
 				final_framebuffer[i] += bloom_overlay[i];
 			}
-		} else {
+		}
+		else {
 			for (size_t i = 0; i < total; ++i) final_framebuffer[i] *= current_ev;
 		}
 
@@ -136,10 +138,11 @@ public:
 		auto prepare_buffer = [&](std::vector<color>& buf) {
 			if (buf.size() != required_size) {
 				buf.resize(required_size, color(0.0, 0.0, 0.0));
-			} else {
+			}
+			else {
 				std::fill(buf.begin(), buf.end(), color(0.0, 0.0, 0.0));
 			}
-		};
+			};
 
 		prepare_buffer(render_accumulator);
 		prepare_buffer(albedo_buffer);
@@ -277,6 +280,7 @@ private:
 		std::vector<color>& refraction_buffer,
 		double z_depth_max_dist,
 		std::atomic<bool>& render_flag) {
+
 		//reset atomic counter for progress bar
 		this->lines_rendered = 0;
 		//local atomic counter for progress bar in this function
@@ -288,6 +292,8 @@ private:
 
 		//lamba function for rendering a block of rows
 		auto render_rows = [&](int start_y, int end_y) {
+			int local_lines_done = 0; //local thread counter
+
 			const int aux_sample = std::clamp(samples_per_pixel / 8, 64, 1024); //for albedo, normals, zdepth
 			const int light_pass_sample = samples_per_pixel; //for reflection/refraction
 
@@ -299,32 +305,30 @@ private:
 				if (!render_flag.load()) {
 					return;
 				}
+
 				for (int i = 0; i < image_width; ++i) {
-					color pixel_color(0, 0, 0);
-					color pixel_albedo(0, 0, 0);
-					color pixel_normal(0, 0, 0);
-					color pixel_zdepth(0, 0, 0);
-					color pixel_reflection(0, 0, 0);
-					color pixel_refraction(0, 0, 0);
+					color pixel_color(0.0, 0.0, 0.0);
+					color pixel_albedo(0.0, 0.0, 0.0);
+					color pixel_normal(0.0, 0.0, 0.0);
+					color pixel_zdepth(0.0, 0.0, 0.0);
+					color pixel_reflection(0.0, 0.0, 0.0);
+					color pixel_refraction(0.0, 0.0, 0.0);
 
 					//sampling loop for each pixel 
 					for (int s = 0; s < samples_per_pixel; s++) {
-						if (!render_flag.load()) {
-							return;
-						}
-						//beauty pass (ray with defocus blur)
-						ray r_beauty = get_ray(i, j);
-						pixel_color += ray_color(r_beauty, world, this->max_depth, env);
+						ray r = get_ray(i, j);
+						hit_record rec;
 
-						//render passes Albedo, Normals, Z-Depth (ray without defocus blur) 
-						if (s < aux_sample) {
-							ray r_aux = get_sharp_ray(i, j);
-							hit_record rec;
-							//calculate auxiliary data for the same sample
-							if (world.hit(r_aux, interval(0.001, infinity), rec)) {
-								//albedo 
+						//only one collision test for the main ray
+						if (world.hit(r, interval(0.001, infinity), rec)) {
+							//beauty pass
+							pixel_color += ray_color_from_hit(r, rec, world, max_depth, env);
+
+							//get datas (render passes: Albedo, Normals, Z-Depth) from the first hit
+							if (s < aux_sample) {
+								// - albedo 
 								pixel_albedo += rec.mat->get_albedo(rec);
-								//normals
+								// - normals
 								vec3 n = unit_vector(rec.normal);
 								//transition on camera space(view space)
 								double nx = dot(n, u);
@@ -335,58 +339,52 @@ private:
 									(nx + 1.0) * 0.5,
 									(ny + 1.0) * 0.5,
 									(nz + 1.0) * 0.5);
-								//z-depth
-								double depth_val = rec.t / z_depth_max_dist;
-								double z_depth = 1.0 - std::clamp(depth_val, 0.0, 1.0);
+
+								// - zDepth
+								double z_depth = 1.0 - std::clamp(rec.t / z_depth_max_dist, 0.0, 1.0);
 								pixel_zdepth += color(z_depth, z_depth, z_depth);
 							}
-							else {
-								//backgrounds for passes aux(albedo, normals, zdepth)
+
+							//reflection and refraction
+							//use 'rec' from the first hit
+							ray scattered;
+							color attenuation;
+							if (rec.mat->scatter(r, rec, attenuation, scattered)) {
+								//check what the ray hits
+								color scattered_color = ray_color(scattered, world, this->max_depth - 1, env);
+
+								//limit maximum luma for reflection/refraction to avoid fireflies
+								double luma = 0.2126 * scattered_color.length();
+								double max_luma = 2.0; //maximum luma threshold
+								if (luma > max_luma) {
+									scattered_color *= (max_luma / luma);
+								}
+								//divide into buffers depending on material type
+								//scattered ray has almost the same direction as the perfect reflection:
+								vec3 reflected_dir = reflect(unit_vector(r.direction()), unit_vector(rec.normal));
+								bool is_specular = dot(unit_vector(scattered.direction()), reflected_dir) > 0.9;
+
+								if (is_specular) {
+									pixel_reflection += attenuation * scattered_color;
+								}
+								else if (dot(scattered.direction(), rec.normal) < 0) {
+									//if not mirror check if glass 
+									pixel_refraction += attenuation * scattered_color;
+								}
+							}
+						}
+						else {
+							//background for Beauty Pass
+							pixel_color += get_background_color(r, env);
+							if (s < aux_sample) {
+								//backgrounds for passes (albedo, normals, zdepth)
 								pixel_albedo += color(0.0, 0.0, 0.0);
 								pixel_normal += color(0.5, 0.5, 1.0);
 								pixel_zdepth += color(0.0, 0.0, 0.0);
 							}
-						}
-						//reflection/refraction passes
-						if (s < light_pass_sample) {
-							//get_sharp_ray to avoid defocus blur in reflection/refraction
-							ray r_light = get_sharp_ray(i, j);
-							hit_record rec_l;
-							//calculate reflection/refraction for the same sample
-							if (world.hit(r_light, interval(0.001, infinity), rec_l)) {
-								ray scattered;
-								color attenuation;
-								//calculate the color that "returns" from this reflection/refraction
-								//max_depth-1 to avoid an infinite loop
-								if (rec_l.mat->scatter(r_light, rec_l, attenuation, scattered)) {
-									color scattered_color = ray_color(scattered, world, this->max_depth - 1, env);
-
-									//limit maximum luma for reflection/refraction to avoid fireflies
-									double luma = 0.2126 * scattered_color.length();
-									double max_luma = 2.0; //maximum luma threshold
-									if (luma > max_luma) {
-										scattered_color *= (max_luma / luma);
-									}
-
-									//divide into buffers depending on material type
-									//scattered ray has almost the same direction as the perfect reflection:
-									vec3 reflected_dir = reflect(unit_vector(r_light.direction()), unit_vector(rec_l.normal));
-									bool is_specular = dot(unit_vector(scattered.direction()), reflected_dir) > 0.9;
-
-									if (is_specular) {
-										pixel_reflection += attenuation * scattered_color;
-									}
-									else if (dot(scattered.direction(), rec_l.normal) < 0) {
-										//if not mirror check if glass 
-										pixel_refraction += attenuation * scattered_color;
-									}
-								}
-							}
-							else {
-								//backgrounds for reflection/refraction
-								pixel_reflection += color(0.0, 0.0, 0.0);
-								pixel_refraction += color(0.0, 0.0, 0.0);
-							}
+							//backgrounds for passes reflection, refraction
+							pixel_reflection += color(0.0, 0.0, 0.0);
+							pixel_refraction += color(0.0, 0.0, 0.0);
 						}
 					}
 
@@ -402,11 +400,17 @@ private:
 					refraction_buffer[idx] = pixel_refraction * light_scale;
 				}
 				//increase the local counter for progress bar
-				lines_done++;
-				//increase the global counter for Imgui progress bar 
-				this->lines_rendered++;
+				local_lines_done++;
+				//every 10 lines update progress bar
+				if (local_lines_done % 10 == 0 || j == end_y - 1) {
+					//fetch_add for atomic safety 
+					this->lines_rendered.fetch_add(local_lines_done);
+					local_lines_done = 0; //reset locally
+				}
 			}
 			};
+
+		std::cerr << "[Render] Threading started with " << num_threads << " threads.\n";
 
 		//split the work between threads
 		int rows_per_thread = image_height / num_threads;
@@ -418,43 +422,21 @@ private:
 			start = end;
 		}
 
-		//progress bar
-		while (lines_done < image_height && render_flag.load()) {
-			int done = lines_done.load();
-			double percent = double(done) / image_height;
-			int barWidth = 40;
-			int filled = int(percent * barWidth);
-
-			std::cerr << "\r[";
-			for (int i = 0; i < filled; i++) {
-				std::cerr << "#"; //fill of the bar
-			}
-			for (int i = filled; i < barWidth; i++) {
-				std::cerr << "."; //empty space of the bar
-			}
-			std::cerr << "] ";
-			std::cerr << std::fixed << std::setprecision(1)
-				<< (percent * 100.0) << "% (" << done << "/" << image_height << " lines)"
-				<< std::flush;
-
-			std::this_thread::sleep_for(std::chrono::milliseconds(200));
-		}
-		//final 100% while loop finished
-		if (render_flag.load()) {
-			//100% only if we actually reached the end without cancellation
-			std::cerr << "\rProgress : 100% (" << image_height << "/" << image_height << " lines)          \n";
-		}
-		else {
-			//inform about render cancellation
-			std::cerr << "\rRender cancelled/restarting...                                         \n";
-		}
 		//join threads - finished
 		for (auto& th : threads) {
 			if (th.joinable()) {
 				th.join();
 			}
 		}
+
+		std::cerr << "[Render] Completed.\n";
+
+		//final 100% while loop finished
+		if (render_flag.load()) {
+			this->lines_rendered = image_height; //force 100% for GUI
+		}
 	}
+
 	void apply_denoising(int width, int height, std::vector<color>& framebuffer,
 		std::vector<color>& albedo_buffer, std::vector<color>& normal_buffer) {
 
@@ -706,11 +688,11 @@ private:
 		double sunset_intensity = std::clamp(1.0 - std::abs(adjusted_height + 0.05) * 30.0, 0.0, 1.0);
 		double sunset_factor = (adjusted_height > -0.1) ? sunset_intensity : 0.0;
 		//tone down sunset below horizon
-		if (sun_height < 0) { 
+		if (sun_height < 0) {
 			sunset_factor *= (sun_height * 10.0 + 1.0);
 		}
 		sunset_factor = std::clamp(sunset_factor, 0.0, 1.0);
-		
+
 		//sky colors
 		color zenit_color = color(0.01, 0.03, 0.1) * (1.0 - day_factor) + color(0.2, 0.5, 1.0) * day_factor;
 		color horizon_color = color(0.05, 0.02, 0.01) * (1.0 - day_factor) + color(0.6, 0.8, 1.0) * day_factor;
@@ -722,7 +704,8 @@ private:
 
 		if (a > 0.0) {
 			sky_color = (1.0 - a) * horizon_color + a * zenit_color;
-		} else {
+		}
+		else {
 			// Dla dołu (pod horyzontem) dajemy ciemniejszy kolor horyzontu
 			sky_color = horizon_color * 0.1;
 		}
@@ -776,7 +759,8 @@ private:
 				if (i > 10 && accumulated_attenuation.length() < 0.00001) {
 					break;
 				}
-			} else {
+			}
+			else {
 				//material absorbed the ray, no more light is gathered
 				break;
 			}
@@ -796,6 +780,23 @@ private:
 				accumulated_attenuation /= p;
 			}
 		}
+		return accumulated_light;
+	}
+
+	color ray_color_from_hit(const ray& r, const hit_record& first_rec, const hittable& world, int depth, const EnvironmentSettings& env) const {
+		color accumulated_light = first_rec.mat->emitted(first_rec.u, first_rec.v, first_rec.p);
+		color accumulated_attenuation(1.0, 1.0, 1.0);
+
+		ray scattered;
+		color attenuation;
+
+		// Obsługujemy pierwsze rozproszenie
+		if (first_rec.mat->scatter(r, first_rec, attenuation, scattered)) {
+			accumulated_attenuation *= attenuation;
+			// Reszta odbić leci już normalnie w pętli (od i=1 do depth)
+			return accumulated_light + accumulated_attenuation * ray_color(scattered, world, depth - 1, env);
+		}
+
 		return accumulated_light;
 	}
 };
