@@ -162,6 +162,9 @@ public:
 		// - 1. INITIALIZE - 
 		initialize();
 
+		int num_threads = std::thread::hardware_concurrency();
+		std::cerr << "Render threading started with " << num_threads << " threads.\n";
+
 		// - 2. MULTITHREADING  -
 		//transfer reference to is_rendering so threads can check if they should stop working
 		execute_render_threads(world, env, render_accumulator,
@@ -169,10 +172,13 @@ public:
 			reflection_buffer, refraction_buffer, post.z_depth_max_dist,
 			render_flag);
 
+
 		//if rendering was cancelled, skip post-processing steps 
 		if (!render_flag.load()) {
 			return;
 		}
+
+		std::cerr << "Render completed. Total samples: " << samples_per_pixel << "\n";
 
 		// - 3. AUTO-EXPOSURE -
 		if (post.use_auto_exposure) {
@@ -410,8 +416,6 @@ private:
 			}
 			};
 
-		std::cerr << "[Render] Threading started with " << num_threads << " threads.\n";
-
 		//split the work between threads
 		int rows_per_thread = image_height / num_threads;
 		int extra = image_height % num_threads;
@@ -428,8 +432,6 @@ private:
 				th.join();
 			}
 		}
-
-		std::cerr << "[Render] Completed.\n";
 
 		//final 100% while loop finished
 		if (render_flag.load()) {
@@ -729,9 +731,9 @@ private:
 		return final_color;
 	}
 
-	//intersection radius with sphere
+	//get ray and check the hit 
 	color ray_color(const ray& r, const hittable& world, int depth, const EnvironmentSettings& env) const {
-		color accumulated_light(0, 0, 0);
+		color accumulated_light(0.0, 0.0, 0.0);
 		color accumulated_attenuation(1, 1, 1);
 		ray cur_ray = r;
 
@@ -783,6 +785,7 @@ private:
 		return accumulated_light;
 	}
 
+	//optimazed ray_color (skip first collision test)
 	color ray_color_from_hit(const ray& r, const hit_record& first_rec, const hittable& world, int depth, const EnvironmentSettings& env) const {
 		color accumulated_light = first_rec.mat->emitted(first_rec.u, first_rec.v, first_rec.p);
 		color accumulated_attenuation(1.0, 1.0, 1.0);
