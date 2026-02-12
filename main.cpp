@@ -328,7 +328,6 @@ int main(int argc, char* argv[]) {
 					should_restart = true;
 				}
 
-
 				//environmental fog
 				if (ImGui::CollapsingHeader("Environmental Fog")) {
 					if (ImGui::Checkbox("Enable Fog", &cam.use_fog)) {
@@ -343,8 +342,6 @@ int main(int argc, char* argv[]) {
 						}
 					}
 				}
-
-
 
 				//HDRI mode settings
 				if (env.mode == EnvironmentSettings::HDR_MAP) {
