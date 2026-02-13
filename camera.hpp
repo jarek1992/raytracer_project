@@ -17,6 +17,7 @@
 #include <iomanip>
 #include <chrono>
 #include <vector>
+#include <filesystem>
 
 class camera {
 public:
@@ -40,7 +41,7 @@ public:
 	double focus_dist = 10; //distance from camera lookfrom point to plane of perfect focus
 
 	//denoiser flag
-	bool use_denoiser = true;
+	bool use_denoiser = false;
 
 	//volumetric fog
 	bool use_fog = false;
@@ -54,6 +55,9 @@ public:
 	bool use_reflection = false;
 	bool use_refraction = false;
 
+	//hdr maps
+	std::vector<std::string> hdr_files;
+
 	std::vector<color> render_accumulator; //raw image (no filters applied)
 
 	//create all the necessary buffers
@@ -65,6 +69,32 @@ public:
 
 	std::vector<color> final_framebuffer; //image after post-processing (filters applied)
 	std::atomic<int> lines_rendered{ 0 }; //atomic counter for rendered lines
+
+	std::string get_default_hdr_path() const {
+		if (!hdr_files.empty()) {
+			return HDR_DIR + hdr_files[0];
+		}
+		return "";
+	}
+
+	void refresh_hdr_list() {
+		hdr_files.clear();
+
+		try {
+			if (!std::filesystem::exists(HDR_DIR)) {
+				std::filesystem::create_directories(HDR_DIR);
+				return;
+			}
+
+			for (const auto& entry : std::filesystem::directory_iterator(HDR_DIR)) {
+				auto ext = entry.path().extension().string();
+				if (ext == ".hdr" || ext == ".exr") {
+					hdr_files.push_back(entry.path().filename().string());
+				}
+			}
+		}
+		catch (...) {}
+	}
 
 	void update_post_processing(const post_processor& post, int w, int h) {
 		//copy HDR datas before calculating
@@ -193,7 +223,7 @@ public:
 
 		// - 4. AI DENOISING AND POST-DENOISE SHARPENING -
 		if (use_denoiser) {
-			//a. denoise all the necessary passes (linear hdr)
+			//denoise all the necessary passes (linear hdr)
 			// 
 			//beauty pass
 			apply_denoising(image_width, image_height, render_accumulator, albedo_buffer, normal_buffer);
@@ -273,6 +303,8 @@ private:
 		auto defocus_radius = focus_dist * std::tan(degrees_to_radians(defocus_angle / 2));
 		defocus_disk_u = u * defocus_radius;
 		defocus_disk_v = v * defocus_radius;
+
+		refresh_hdr_list();
 	}
 
 	void execute_render_threads(
@@ -657,18 +689,29 @@ private:
 			}
 			vec3 d = unit_dir;
 
-			//HDR rotation 
+			//Yaw HDR rotation (Y-axis) 
 			double cos_y = cos(env.hdri_rotation);
 			double sin_y = sin(env.hdri_rotation);
-			double x1 = cos_y * d.x() - sin_y * d.z();
-			double z1 = sin_y * d.x() + cos_y * d.z();
+			double x1 = cos_y * d.x() + sin_y * d.z();
+			double z1 = -sin_y * d.x() + cos_y * d.z();
 			d = vec3(x1, d.y(), z1);
-			//HDR tilt
-			double cos_t = cos(env.hdri_tilt);
-			double sin_t = sin(env.hdri_tilt);
-			double y2 = cos_t * d.y() - sin_t * d.z();
-			double z2 = sin_t * d.y() + cos_t * d.z();
+
+			//pitch/tilt (X-axis) - up/down tilt
+			double cos_p = cos(env.hdri_tilt);
+			double sin_p = sin(env.hdri_tilt);
+			double y2 = cos_p * d.y() - sin_p * d.z();
+			double z2 = sin_p * d.y() + cos_p * d.z();
 			d = vec3(d.x(), y2, z2);
+
+			//roll (Z-axis) - "Wyprostowanie" horyzontu (DODAJ TO)
+			// Musisz dodać env.hdri_roll do swojej struktury
+			double cos_r = cos(env.hdri_roll);
+			double sin_r = sin(env.hdri_roll);
+			double x3 = cos_r * d.x() - sin_r * d.y();
+			double y3 = sin_r * d.x() + cos_r * d.y();
+			d = vec3(x3, y3, d.z());
+
+
 			//uv mapping
 			auto phi = atan2(d.z(), d.x()) + pi;
 			auto theta = acos(std::clamp(d.y(), -1.0, 1.0));

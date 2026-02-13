@@ -50,6 +50,7 @@ int main(int argc, char* argv[]) {
 
 	// - 3. CREATE CAMERA  -
 	camera cam;
+	cam.refresh_hdr_list(); //scan folder assets/hdr_maps/
 
 	// - 4. LOADING THE GEOMETRY -
 	hittable_list world = build_geometry(mat_lib,
@@ -63,9 +64,7 @@ int main(int argc, char* argv[]) {
 
 	// - 6. CREATE ENVIRONMENT -
 	EnvironmentSettings env;
-	//loading 
-	env.hdr_texture = make_shared<image_texture>("assets/sunny_rose_garden_2k.hdr", true);
-	env.mode = EnvironmentSettings::HDR_MAP;
+	env.load_hdr(cam.get_default_hdr_path());
 	env.intensity = 1.0;
 
 	// - 7. POST-PROCESSING -
@@ -287,14 +286,22 @@ int main(int argc, char* argv[]) {
 					env.sun_direction.y(),
 					env.sun_direction.z()
 				};
-				static float rot_deg = -45.0f;
-				static float tilt_deg = -4.0f;
+				static float rot_deg = 0.0f;
+				static float tilt_deg = 0.0f;
+				static float roll_deg = 0.0f;
 
 				static float sun_col[3] = {
 					(float)env.sun_color.x(),
 					(float)env.sun_color.y(),
 					(float)env.sun_color.z()
 				};
+
+				static float bg_col[3] = {
+					(float)env.background_color.x(),
+					(float)env.background_color.y(),
+					(float)env.background_color.z()
+				};
+
 
 				//desychronization and crash prevention
 				if (!ImGui::IsAnyItemActive()) {
@@ -305,6 +312,10 @@ int main(int argc, char* argv[]) {
 					sun_col[0] = (float)env.sun_color.x();
 					sun_col[1] = (float)env.sun_color.y();
 					sun_col[2] = (float)env.sun_color.z();
+
+					bg_col[0] = (float)env.background_color.x();
+					bg_col[1] = (float)env.background_color.y();
+					bg_col[2] = (float)env.background_color.z();
 
 				}
 
@@ -322,6 +333,11 @@ int main(int argc, char* argv[]) {
 					should_restart = true;
 				}
 				ImGui::Separator();
+				if (ImGui::RadioButton("Solid Color", current_mode == EnvironmentSettings::SOLID_COLOR)) {
+					env.mode = EnvironmentSettings::SOLID_COLOR;
+					should_restart = true;
+				}
+
 				float intensity_f = static_cast<float>(env.intensity);
 				if (ImGui::SliderFloat("Global Intensity", &intensity_f, 0.0f, 5.0f)) {
 					env.intensity = static_cast<double>(intensity_f);
@@ -348,15 +364,54 @@ int main(int argc, char* argv[]) {
 					if (!ImGui::IsAnyItemActive()) {
 						rot_deg = static_cast<float>(radians_to_degrees(env.hdri_rotation));
 						tilt_deg = static_cast<float>(radians_to_degrees(env.hdri_tilt));
+						roll_deg = static_cast<float>(radians_to_degrees(env.hdri_roll));
 					}
 					ImGui::TextColored(ImVec4(0.4f, 0.8f, 1.0f, 1.0f), "HDR Map Settings");
-					//desplay the name of the loaded texture (informational)
-					ImGui::Text("Active Texture: assets/sunny_rose_garden_2k.hdr");
+					//dynamic hdr loading
+					ImGui::Text("Active Texture: %s", env.current_hdr_name.c_str());
+
+					if (ImGui::BeginCombo("Select HDR", env.current_hdr_name.c_str())) {
+						for (int n = 0; n < cam.hdr_files.size(); n++) {
+							const bool is_selected = (env.current_hdr_name == cam.hdr_files[n]);
+
+							if (ImGui::Selectable(cam.hdr_files[n].c_str(), is_selected)) {
+
+								//loading
+								env.load_hdr(HDR_DIR + cam.hdr_files[n]);
+
+								//render reset
+								cam.reset_accumulator();
+								should_restart = true;
+
+								//rotation parameters reset for new hdr map
+								rot_deg = 0.0f;
+								tilt_deg = 0.0f;
+								roll_deg = 0.0f;
+								env.hdri_rotation = 0.0;
+								env.hdri_tilt = 0.0;
+								env.hdri_roll = 0.0;
+							}
+							if (is_selected) { 
+								ImGui::SetItemDefaultFocus(); 
+							}
+						}
+						ImGui::EndCombo();
+					}
+
+					if (ImGui::Button("Refresh Folder")) {
+						cam.refresh_hdr_list();
+					}
+
+					ImGui::Separator();
+
 					if (ImGui::Button("Reset Orientation")) {
+						//reset parameters to default
 						rot_deg = 0.0f;
-						tilt_deg = 0.0f; //reset parameters to default
+						tilt_deg = 0.0f;
+						roll_deg = 0.0f;
 						env.hdri_rotation = 0.0;
 						env.hdri_tilt = 0.0;
+						env.hdri_roll = 0.0;
 						should_restart = true;
 					}
 					if (ImGui::SliderFloat("Rotation (Y-axis)", &rot_deg, -180.0f, 180.0f)) {
@@ -365,6 +420,10 @@ int main(int argc, char* argv[]) {
 					}
 					if (ImGui::SliderFloat("Tilt (X-axis)", &tilt_deg, -90.0f, 90.0f)) {
 						env.hdri_tilt = degrees_to_radians(tilt_deg);
+						should_restart = true;
+					}
+					if (ImGui::SliderFloat("Roll (Z-axis)", &roll_deg, -180.0f, 180.0f)) {
+						env.hdri_roll = degrees_to_radians(roll_deg);
 						should_restart = true;
 					}
 				}
@@ -486,6 +545,17 @@ int main(int argc, char* argv[]) {
 						ImGui::TextDisabled("(Controlled by Daylight System)");
 					}
 				}
+
+				//solid background color
+				if (env.mode == EnvironmentSettings::SOLID_COLOR) {
+					ImGui::TextColored(ImVec4(0.7f, 0.7f, 0.7f, 1.0f), "Solid Color Mode");
+					
+					if (ImGui::ColorEdit3("Background Color", bg_col)) {
+						env.background_color = color(bg_col[0], bg_col[1], bg_col[2]);
+						should_restart = true;
+					}
+				}
+
 				ImGui::EndTabItem();
 			}
 			//post-processing tab
@@ -642,9 +712,9 @@ int main(int argc, char* argv[]) {
 
 			hittable_list world = build_geometry(
 				mat_lib,
-				assets, 
+				assets,
 				cam.use_fog,
-				static_cast<double>(cam.fog_density), 
+				static_cast<double>(cam.fog_density),
 				color(cam.fog_color[0], cam.fog_color[1], cam.fog_color[2])
 			);
 
@@ -669,7 +739,7 @@ int main(int argc, char* argv[]) {
 				if (is_rendering.load() && cam.lines_rendered >= cam.image_height) {
 					is_rendering = false;
 				}
-				});
+			});
 
 			should_restart = false;
 		}

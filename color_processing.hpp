@@ -46,7 +46,7 @@ public:
 	float z_depth_max_dist = 1.0f; //for depth buffer normalization
 	float exposure_compensation_stops = 0.0f; // 0.0 - no correction
 
-	bool use_aces_tone_mapping = true;
+	bool use_aces_tone_mapping = false;
 	bool use_auto_exposure = false;
 	float target_luminance = 0.22f; //aimed value for autoexposure (middle gray standard in photography 22%, higher value = overburn)
 	mutable debug_mode current_debug_mode = debug_mode::NONE;
@@ -60,7 +60,7 @@ public:
 	bool needs_update = true;
 
 	//post-denoise sharpening
-	bool use_sharpening = true;
+	bool use_sharpening = false;
 	double sharpen_amount = 0.2; //0.05 - 0.3 suggested range
 
 	color process(color exposed_color, float u = 0.5f, float v = 0.5f) const {

@@ -16,21 +16,22 @@ public:
 		if (is_hdr) {
 			//loading data as a float (32-bit per canal)
 			data_f = stbi_loadf(filename, &width, &height, &components, 3);
-			{
-				if (!data_f) std::cerr << "ERROR: Could not load HDR: " << filename << "\n";
+			if (!data_f) {
+				std::cerr << "ERROR: Could not load HDR: " << filename << "\n";
 			}
 		} else {
 			//loading data as unsigned char (8-bit per canal)
 			data_u = stbi_load(filename, &width, &height, &components, 3);
-			{
-				if (!data_u) std::cerr << "ERROR: Could not load texture: " << filename << "\n";
+
+			if (!data_u) {
+				std::cerr << "ERROR: Could not load texture: " << filename << "\n";
 			}
 		}
 	}
 
 	~image_texture() {
-		if (data_f) { 
-			stbi_image_free(data_f); 
+		if (data_f) {
+			stbi_image_free(data_f);
 		}
 		if (data_u) {
 			stbi_image_free(data_u);
@@ -118,8 +119,6 @@ public:
 		bool isEven = (xInteger + yInteger + zInteger) % 2 == 0;
 
 		return isEven ? even->value(u, v, p) : odd->value(u, v, p);
-
-
 	}
 
 private:

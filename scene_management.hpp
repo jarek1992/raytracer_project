@@ -118,77 +118,77 @@ hittable_list build_geometry(MaterialLibrary& mat_lib, const sceneAssetsLoader& 
 	auto big_cube_instance = make_shared<material_instance>(big_cube_geom, mat_lib.get("foggy_glass"));
 	world.add(make_shared<translate>(big_cube_instance, point3(0.0, 1.0, 2.5)));
 
-	// - 3. RANDOM SPREADED GEOMETRIES
-	//
-	//master geometries (local prefabicats)
-	auto master_cube = make_shared<cube>(point3(-0.2, -0.2, -0.2), point3(0.2, 0.2, 0.2), nullptr);
-	auto master_sphere = make_shared<sphere>(point3(0.0, 0.0, 0.0), 0.2, nullptr);
-	//material filters
-	auto neon_mats = mat_lib.get_emissive_names();
-	auto regular_mats = mat_lib.get_regular_names();
-	//for loop to randomize location of small cubes and spheres*/
-	for (int a = -15; a < 15; a++) {
-		for (int b = -15; b < 15; b++) { //create the grid a(-15, 15) / b(-15, 15)
-			point3 center(a + 0.9 * random_double(), 0.2, b + 0.9 * random_double()); //point3(x,(y = const),z)
+	//// - 3. RANDOM SPREADED GEOMETRIES
+	////
+	////master geometries (local prefabicats)
+	//auto master_cube = make_shared<cube>(point3(-0.2, -0.2, -0.2), point3(0.2, 0.2, 0.2), nullptr);
+	//auto master_sphere = make_shared<sphere>(point3(0.0, 0.0, 0.0), 0.2, nullptr);
+	////material filters
+	//auto neon_mats = mat_lib.get_emissive_names();
+	//auto regular_mats = mat_lib.get_regular_names();
+	////for loop to randomize location of small cubes and spheres*/
+	//for (int a = -15; a < 15; a++) {
+	//	for (int b = -15; b < 15; b++) { //create the grid a(-15, 15) / b(-15, 15)
+	//		point3 center(a + 0.9 * random_double(), 0.2, b + 0.9 * random_double()); //point3(x,(y = const),z)
 
-			if ((center - point3(4.0, 0.2, 0.0)).length() > 0.9) {
-				std::string selected_mat_name;
-				shared_ptr<hittable> geometry;
-				//scale
-				vec3 scale_v(1.0, 1.0, 1.0); //default scale
-				//select random number 0.0 - 1.0
-				double dice_roll = random_double();
+	//		if ((center - point3(4.0, 0.2, 0.0)).length() > 0.9) {
+	//			std::string selected_mat_name;
+	//			shared_ptr<hittable> geometry;
+	//			//scale
+	//			vec3 scale_v(1.0, 1.0, 1.0); //default scale
+	//			//select random number 0.0 - 1.0
+	//			double dice_roll = random_double();
 
-				//1. Probability distribution
-				if (dice_roll < 0.25 && !neon_mats.empty()) {
-					//25% chance to draw neon material
-					int max_idx = static_cast<int>(neon_mats.size()) - 1;
-					selected_mat_name = neon_mats[random_int(0, max_idx)];
-					geometry = master_cube;
-					//scale
-					scale_v = vec3(0.4, random_double(1.5, 4.5), 0.4);
-				}
-				else if (dice_roll < 0.55) {
-					//30% chance to draw glass material(0.25 + 0.3 = 0.55)
-					selected_mat_name = (random_double() < 0.7) ? "glass" : "glass_bubble";
-					geometry = master_sphere;
-					double s = random_double(0.5, 1.0);
-					scale_v = vec3(s, s, s);
-				}
-				else {
-					//45% left draw random material left materials from the list (excluding emissive/neaons using regular_mats)
-					int random_idx = random_int(0, static_cast<int>(regular_mats.size()) - 1);
-					selected_mat_name = regular_mats[random_idx];
+	//			//1. Probability distribution
+	//			if (dice_roll < 0.25 && !neon_mats.empty()) {
+	//				//25% chance to draw neon material
+	//				int max_idx = static_cast<int>(neon_mats.size()) - 1;
+	//				selected_mat_name = neon_mats[random_int(0, max_idx)];
+	//				geometry = master_cube;
+	//				//scale
+	//				scale_v = vec3(0.4, random_double(1.5, 4.5), 0.4);
+	//			}
+	//			else if (dice_roll < 0.55) {
+	//				//30% chance to draw glass material(0.25 + 0.3 = 0.55)
+	//				selected_mat_name = (random_double() < 0.7) ? "glass" : "glass_bubble";
+	//				geometry = master_sphere;
+	//				double s = random_double(0.5, 1.0);
+	//				scale_v = vec3(s, s, s);
+	//			}
+	//			else {
+	//				//45% left draw random material left materials from the list (excluding emissive/neaons using regular_mats)
+	//				int random_idx = random_int(0, static_cast<int>(regular_mats.size()) - 1);
+	//				selected_mat_name = regular_mats[random_idx];
 
-					if (random_double() < 0.5) {
-						geometry = master_sphere;
-					}
-					else {
-						geometry = master_cube;
-					}
-					//scale to difference
-					double s = random_double(0.8, 1.2);
-					scale_v = vec3(s, s, s);
+	//				if (random_double() < 0.5) {
+	//					geometry = master_sphere;
+	//				}
+	//				else {
+	//					geometry = master_cube;
+	//				}
+	//				//scale to difference
+	//				double s = random_double(0.8, 1.2);
+	//				scale_v = vec3(s, s, s);
 
-				}
-				//2. get material
-				auto obj_mat = mat_lib.get(selected_mat_name);
+	//			}
+	//			//2. get material
+	//			auto obj_mat = mat_lib.get(selected_mat_name);
 
-				//3. scale
-				auto scaled_obj = make_shared<scale>(geometry, scale_v);
-				//4. rotation (only cubes)
-				shared_ptr<hittable> rotated_obj = scaled_obj;
-				if (geometry == master_cube) {
-					rotated_obj = make_shared<rotate_y>(scaled_obj, random_double(0.0, 90.0));
-				}
+	//			//3. scale
+	//			auto scaled_obj = make_shared<scale>(geometry, scale_v);
+	//			//4. rotation (only cubes)
+	//			shared_ptr<hittable> rotated_obj = scaled_obj;
+	//			if (geometry == master_cube) {
+	//				rotated_obj = make_shared<rotate_y>(scaled_obj, random_double(0.0, 90.0));
+	//			}
 
-				//5. applying material to the instance through material_instance class
-				auto instance = make_shared<material_instance>(rotated_obj, obj_mat);
-				//3. final position translation
-				world.add(make_shared<translate>(instance, center));
-			}
-		}
-	}
+	//			//5. applying material to the instance through material_instance class
+	//			auto instance = make_shared<material_instance>(rotated_obj, obj_mat);
+	//			//3. final position translation
+	//			world.add(make_shared<translate>(instance, center));
+	//		}
+	//	}
+	//}
 
 	// - 4. LIGHTS 
 	/*auto light_geom = make_shared<cube>(point3(-0.2, -0.2, -0.2), point3(0.2, 0.2, 0.2), nullptr);
