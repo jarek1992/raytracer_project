@@ -680,7 +680,11 @@ private:
 
 	color get_background_color(const ray& r, const EnvironmentSettings& env) const {
 		vec3 unit_dir = unit_vector(r.direction());
-		color env_color;
+
+		//solid color background
+		if (env.mode == EnvironmentSettings::SOLID_COLOR) {
+			return env.background_color * env.intensity;
+		}
 
 		//HDR map background
 		if (env.mode == EnvironmentSettings::HDR_MAP) {
@@ -689,7 +693,7 @@ private:
 			}
 			vec3 d = unit_dir;
 
-			//Yaw HDR rotation (Y-axis) 
+			//yaw HDR rotation (Y-axis) 
 			double cos_y = cos(env.hdri_rotation);
 			double sin_y = sin(env.hdri_rotation);
 			double x1 = cos_y * d.x() + sin_y * d.z();
@@ -703,8 +707,7 @@ private:
 			double z2 = sin_p * d.y() + cos_p * d.z();
 			d = vec3(d.x(), y2, z2);
 
-			//roll (Z-axis) - "Wyprostowanie" horyzontu (DODAJ TO)
-			// Musisz dodać env.hdri_roll do swojej struktury
+			//roll (Z-axis)  
 			double cos_r = cos(env.hdri_roll);
 			double sin_r = sin(env.hdri_roll);
 			double x3 = cos_r * d.x() - sin_r * d.y();
@@ -749,8 +752,7 @@ private:
 
 		if (a > 0.0) {
 			sky_color = (1.0 - a) * horizon_color + a * zenit_color;
-		}
-		else {
+		} else {
 			// Dla dołu (pod horyzontem) dajemy ciemniejszy kolor horyzontu
 			sky_color = horizon_color * 0.1;
 		}

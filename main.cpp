@@ -286,6 +286,7 @@ int main(int argc, char* argv[]) {
 					env.sun_direction.y(),
 					env.sun_direction.z()
 				};
+
 				static float rot_deg = 0.0f;
 				static float tilt_deg = 0.0f;
 				static float roll_deg = 0.0f;
@@ -332,11 +333,13 @@ int main(int argc, char* argv[]) {
 					env.mode = EnvironmentSettings::PHYSICAL_SUN;
 					should_restart = true;
 				}
-				ImGui::Separator();
+				ImGui::SameLine();
 				if (ImGui::RadioButton("Solid Color", current_mode == EnvironmentSettings::SOLID_COLOR)) {
 					env.mode = EnvironmentSettings::SOLID_COLOR;
 					should_restart = true;
 				}
+
+				ImGui::Separator();
 
 				float intensity_f = static_cast<float>(env.intensity);
 				if (ImGui::SliderFloat("Global Intensity", &intensity_f, 0.0f, 5.0f)) {
@@ -368,7 +371,7 @@ int main(int argc, char* argv[]) {
 					}
 					ImGui::TextColored(ImVec4(0.4f, 0.8f, 1.0f, 1.0f), "HDR Map Settings");
 					//dynamic hdr loading
-					ImGui::Text("Active Texture: %s", env.current_hdr_name.c_str());
+					ImGui::Text("Active HDR map: %s", env.current_hdr_name.c_str());
 
 					if (ImGui::BeginCombo("Select HDR", env.current_hdr_name.c_str())) {
 						for (int n = 0; n < cam.hdr_files.size(); n++) {
@@ -383,7 +386,7 @@ int main(int argc, char* argv[]) {
 								cam.reset_accumulator();
 								should_restart = true;
 
-								//rotation parameters reset for new hdr map
+								//rotation parameters reset for a new hdr map
 								rot_deg = 0.0f;
 								tilt_deg = 0.0f;
 								roll_deg = 0.0f;
