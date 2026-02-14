@@ -115,8 +115,7 @@ public:
 			// Analizujemy jasność skopiowanego bufora
 			image_statistics stats = post.analyze_framebuffer(final_framebuffer);
 			current_ev = post.apply_auto_exposure(stats);
-		}
-		else {
+		} else {
 			current_ev = post.exposure; //get value in manual mode from slider
 		}
 
@@ -135,8 +134,7 @@ public:
 			for (size_t i = 0; i < total; ++i) {
 				final_framebuffer[i] += bloom_overlay[i];
 			}
-		}
-		else {
+		} else {
 			for (size_t i = 0; i < total; ++i) final_framebuffer[i] *= current_ev;
 		}
 
@@ -151,7 +149,9 @@ public:
 				int idx = j * w + i;
 
 				// Ostateczny bezpiecznik przed crashem
-				if (idx >= (int)total) break;
+				if (idx >= (int)total) {
+					break;
+				}
 
 				float u = (w > 1) ? float(i) / (w - 1) : 0.5f;
 				float v = (h > 1) ? float(j) / (h - 1) : 0.5f;
@@ -752,7 +752,8 @@ private:
 
 		if (a > 0.0) {
 			sky_color = (1.0 - a) * horizon_color + a * zenit_color;
-		} else {
+		}
+		else {
 			// Dla dołu (pod horyzontem) dajemy ciemniejszy kolor horyzontu
 			sky_color = horizon_color * 0.1;
 		}
@@ -848,4 +849,3 @@ private:
 		return accumulated_light;
 	}
 };
-

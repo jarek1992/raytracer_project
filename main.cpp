@@ -394,8 +394,8 @@ int main(int argc, char* argv[]) {
 								env.hdri_tilt = 0.0;
 								env.hdri_roll = 0.0;
 							}
-							if (is_selected) { 
-								ImGui::SetItemDefaultFocus(); 
+							if (is_selected) {
+								ImGui::SetItemDefaultFocus();
 							}
 						}
 						ImGui::EndCombo();
@@ -552,7 +552,7 @@ int main(int argc, char* argv[]) {
 				//solid background color
 				if (env.mode == EnvironmentSettings::SOLID_COLOR) {
 					ImGui::TextColored(ImVec4(0.7f, 0.7f, 0.7f, 1.0f), "Solid Color Mode");
-					
+
 					if (ImGui::ColorEdit3("Background Color", bg_col)) {
 						env.background_color = color(bg_col[0], bg_col[1], bg_col[2]);
 						should_restart = true;
@@ -577,14 +577,67 @@ int main(int argc, char* argv[]) {
 				}
 
 				ImGui::SeparatorText("Debug Views");
-				const char* debug_items[] = { "NONE", "RED", "GREEN", "BLUE", "LUMINANCE" };
-				int current_mode = (int)my_post.current_debug_mode;
-				if (ImGui::Combo("Debug Mode", &current_mode, debug_items, IM_ARRAYSIZE(debug_items))) {
-					my_post.current_debug_mode = (debug_mode)current_mode;
-					my_post.needs_update = true; // Zmień na my_post.needs_update
+
+				//auxiliary function
+				auto DebugToggle = [&](const char* id, bool& flag, ImVec4 col) {
+					int pushed_colors = 0;
+					int pushed_vars = 0;
+
+					if (flag) {
+						//highligt active debug mode with brighter color and border
+						ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(col.x * 1.2f, col.y * 1.2f, col.z * 1.2f, 1.0f));
+						pushed_colors++;
+						ImGui::PushStyleColor(ImGuiCol_Border, ImVec4(1, 1, 1, 1));
+						pushed_colors++;
+						ImGui::PushStyleVar(ImGuiStyleVar_FrameBorderSize, 1.0f);
+						pushed_vars++;
+					} else {
+						ImGui::PushStyleColor(ImGuiCol_Button, col);
+						pushed_colors++;
+					}
+
+					if (ImGui::Button(id, ImVec2(30, 30))) {
+						flag = !flag; //toggle the debug flag
+						//if color debug mode is activated, deactivate luminance and vice versa
+						if (&flag == &my_post.debug.luminance) {
+							if (my_post.debug.luminance) {
+								//if L on = R, G, B off
+								my_post.debug.red = my_post.debug.green = my_post.debug.blue = false;
+							} else {
+								//if L off = R, G, B on
+								my_post.debug.red = my_post.debug.green = my_post.debug.blue = true;
+							}
+						} else {
+							//if any of the R G B on = L off
+							my_post.debug.luminance = false;
+						}
+						my_post.needs_update = true;
+					}
+
+					ImGui::PopStyleColor(pushed_colors);
+					ImGui::PopStyleVar(pushed_vars);
+				};
+
+				//buttons row
+				if (ImGui::Button("N", ImVec2(30, 30))) {
+					my_post.debug.red = true;   
+					my_post.debug.green = true; 
+					my_post.debug.blue = true;
+					my_post.debug.luminance = false;
+					my_post.needs_update = true;
 				}
+
+				ImGui::SameLine();
+				DebugToggle("R", my_post.debug.red, ImVec4(0.6f, 0.1f, 0.1f, 1.0f));
+				ImGui::SameLine();
+				DebugToggle("G", my_post.debug.green, ImVec4(0.1f, 0.6f, 0.1f, 1.0f));
+				ImGui::SameLine();
+				DebugToggle("B", my_post.debug.blue, ImVec4(0.1f, 0.1f, 0.6f, 1.0f));
+				ImGui::SameLine();
+				DebugToggle("L", my_post.debug.luminance, ImVec4(0.4f, 0.4f, 0.4f, 1.0f));
+
 				//display legend only if LUMINANCE debug mode on
-				if (my_post.current_debug_mode == debug_mode::LUMINANCE) {
+				if (my_post.debug.luminance) {
 					ImGui::Spacing();
 					ImGui::Text("Luminance False Color Legend:");
 
@@ -593,7 +646,7 @@ int main(int argc, char* argv[]) {
 						ImGui::ColorButton(label, color, ImGuiColorEditFlags_NoTooltip, ImVec2(20, 20));
 						ImGui::SameLine();
 						ImGui::Text("%s", label);
-						};
+					};
 
 					ColorLabel("100%+ (Clipping)", ImVec4(1.0f, 1.0f, 1.0f, 1.0f));
 					ColorLabel("95%-100% (Near Clip)", ImVec4(1.0f, 0.0f, 0.0f, 1.0f));
@@ -605,7 +658,21 @@ int main(int argc, char* argv[]) {
 				}
 
 				ImGui::Spacing();
-				ImGui::Separator();
+				ImGui::SeparatorText("Luminance Histogram");
+
+				//normalized histogram plot (256 bins, range 0-1)
+				ImGui::PlotHistogram("##HDR_Histogram",
+					my_post.last_stats.normalized_histogram, 256,
+					0, NULL, 0.0f, 1.0f, ImVec2(-1, 80));
+
+				//display crucial luminance stats 
+				ImGui::Text("Avg Luma: %.4f", my_post.last_stats.average_luminance);
+				ImGui::SameLine();
+				ImGui::Text("| Max Luma: %.2f", my_post.last_stats.max_luminance);
+
+				if (ImGui::IsItemHovered()) {
+					ImGui::SetTooltip("Logarithmic scale histogram showing HDR distribution.");
+				}
 
 				my_post.needs_update |= ImGui::Checkbox("ACES Tone Mapping", &my_post.use_aces_tone_mapping);
 				my_post.needs_update |= ImGui::Checkbox("Auto Exposure", &my_post.use_auto_exposure);
@@ -614,8 +681,7 @@ int main(int argc, char* argv[]) {
 					//slider in "stops"(EV) units - (+2)lighten or (-2)darken
 					my_post.needs_update |= ImGui::SliderFloat("Exposure Compensation", &my_post.exposure_compensation_stops, -5.0f, 5.0f, "%.1f EV");
 					ImGui::Unindent();
-				}
-				else {
+				} else {
 					my_post.needs_update |= ImGui::SliderFloat("Manual Exposure", &my_post.exposure, 0.0f, 5.0f);
 				}
 
@@ -661,11 +727,6 @@ int main(int argc, char* argv[]) {
 						my_post.needs_update = true;
 					}
 				}
-
-				////update the rendered image preview only if settings changed and not currently rendering
-				//if (my_post.needs_update && !is_rendering) {
-				//	cam.update_post_processing(my_post);
-				//}
 				ImGui::EndTabItem();
 			}
 			ImGui::EndTabBar();
@@ -694,8 +755,7 @@ int main(int argc, char* argv[]) {
 				}
 			}
 			ImGui::PopStyleColor();
-		}
-		else {
+		} else {
 			//start render button
 			ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.1f, 0.4f, 0.1f, 1.0f)); //green color
 			if (ImGui::Button("Render", ImVec2(-1, 0))) {
@@ -742,7 +802,7 @@ int main(int argc, char* argv[]) {
 				if (is_rendering.load() && cam.lines_rendered >= cam.image_height) {
 					is_rendering = false;
 				}
-			});
+				});
 
 			should_restart = false;
 		}
@@ -770,35 +830,30 @@ int main(int argc, char* argv[]) {
 				int locked_w = cam.image_width;
 				int locked_h = cam.image_height;
 
-				// Robimy kopię rozmiaru i bufora RAZ na początku bloku
-				std::vector<color> temp_data = cam.render_accumulator;
+				//if rendering: get the latest data from the accumulator for preview (thread-safe mindset)
+				if (rendering_active || just_finished) {
+					cam.final_framebuffer = cam.render_accumulator;
+				}
 
-				// WARUNEK STABILNOŚCI:
-				// Jeśli rozmiar bufora nie zgadza się IDEALNIE z wymiarami, pomijamy klatkę.
-				// To chroni przed crashem, gdy wpisujesz "600" i masz "6" w polu tekstowym.
-				if (!temp_data.empty() && temp_data.size() == (size_t)locked_w * locked_h) {
-
-					if (rendered_texture != 0) glDeleteTextures(1, &rendered_texture);
-
-					cam.final_framebuffer = temp_data;
-
-
-					// Musimy przeliczyć statystyki (średnią jasność) z TYCH danych, które właśnie skopiowaliśmy
-					// zanim wejdziemy w update_post_processing.
-					image_statistics stats = my_post.analyze_framebuffer(temp_data);
-
-
-
-					// Wywołujemy post-processing
-					cam.update_post_processing(my_post, locked_w, locked_h);
-
-
-
-					if (!cam.final_framebuffer.empty()) {
-						rendered_texture = create_texture_from_buffer(cam.final_framebuffer, locked_w, locked_h);
+				//check if we have data to display
+				if (!cam.final_framebuffer.empty() && cam.final_framebuffer.size() == (size_t)locked_w * locked_h) {
+					//clean old texture from GPU to prevent memory leak
+					if (rendered_texture != 0) {
+						glDeleteTextures(1, &rendered_texture);
 					}
+					//analyze buffer for post-processing (e.g. auto-exposure)
+					image_statistics stats = my_post.analyze_framebuffer(cam.final_framebuffer);
+					my_post.last_stats = stats; //for GUi
+					//autoexposure
+					my_post.exposure = (float)my_post.apply_auto_exposure(stats);
+					//callout post-processing update if needed
+					cam.update_post_processing(my_post, locked_w, locked_h);
+					//create a new texture
+					rendered_texture = create_texture_from_buffer(cam.final_framebuffer, locked_w, locked_h);
 
-					if (rendering_active) last_preview_update = now;
+					if (rendering_active) {
+						last_preview_update = now;
+					}
 				}
 				my_post.needs_update = false;
 			}
@@ -816,8 +871,7 @@ int main(int argc, char* argv[]) {
 					//image is wider than window -> fit to width
 					display_w = avail_size.x;
 					display_h = avail_size.x / image_aspect;
-				}
-				else {
+				} else {
 					//image is higher than window -> fit to height
 					display_h = avail_size.y;
 					display_w = avail_size.y * image_aspect;

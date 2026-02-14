@@ -27,12 +27,17 @@ struct image_statistics {
 	}
 };
 
-enum class debug_mode {
-	NONE,
-	RED,
-	GREEN,
-	BLUE,
-	LUMINANCE
+struct debug_flags {
+	bool red = false;
+	bool green = false;
+	bool blue = false;
+	bool luminance = false;
+
+	//check if any debug mode is active
+	bool any_active() const {
+		return red || green || blue || luminance;
+	}
+
 };
 
 class post_processor {
@@ -49,7 +54,9 @@ public:
 	bool use_aces_tone_mapping = false;
 	bool use_auto_exposure = false;
 	float target_luminance = 0.22f; //aimed value for autoexposure (middle gray standard in photography 22%, higher value = overburn)
-	mutable debug_mode current_debug_mode = debug_mode::NONE;
+
+	//struct debug_flags instance
+	mutable debug_flags debug;
 
 	//bloom effect
 	bool use_bloom = false;
@@ -58,6 +65,9 @@ public:
 	int bloom_radius = 4;
 
 	bool needs_update = true;
+
+	//hisogram datas for Imgui plot 
+	mutable image_statistics last_stats;
 
 	//post-denoise sharpening
 	bool use_sharpening = false;
@@ -111,8 +121,8 @@ public:
 		}
 
 		//9. flags debug modes RGB/Luminance
-		if (current_debug_mode != debug_mode::NONE) {
-			apply_debug_view(c);
+		if (debug.any_active()) {
+			c = apply_debug_view(c);
 		}
 
 		return linear_to_gamma(color(
@@ -218,42 +228,37 @@ private:
 	}
 
 	color apply_debug_view(color c) const {
-		switch (current_debug_mode) {
-		case debug_mode::RED: {
-			return color(c.x(), 0, 0);
-		}
-		case debug_mode::GREEN: {
-			return color(0, c.y(), 0);
-		}
-		case debug_mode::BLUE: {
-			return color(0, 0, c.z());
-		}
-		case debug_mode::LUMINANCE: {
+		//if luminance debug mode is active, overwrite rgb and display luminance view
+		if(debug.luminance) {
 			double lum = c.luminance();
 			if (lum >= 1.0) {
-				return color(1, 1, 1);
+				return color(1.0, 1.0, 1.0);
 			}
 			if (lum > 0.95) {
-				return color(1, 0, 0);
+				return color(1.0, 0.0, 0.0);
 			}
 			if (lum > 0.70) {
-				return color(1, 1, 0);
+				return color(1.0, 1.0, 0.0);
 			}
 			if (lum > 0.40) {
 				return color(0.5, 0.5, 0.5);
 			}
 			if (lum > 0.10) {
-				return color(0, 0.5, 0);
+				return color(0.0, 0.5, 0.0);
 			}
 			if (lum > 0.02) {
-				return color(0, 0, 1);
+				return color(0.0, 0.0, 1.0);
 			}
 			else {
-				return color(0.1, 0, 0.2);
+				return color(0.1, 0.0, 0.2);
 			}
 		}
-		default: return c;
-		}
+		//rgb channels mix
+		double r = debug.red ? c.x() : 0.0;
+		double g = debug.green ? c.y() : 0.0;
+		double b = debug.blue ? c.z() : 0.0;
+
+		return color(r, g, b);
 	}
 
 	vec3 rgb_to_hsv(vec3 c) const {
