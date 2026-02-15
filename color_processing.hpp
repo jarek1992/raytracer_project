@@ -37,7 +37,6 @@ struct debug_flags {
 	bool any_active() const {
 		return red || green || blue || luminance;
 	}
-
 };
 
 class post_processor {
@@ -73,7 +72,19 @@ public:
 	bool use_sharpening = false;
 	double sharpen_amount = 0.2; //0.05 - 0.3 suggested range
 
-	color process(color exposed_color, float u = 0.5f, float v = 0.5f) const {
+	color process(color exposed_color, float u = 0.5f, float v = 0.5f, render_pass current_pass = render_pass::RGB) const {
+		//apply full process to beauty, denoise passes and debug modes
+		bool is_beauty_pass = (current_pass == render_pass::RGB || current_pass == render_pass::DENOISE);
+		//ignore post-processing effects if any pass is on
+		if (!is_beauty_pass && !debug.any_active()) {
+			//for Z-Depth save clamp and gamma for and overview
+			return linear_to_gamma(color(
+				std::clamp(exposed_color.x(), 0.0, 1.0),
+				std::clamp(exposed_color.y(), 0.0, 1.0),
+				std::clamp(exposed_color.z(), 0.0, 1.0)
+			));
+		}
+
 		color c = exposed_color;
 		//1. color balance(HDR)
 		c = color(
@@ -84,13 +95,13 @@ public:
 		if (std::abs(contrast - 1.0f) > 0.001f) {
 			c = apply_contrast(c, contrast);
 		}
-		//8. vignette effect
+		//3. vignette effect
 		if (vignette_intensity > 0.0f) {
 			float dist = std::sqrt((u - 0.5f) * (u - 0.5f) + (v - 0.5f) * (v - 0.5f));
 			float vig = std::clamp(1.0f - dist * vignette_intensity, 0.0f, 1.0f);
 			c *= static_cast<double>(vig);
 		}
-		//3. HSV operations
+		//4. HSV operations
 		if (std::abs(saturation - 1.0f) > 0.001f || std::abs(hue_shift) > 0.001f) {
 			double original_luma = c.x() * 0.2126 + c.y() * 0.7152 + c.z() * 0.0722;
 
@@ -120,7 +131,7 @@ public:
 			c = apply_aces(c);
 		}
 
-		//9. flags debug modes RGB/Luminance
+		//6. flags debug modes RGB/Luminance
 		if (debug.any_active()) {
 			c = apply_debug_view(c);
 		}

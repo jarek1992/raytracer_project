@@ -184,8 +184,7 @@ int main(int argc, char* argv[]) {
 					//calculate image height automatically
 					cam.image_height = static_cast<int>(cam.image_width / cam.aspect_ratio);
 					ImGui::Text("Locked Height: %d", cam.image_height);
-				}
-				else {
+				} else {
 					//custom mode: height is unlocked
 					if (ImGui::InputInt("Image Height", &cam.image_height)) {
 						if (cam.image_height < 100) {
@@ -265,19 +264,70 @@ int main(int argc, char* argv[]) {
 					should_restart = true;
 				}
 				ImGui::SeparatorText("Render Passes");
-				ImGui::Checkbox("Denoise", &cam.use_denoiser);
-				ImGui::Checkbox("Albedo", &cam.use_albedo_buffer);
-				ImGui::Checkbox("Normals", &cam.use_normal_buffer);
-				ImGui::Checkbox("Z-Depth", &cam.use_z_depth_buffer);
-				if (cam.use_z_depth_buffer) {
-					ImGui::Indent();
-					ImGui::SliderFloat("Max Distance", &my_post.z_depth_max_dist, 0.1f, 50.0f);
-					ImGui::Unindent();
+
+				//dropdown passes
+				ImGui::Text("Active View:");
+				//reference to static array of pass names in camera class
+				if (ImGui::BeginCombo("##SelectPass", camera::pass_names[static_cast<int>(cam.current_display_pass)])) {
+					for (int n = 0; n < 7; n++) {
+						render_pass p = static_cast<render_pass>(n);
+
+						//display only if checkbox for the pass is active (except RGB always active)
+						bool is_enabled = true;
+						if (p == render_pass::DENOISE) {
+							is_enabled = cam.use_denoiser;
+						} else if (p == render_pass::ALBEDO) {
+							is_enabled = cam.use_albedo_buffer;
+						} else if (p == render_pass::NORMALS) {
+							is_enabled = cam.use_normal_buffer;
+						} else if (p == render_pass::Z_DEPTH) {
+							is_enabled = cam.use_z_depth_buffer;
+						} else if (p == render_pass::REFLECTIONS) {
+							is_enabled = cam.use_reflection;
+						} else if (p == render_pass::REFRACTIONS) {
+							is_enabled = cam.use_refraction;
+						}
+
+						if (!is_enabled && p != render_pass::RGB) {
+							continue;
+						}
+						const bool is_selected = (cam.current_display_pass == p);
+						if (ImGui::Selectable(camera::pass_names[n], is_selected)) {
+							cam.current_display_pass = p;
+							my_post.needs_update = true;
+						}
+					}
+					ImGui::EndCombo();
 				}
-				ImGui::Checkbox("Reflections (Mirrors)", &cam.use_reflection);
-				ImGui::Checkbox("Refractions (Glass)", &cam.use_refraction);
+				ImGui::Spacing();
+				ImGui::Separator();
+				ImGui::Spacing();
+
+				//passes checkboxes for activation (except RGB always active)
+				ImGui::Text("Compute Passes:");
+
+				//block checkboxes during rendering
+				bool is_rendering_now = is_rendering.load();
+				ImGui::BeginDisabled(is_rendering_now);
+
+					ImGui::Checkbox("Denoise", &cam.use_denoiser);
+					ImGui::Checkbox("Albedo", &cam.use_albedo_buffer);
+					ImGui::Checkbox("Normals", &cam.use_normal_buffer);
+					ImGui::Checkbox("Z-Depth", &cam.use_z_depth_buffer);
+					if (cam.use_z_depth_buffer) {
+						ImGui::Indent();
+						if (ImGui::SliderFloat("Max Distance", &my_post.z_depth_max_dist, 0.1f, 50.0f)) {
+							my_post.needs_update = true;
+						}
+						ImGui::Unindent();
+					}
+					ImGui::Checkbox("Reflections(Mirrors)", &cam.use_reflection);
+					ImGui::Checkbox("Refractions(Glass)", &cam.use_refraction);
+
+				ImGui::EndDisabled();
 				ImGui::EndTabItem();
 			}
+
 			//environment settings tab
 			if (ImGui::BeginTabItem("Environment")) {
 				//buffer definition 
@@ -591,7 +641,8 @@ int main(int argc, char* argv[]) {
 						pushed_colors++;
 						ImGui::PushStyleVar(ImGuiStyleVar_FrameBorderSize, 1.0f);
 						pushed_vars++;
-					} else {
+					}
+					else {
 						ImGui::PushStyleColor(ImGuiCol_Button, col);
 						pushed_colors++;
 					}
@@ -603,11 +654,13 @@ int main(int argc, char* argv[]) {
 							if (my_post.debug.luminance) {
 								//if L on = R, G, B off
 								my_post.debug.red = my_post.debug.green = my_post.debug.blue = false;
-							} else {
+							}
+							else {
 								//if L off = R, G, B on
 								my_post.debug.red = my_post.debug.green = my_post.debug.blue = true;
 							}
-						} else {
+						}
+						else {
 							//if any of the R G B on = L off
 							my_post.debug.luminance = false;
 						}
@@ -616,12 +669,12 @@ int main(int argc, char* argv[]) {
 
 					ImGui::PopStyleColor(pushed_colors);
 					ImGui::PopStyleVar(pushed_vars);
-				};
+					};
 
 				//buttons row
 				if (ImGui::Button("N", ImVec2(30, 30))) {
-					my_post.debug.red = true;   
-					my_post.debug.green = true; 
+					my_post.debug.red = true;
+					my_post.debug.green = true;
 					my_post.debug.blue = true;
 					my_post.debug.luminance = false;
 					my_post.needs_update = true;
@@ -646,7 +699,7 @@ int main(int argc, char* argv[]) {
 						ImGui::ColorButton(label, color, ImGuiColorEditFlags_NoTooltip, ImVec2(20, 20));
 						ImGui::SameLine();
 						ImGui::Text("%s", label);
-					};
+						};
 
 					ColorLabel("100%+ (Clipping)", ImVec4(1.0f, 1.0f, 1.0f, 1.0f));
 					ColorLabel("95%-100% (Near Clip)", ImVec4(1.0f, 0.0f, 0.0f, 1.0f));
@@ -681,7 +734,8 @@ int main(int argc, char* argv[]) {
 					//slider in "stops"(EV) units - (+2)lighten or (-2)darken
 					my_post.needs_update |= ImGui::SliderFloat("Exposure Compensation", &my_post.exposure_compensation_stops, -5.0f, 5.0f, "%.1f EV");
 					ImGui::Unindent();
-				} else {
+				}
+				else {
 					my_post.needs_update |= ImGui::SliderFloat("Manual Exposure", &my_post.exposure, 0.0f, 5.0f);
 				}
 
@@ -741,8 +795,7 @@ int main(int argc, char* argv[]) {
 
 			if (is_rendering) {
 				ImGui::TextColored(ImVec4(1.0f, 1.0f, 0.0f, 1.0f), "Rendering: %.1f%%", progress * 100.0f);
-			}
-			else {
+			} else {
 				ImGui::TextColored(ImVec4(0.0f, 1.0f, 0.0f, 1.0f), "Render Finished (100%)");
 			}
 			//stop render button
@@ -835,21 +888,32 @@ int main(int argc, char* argv[]) {
 					cam.final_framebuffer = cam.render_accumulator;
 				}
 
+				//get reference to selected buffer from passes dropdown
+				const std::vector<color>& buffer_to_show = cam.get_active_buffer();
+
 				//check if we have data to display
-				if (!cam.final_framebuffer.empty() && cam.final_framebuffer.size() == (size_t)locked_w * locked_h) {
+				if (!buffer_to_show.empty() && buffer_to_show.size() == (size_t)locked_w * locked_h) {
 					//clean old texture from GPU to prevent memory leak
 					if (rendered_texture != 0) {
 						glDeleteTextures(1, &rendered_texture);
 					}
-					//analyze buffer for post-processing (e.g. auto-exposure)
-					image_statistics stats = my_post.analyze_framebuffer(cam.final_framebuffer);
-					my_post.last_stats = stats; //for GUi
-					//autoexposure
-					my_post.exposure = (float)my_post.apply_auto_exposure(stats);
-					//callout post-processing update if needed
-					cam.update_post_processing(my_post, locked_w, locked_h);
-					//create a new texture
-					rendered_texture = create_texture_from_buffer(cam.final_framebuffer, locked_w, locked_h);
+					//if display rgb or denoise passes apply postprocessing
+					if (cam.current_display_pass == render_pass::RGB || cam.current_display_pass == render_pass::DENOISE) {
+						//analyze buffer for post-processing (e.g. auto-exposure)
+						image_statistics stats = my_post.analyze_framebuffer(cam.final_framebuffer);
+						my_post.last_stats = stats;
+						//autoexposure
+						if (my_post.use_auto_exposure) {
+							my_post.exposure = (float)my_post.apply_auto_exposure(stats);
+						}
+						//callout post-processing update if needed
+						cam.update_post_processing(my_post, locked_w, locked_h);
+						//create a new texture
+						rendered_texture = create_texture_from_buffer(cam.final_framebuffer, locked_w, locked_h);
+					} else {
+						//other passes are raw datas without post-processing
+						rendered_texture = create_texture_from_buffer(buffer_to_show, locked_w, locked_h);
+					}
 
 					if (rendering_active) {
 						last_preview_update = now;
@@ -871,7 +935,8 @@ int main(int argc, char* argv[]) {
 					//image is wider than window -> fit to width
 					display_w = avail_size.x;
 					display_h = avail_size.x / image_aspect;
-				} else {
+				}
+				else {
 					//image is higher than window -> fit to height
 					display_h = avail_size.y;
 					display_w = avail_size.y * image_aspect;
@@ -885,8 +950,7 @@ int main(int argc, char* argv[]) {
 				ImGui::SetCursorPos(ImVec2(offset_x, offset_y));
 				//display the image 
 				ImGui::Image((ImTextureID)(intptr_t)rendered_texture, ImVec2(display_w, display_h));
-			}
-			else {
+			} else {
 				ImGui::Text("Ready to render...");
 			}
 			last_rendering_state = rendering_active;

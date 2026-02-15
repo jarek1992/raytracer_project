@@ -58,9 +58,25 @@ public:
 	//hdr maps
 	std::vector<std::string> hdr_files;
 
-	std::vector<color> render_accumulator; //raw image (no filters applied)
+	//raw image (no filters applied)
+	std::vector<color> render_accumulator;
+
+	//mapping of render passes to display names for GUI
+	static inline const char* pass_names[] = {
+		"RGB",
+		"Denoise",
+		"Albedo",
+		"Normals",
+		"Z-Depth",
+		"Reflections",
+		"Refractions"
+	};
+
+	//current render pass for GUI display
+	render_pass current_display_pass = render_pass::RGB;
 
 	//create all the necessary buffers
+	std::vector<color> denoise_buffer;
 	std::vector<color> albedo_buffer;
 	std::vector<color> normal_buffer;
 	std::vector<color> z_depth_buffer;
@@ -69,6 +85,32 @@ public:
 
 	std::vector<color> final_framebuffer; //image after post-processing (filters applied)
 	std::atomic<int> lines_rendered{ 0 }; //atomic counter for rendered lines
+
+	//choose the buffer function
+	const std::vector<color>& get_active_buffer() {
+		switch (current_display_pass) {
+		case render_pass::DENOISE: {
+			return denoise_buffer;
+		}
+		case render_pass::ALBEDO: {
+			return albedo_buffer;
+		}
+		case render_pass::NORMALS: {
+			return normal_buffer;
+		}
+		case render_pass::Z_DEPTH: {
+			return z_depth_buffer;
+		}
+		case render_pass::REFLECTIONS: {
+			return reflection_buffer;
+		}
+		case render_pass::REFRACTIONS: {
+			return refraction_buffer;
+		}
+		default:
+			return render_accumulator;
+		}
+	}
 
 	std::string get_default_hdr_path() const {
 		if (!hdr_files.empty()) {
@@ -101,62 +143,52 @@ public:
 		if (render_accumulator.empty()) {
 			return;
 		}
-		final_framebuffer = render_accumulator;
 
-		size_t total = final_framebuffer.size();
+		// 1. WYBÓR ŹRÓDŁA (Zawsze świeże dane HDR)
+		const std::vector<color>& source = get_active_buffer();
 
-		//check buffer size 
-		if (total != static_cast<size_t>(w) * h) {
-			return;
-		}
-		//Wyliczenie aktualnej ekspozycj
-		double current_ev;
-		if (post.use_auto_exposure) {
-			// Analizujemy jasność skopiowanego bufora
-			image_statistics stats = post.analyze_framebuffer(final_framebuffer);
-			current_ev = post.apply_auto_exposure(stats);
-		} else {
-			current_ev = post.exposure; //get value in manual mode from slider
-		}
+		// Inicjalizujemy final_framebuffer jako kopię źródła
+		final_framebuffer = source;
 
-		// NAJPIERW nakładamy ekspozycję na bazowy obraz
-		for (size_t i = 0; i < total; ++i) {
-			final_framebuffer[i] *= current_ev;
-		}
+		bool is_beauty = (current_display_pass == render_pass::RGB || current_display_pass == render_pass::DENOISE);
+		bool is_light = (current_display_pass == render_pass::REFLECTIONS || current_display_pass == render_pass::REFRACTIONS);
 
-		// 1. Bloom & Exposure (Używamy parametrów 'w' i 'h')
-		if (post.use_bloom) {
-			std::vector<color> bloom_overlay(total, color(0.0, 0.0, 0.0));
-			bloom_filter bloom(post.bloom_threshold, post.bloom_intensity, post.bloom_radius);
-
-			bloom.generate_bloom_overlay(final_framebuffer, bloom_overlay, w, h, 1.0f);
-
-			for (size_t i = 0; i < total; ++i) {
-				final_framebuffer[i] += bloom_overlay[i];
+		// 2. EFEKTY GLOBALNE(Tylko dla Beauty Pass)
+		if (is_beauty) {
+			double current_ev = std::pow(2.0, post.exposure);
+			for (auto& c : final_framebuffer) {
+				c *= current_ev;
 			}
-		} else {
-			for (size_t i = 0; i < total; ++i) final_framebuffer[i] *= current_ev;
+
+			if (post.use_bloom) {
+				std::vector<color> bloom_overlay(final_framebuffer.size(), color(0.0, 0.0, 0.0));
+				bloom_filter bloom(post.bloom_threshold, post.bloom_intensity, post.bloom_radius);
+				bloom.generate_bloom_overlay(final_framebuffer, bloom_overlay, w, h, 1.0f);
+				for (size_t i = 0; i < final_framebuffer.size(); ++i) final_framebuffer[i] += bloom_overlay[i];
+			}
+
+			if (post.use_sharpening) {
+				post.apply_sharpening(final_framebuffer, w, h, post.sharpen_amount);
+			}
 		}
 
-		// 2. Sharpening (Używamy parametrów 'w' i 'h')
-		if (post.use_sharpening) {
-			post.apply_sharpening(final_framebuffer, w, h, post.sharpen_amount);
-		}
+		// 3. FINALNY PROCES (Dla każdego piksela)
+		double current_ev = std::pow(2.0, post.exposure);
 
-		// 3. Efekty końcowe (Color Balance, ACES, Gamma)
+		//exposure and bloom
 		for (int j = 0; j < h; ++j) {
 			for (int i = 0; i < w; ++i) {
 				int idx = j * w + i;
+				color c = final_framebuffer[idx];
 
-				// Ostateczny bezpiecznik przed crashem
-				if (idx >= (int)total) {
-					break;
-				}
+				// Jeśli to odbicia/załamania, a nie beauty, też dajemy ekspozycję
+				if (is_light && !is_beauty) c *= current_ev;
 
-				float u = (w > 1) ? float(i) / (w - 1) : 0.5f;
-				float v = (h > 1) ? float(j) / (h - 1) : 0.5f;
+				float u = float(i) / (w - 1);
+				float v = float(j) / (h - 1);
 
-				final_framebuffer[idx] = post.process(final_framebuffer[idx], u, v);
+				// Wywołujemy process, który nałoży Gammę TYLKO RAZ na samym końcu
+				final_framebuffer[idx] = post.process(c, u, v, current_display_pass);
 			}
 		}
 	}
@@ -175,6 +207,7 @@ public:
 			};
 
 		prepare_buffer(render_accumulator);
+		prepare_buffer(denoise_buffer);
 		prepare_buffer(albedo_buffer);
 		prepare_buffer(normal_buffer);
 		prepare_buffer(z_depth_buffer);
@@ -226,7 +259,8 @@ public:
 			//denoise all the necessary passes (linear hdr)
 			// 
 			//beauty pass
-			apply_denoising(image_width, image_height, render_accumulator, albedo_buffer, normal_buffer);
+			denoise_buffer = render_accumulator; //copy before denoising for display in GUI
+			apply_denoising(image_width, image_height, denoise_buffer, albedo_buffer, normal_buffer);
 
 			//reflection pass
 			if (use_reflection) {
@@ -246,6 +280,7 @@ public:
 
 		// - 5. COMPOSE FINAL FRAMEBUFFER WITH POST-PROCESSING -
 		std::cerr << "Render finished. Finalizing buffers...\n";
+		update_post_processing(post, image_width, image_height);
 	}
 
 private:
@@ -365,77 +400,83 @@ private:
 							//get datas (render passes: Albedo, Normals, Z-Depth) from the first hit
 							if (s < aux_sample) {
 								// - albedo 
-								pixel_albedo += rec.mat->get_albedo(rec);
+								if (use_albedo_buffer) {
+									pixel_albedo += rec.mat->get_albedo(rec);
+								}
 								// - normals
-								vec3 n = unit_vector(rec.normal);
-								//transition on camera space(view space)
-								double nx = dot(n, u);
-								double ny = dot(n, v);
-								double nz = dot(n, w);
-								//mapping to range[0,1]
-								pixel_normal += color(
-									(nx + 1.0) * 0.5,
-									(ny + 1.0) * 0.5,
-									(nz + 1.0) * 0.5);
-
-								// - zDepth
-								double z_depth = 1.0 - std::clamp(rec.t / z_depth_max_dist, 0.0, 1.0);
-								pixel_zdepth += color(z_depth, z_depth, z_depth);
+								if (use_normal_buffer) {
+									vec3 n = unit_vector(rec.normal);
+									//transition on camera space(view space)
+									double nx = dot(n, u);
+									double ny = dot(n, v);
+									double nz = dot(n, w);
+									//mapping to range[0,1]
+									pixel_normal += color(
+										(nx + 1.0) * 0.5,
+										(ny + 1.0) * 0.5,
+										(nz + 1.0) * 0.5
+									);
+								}
+								// - Z-Depth
+								if (use_z_depth_buffer) {
+									double z_depth = 1.0 - std::clamp(rec.t / z_depth_max_dist, 0.0, 1.0);
+									pixel_zdepth += color(z_depth, z_depth, z_depth);
+								}
 							}
 
 							//reflection and refraction
 							//use 'rec' from the first hit
-							ray scattered;
-							color attenuation;
-							if (rec.mat->scatter(r, rec, attenuation, scattered)) {
-								//check what the ray hits
-								color scattered_color = ray_color(scattered, world, this->max_depth - 1, env);
+							if (use_reflection || use_refraction) {
+								ray scattered;
+								color attenuation;
+								if (rec.mat->scatter(r, rec, attenuation, scattered)) {
+									//check what the ray hits
+									color scattered_color = ray_color(scattered, world, this->max_depth - 1, env);
 
-								//limit maximum luma for reflection/refraction to avoid fireflies
-								double luma = 0.2126 * scattered_color.length();
-								double max_luma = 2.0; //maximum luma threshold
-								if (luma > max_luma) {
-									scattered_color *= (max_luma / luma);
-								}
-								//divide into buffers depending on material type
-								//scattered ray has almost the same direction as the perfect reflection:
-								vec3 reflected_dir = reflect(unit_vector(r.direction()), unit_vector(rec.normal));
-								bool is_specular = dot(unit_vector(scattered.direction()), reflected_dir) > 0.9;
+									//limit maximum luma for reflection/refraction to avoid fireflies
+									double luma = 0.2126 * scattered_color.length();
+									double max_luma = 2.0; //maximum luma threshold
+									if (luma > max_luma) {
+										scattered_color *= (max_luma / luma);
+									}
+									//divide into buffers depending on material type
+									//scattered ray has almost the same direction as the perfect reflection:
+									vec3 reflected_dir = reflect(unit_vector(r.direction()), unit_vector(rec.normal));
+									bool is_specular = dot(unit_vector(scattered.direction()), reflected_dir) > 0.9;
 
-								if (is_specular) {
-									pixel_reflection += attenuation * scattered_color;
-								}
-								else if (dot(scattered.direction(), rec.normal) < 0) {
-									//if not mirror check if glass 
-									pixel_refraction += attenuation * scattered_color;
+									if (is_specular) {
+										pixel_reflection += attenuation * scattered_color;
+									} else if (dot(scattered.direction(), rec.normal) < 0) {
+										//if not mirror check if glass 
+										pixel_refraction += attenuation * scattered_color;
+									}
 								}
 							}
-						}
-						else {
+						} else {
 							//background for Beauty Pass
 							pixel_color += get_background_color(r, env);
 							if (s < aux_sample) {
-								//backgrounds for passes (albedo, normals, zdepth)
-								pixel_albedo += color(0.0, 0.0, 0.0);
-								pixel_normal += color(0.5, 0.5, 1.0);
-								pixel_zdepth += color(0.0, 0.0, 0.0);
+								if (use_normal_buffer) {
+									pixel_normal += color(0.5, 0.5, 1.0);
+								}
 							}
-							//backgrounds for passes reflection, refraction
-							pixel_reflection += color(0.0, 0.0, 0.0);
-							pixel_refraction += color(0.0, 0.0, 0.0);
 						}
 					}
 
 					//average all the buffers
 					int idx = j * image_width + i;
 					framebuffer[idx] = pixel_color * light_scale; //average by all the samples
-					//average all the passes by declared aux_sample
-					albedo_buffer[idx] = pixel_albedo * aux_scale;
-					normal_buffer[idx] = pixel_normal * aux_scale;
-					z_depth_buffer[idx] = pixel_zdepth * aux_scale;
-					//for those light_scale
 					reflection_buffer[idx] = pixel_reflection * light_scale;
 					refraction_buffer[idx] = pixel_refraction * light_scale;
+
+					int actual_aux_samples = std::min(aux_sample, samples_per_pixel);
+					double dynamic_aux_scale = 1.0 / actual_aux_samples;
+
+					//average albedo, normals, z-depth passes dynamic_aux_scale
+					albedo_buffer[idx] = pixel_albedo * dynamic_aux_scale;
+					normal_buffer[idx] = pixel_normal * dynamic_aux_scale;
+					z_depth_buffer[idx] = pixel_zdepth * dynamic_aux_scale;
+
 				}
 				//increase the local counter for progress bar
 				local_lines_done++;

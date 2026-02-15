@@ -97,6 +97,16 @@ inline vec3 direction_from_spherical(double elevation_deg, double azimuth_deg) {
 	);
 }
 
+enum class render_pass : int {
+	RGB = 0,
+	DENOISE,
+	ALBEDO,
+	NORMALS,
+	Z_DEPTH,
+	REFLECTIONS,
+	REFRACTIONS
+};
+
 #include "color.hpp"
 #include "interval.hpp"
 #include "ray.hpp"
