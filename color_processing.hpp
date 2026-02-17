@@ -41,7 +41,7 @@ struct debug_flags {
 
 class post_processor {
 public:
-	mutable float exposure = 1.0f;
+	mutable float exposure = 0.5f;
 	float saturation = 1.0f;
 	float contrast = 1.0f;
 	float hue_shift = 0.0f; //in degrees [-180, 180]
@@ -52,7 +52,7 @@ public:
 
 	bool use_aces_tone_mapping = false;
 	bool use_auto_exposure = false;
-	float target_luminance = 0.22f; //aimed value for autoexposure (middle gray standard in photography 22%, higher value = overburn)
+	float target_luminance = 0.12f; //aimed value for autoexposure (middle gray standard 18%, here is 12% higher value = overburn)
 
 	//struct debug_flags instance
 	mutable debug_flags debug;
@@ -74,7 +74,8 @@ public:
 
 	color process(color exposed_color, float u = 0.5f, float v = 0.5f, render_pass current_pass = render_pass::RGB) const {
 		//apply full process to beauty, denoise passes and debug modes
-		bool is_beauty_pass = (current_pass == render_pass::RGB || current_pass == render_pass::DENOISE);
+		bool is_beauty_pass = (current_pass == render_pass::RGB || 
+							   current_pass == render_pass::DENOISE);
 		//ignore post-processing effects if any pass is on
 		if (!is_beauty_pass && !debug.any_active()) {
 			//for Z-Depth save clamp and gamma for and overview
@@ -85,7 +86,8 @@ public:
 			));
 		}
 
-		color c = exposed_color;
+		color c = exposed_color * static_cast<double>(exposure);
+
 		//1. color balance(HDR)
 		c = color(
 			c.x() * color_balance.x(),
@@ -103,29 +105,26 @@ public:
 		}
 		//4. HSV operations
 		if (std::abs(saturation - 1.0f) > 0.001f || std::abs(hue_shift) > 0.001f) {
-			double original_luma = c.x() * 0.2126 + c.y() * 0.7152 + c.z() * 0.0722;
+			double original_luma = c.luminance();
 
-			color safe_hsv_input = color(
-				std::clamp(c.x(), 0.0, 1.0),
-				std::clamp(c.y(), 0.0, 1.0),
-				std::clamp(c.z(), 0.0, 1.0)
-			);
-			vec3 hsv = rgb_to_hsv(safe_hsv_input);
+			// Jeśli piksel jest czarniejszy niż czarny, pomiń
+			if (original_luma > 0.0001) {
+				// Normalizujemy kolor do zakresu 0-1 tylko na potrzeby konwersji HSV
+				color normalized_rgb = c / original_luma;
 
-			hsv[0] = std::fmod(hsv[0] + hue_shift, 360.0f);
-			if (hsv[0] < 0) hsv[0] += 360.0f;
-			hsv[1] = std::clamp(static_cast<float>(hsv[1] * saturation), 0.0f, 1.0f);
+				vec3 hsv = rgb_to_hsv(normalized_rgb);
 
-			color rgb_shifted = hsv_to_rgb(hsv);
+				hsv[0] = std::fmod(hsv[0] + hue_shift, 360.0f);
+				if (hsv[0] < 0) hsv[0] += 360.0f;
+				hsv[1] = std::clamp(static_cast<float>(hsv[1] * saturation), 0.0f, 1.0f);
 
-			// Przywracamy energię HDR po operacjach HSV
-			if (original_luma > 1.0) {
+				color rgb_shifted = hsv_to_rgb(hsv);
+
+				// Przywracamy oryginalną jasność HDR do nowego koloru
 				c = rgb_shifted * original_luma;
 			}
-			else {
-				c = rgb_shifted;
-			}
 		}
+
 		//5. tone mapping apply_aces (0-1 range)
 		if (use_aces_tone_mapping) {
 			c = apply_aces(c);
@@ -180,19 +179,24 @@ public:
 
 	//auto-exposure applied to final render
 	double apply_auto_exposure(const image_statistics& stats) const {
+		//safety check to avoid division by zero and extreme exposure values
+		if (stats.average_luminance <= 0.0) { 
+			return static_cast<double>(exposure); 
+		}
+		//if auto-exposure is disabled
 		if (!use_auto_exposure) {
-			return std::clamp(static_cast<float>(exposure), 0.01f, 20.0f);
+			return std::clamp(static_cast<float>(exposure), 0.01f, 10.0f);
 		}
 
 		double current_exp;
 		// Jeśli obraz jest prawie czarny, używamy bardzo małej luminancji, 
 		// żeby nie dzielić przez zero, ale wciąż stosujemy kompensację!
-		double safe_luminance = std::max(static_cast<double>(stats.average_luminance), 0.0001);
+		double safe_luminance = std::max(static_cast<double>(stats.average_luminance), 0.02);
 
 		double raw_exposure = target_luminance / safe_luminance;
 		current_exp = raw_exposure * std::pow(2.0, static_cast<double>(exposure_compensation_stops));
 
-		return std::clamp(static_cast<float>(current_exp), 0.01f, 20.0f);
+		return std::clamp(static_cast<float>(current_exp), 0.01f, 4.0f);
 	}
 
 	//post-denoise sharpness filter
@@ -226,21 +230,19 @@ public:
 private:
 	color apply_contrast(color c, float contrast) const {
 
-		//get pixel brightness (luminance)
-		double lum = c.luminance();
-		//linear contrast 
-		double new_lum = (lum - 0.5) * contrast + 0.5;
-		new_lum = std::clamp(new_lum, 0.0, 1.0);
-
-		if (lum > 0.0001) {
-			return c * (new_lum / lum);
-		}
-		return color(new_lum, new_lum, new_lum);
+		// Standardowy wzór na kontrast w przestrzeni liniowej
+		// 0.18 to "middle gray" - punkt, wokół którego skalujemy
+		double pivot = 0.18;
+		return color(
+			std::max(0.0, (c.x() - pivot) * contrast + pivot),
+			std::max(0.0, (c.y() - pivot) * contrast + pivot),
+			std::max(0.0, (c.z() - pivot) * contrast + pivot)
+		);
 	}
 
 	color apply_debug_view(color c) const {
 		//if luminance debug mode is active, overwrite rgb and display luminance view
-		if(debug.luminance) {
+		if (debug.luminance) {
 			double lum = c.luminance();
 			if (lum >= 1.0) {
 				return color(1.0, 1.0, 1.0);

@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 
 #include <cmath>
 #include <limits>
@@ -48,17 +48,24 @@ inline int random_int(int min, int max) {
 #include "vec3.hpp"
 
 inline color apply_aces(color x) {
-	//ACES tone mapping curve
-	const double a = 2.51;
-	const double b = 0.03;
-	const double c = 2.43;
-	const double d = 0.59;
-	const double e = 0.14;
-	return color(
-		std::clamp((x.x() * (a * x.x() + b)) / (x.x() * (c * x.x() + d) + e), 0.0, 1.0),
-		std::clamp((x.y() * (a * x.y() + b)) / (x.y() * (c * x.y() + d) + e), 0.0, 1.0),
-		std::clamp((x.z() * (a * x.z() + b)) / (x.z() * (c * x.z() + d) + e), 0.0, 1.0)
-	);
+	//Pancerne zabezpieczenie przed ujemnymi wartościami (NaN killer)
+	auto safe_x = [](double v) {
+		// Zabezpieczenie przed NaN i nieskończonością
+		if (std::isnan(v) || std::isinf(v)) {
+			return 0.0; 
+		} 
+		double val = std::max(0.0, v); // Nigdy poniżej zera
+
+		const double a = 2.51;
+		const double b = 0.03;
+		const double c = 2.43;
+		const double d = 0.59;
+		const double e = 0.14;
+
+		return (val * (a * val + b)) / (val * (c * val + d) + e);
+	};
+
+	return color(safe_x(x.x()), safe_x(x.y()), safe_x(x.z()));
 }
 
 //convert linear color component to gamma corrected component
@@ -95,6 +102,10 @@ inline vec3 direction_from_spherical(double elevation_deg, double azimuth_deg) {
 		std::cos(theta),
 		std::sin(theta) * std::sin(phi)
 	);
+}
+
+inline bool is_nan(const color& c) {
+	return std::isnan(c.x()) || std::isnan(c.y()) || std::isnan(c.z());
 }
 
 enum class render_pass : int {

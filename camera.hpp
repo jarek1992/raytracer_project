@@ -139,56 +139,69 @@ public:
 	}
 
 	void update_post_processing(const post_processor& post, int w, int h) {
-		//copy HDR datas before calculating
 		if (render_accumulator.empty()) {
 			return;
 		}
 
-		// 1. WYBÓR ŹRÓDŁA (Zawsze świeże dane HDR)
+		//source choice
 		const std::vector<color>& source = get_active_buffer();
-
-		// Inicjalizujemy final_framebuffer jako kopię źródła
 		final_framebuffer = source;
 
-		bool is_beauty = (current_display_pass == render_pass::RGB || current_display_pass == render_pass::DENOISE);
-		bool is_light = (current_display_pass == render_pass::REFLECTIONS || current_display_pass == render_pass::REFRACTIONS);
+		bool is_beauty = (current_display_pass == render_pass::RGB ||
+			current_display_pass == render_pass::DENOISE);
+		bool is_light = (current_display_pass == render_pass::REFLECTIONS ||
+			current_display_pass == render_pass::REFRACTIONS);
 
-		// 2. EFEKTY GLOBALNE(Tylko dla Beauty Pass)
+		//global effects (HDR)
+		//bloom and sharpening only for beauty pass
 		if (is_beauty) {
-			double current_ev = std::pow(2.0, post.exposure);
-			for (auto& c : final_framebuffer) {
-				c *= current_ev;
+			//exposure before applying bloom 
+			double ev_multiplier = std::pow(2.0, post.exposure);
+
+			//optimalization multiplying by exposure 
+			#pragma omp parallel for
+			for (int i = 0; i < (int)final_framebuffer.size(); ++i) {
+				final_framebuffer[i] *= ev_multiplier;
 			}
 
+			//bloom
 			if (post.use_bloom) {
-				std::vector<color> bloom_overlay(final_framebuffer.size(), color(0.0, 0.0, 0.0));
+				std::vector<color> bloom_overlay(final_framebuffer.size(), color(0, 0, 0));
 				bloom_filter bloom(post.bloom_threshold, post.bloom_intensity, post.bloom_radius);
 				bloom.generate_bloom_overlay(final_framebuffer, bloom_overlay, w, h, 1.0f);
 				for (size_t i = 0; i < final_framebuffer.size(); ++i) final_framebuffer[i] += bloom_overlay[i];
 			}
 
+			//sharpening
 			if (post.use_sharpening) {
 				post.apply_sharpening(final_framebuffer, w, h, post.sharpen_amount);
 			}
 		}
 
-		// 3. FINALNY PROCES (Dla każdego piksela)
-		double current_ev = std::pow(2.0, post.exposure);
+		//final process (per pixel)
+		#pragma omp parallel for schedule(static)
+		for (int idx = 0; idx < (int)final_framebuffer.size(); ++idx) {
+			color c = final_framebuffer[idx];
+			float u = (float)(idx % w) / (w - 1);
+			float v = (float)(idx / w) / (h - 1);
 
-		//exposure and bloom
-		for (int j = 0; j < h; ++j) {
-			for (int i = 0; i < w; ++i) {
-				int idx = j * w + i;
-				color c = final_framebuffer[idx];
-
-				// Jeśli to odbicia/załamania, a nie beauty, też dajemy ekspozycję
-				if (is_light && !is_beauty) c *= current_ev;
-
-				float u = float(i) / (w - 1);
-				float v = float(j) / (h - 1);
-
-				// Wywołujemy process, który nałoży Gammę TYLKO RAZ na samym końcu
-				final_framebuffer[idx] = post.process(c, u, v, current_display_pass);
+			if (is_beauty) {
+				//c contains exposure, bloom and sharpening if enabled
+				//apply processonly for aces, contrast and gamma 
+				final_framebuffer[idx] = post.process(c, u, v);
+			}
+			else if (is_light) {
+				//for reflection/refraction only exposure + process
+				double ev_multiplier = std::pow(2.0, post.exposure);
+				final_framebuffer[idx] = post.process(c * ev_multiplier, u, v);
+			}
+			else {
+				//(albedo, normals, z-depth)
+				//clamp and gamma
+				c = color(std::clamp(c.x(), 0.0, 1.0),
+					std::clamp(c.y(), 0.0, 1.0),
+					std::clamp(c.z(), 0.0, 1.0));
+				final_framebuffer[idx] = linear_to_gamma(c);
 			}
 		}
 	}
@@ -356,6 +369,10 @@ private:
 
 		//reset atomic counter for progress bar
 		this->lines_rendered = 0;
+
+		//reset main framebuffer 
+		std::fill(framebuffer.begin(), framebuffer.end(), color(0, 0, 0));
+
 		//local atomic counter for progress bar in this function
 		std::atomic<int> lines_done = 0;
 
@@ -446,7 +463,8 @@ private:
 
 									if (is_specular) {
 										pixel_reflection += attenuation * scattered_color;
-									} else if (dot(scattered.direction(), rec.normal) < 0) {
+									}
+									else if (dot(scattered.direction(), rec.normal) < 0) {
 										//if not mirror check if glass 
 										pixel_refraction += attenuation * scattered_color;
 									}
@@ -476,6 +494,7 @@ private:
 					albedo_buffer[idx] = pixel_albedo * dynamic_aux_scale;
 					normal_buffer[idx] = pixel_normal * dynamic_aux_scale;
 					z_depth_buffer[idx] = pixel_zdepth * dynamic_aux_scale;
+
 
 				}
 				//increase the local counter for progress bar
@@ -644,7 +663,8 @@ private:
 		for (int j = 0; j < image_height; j++) {
 			for (int i = 0; i < image_width; i++) {
 				//get raw color
-				color pix_color = buffer[static_cast<size_t>(j) * image_width + i];
+				size_t pixel_idx = static_cast<size_t>(j) * image_width + i;
+				color pix_color = buffer[pixel_idx];
 
 				if (!is_data_pass) {
 					//calculate normalized u,v (0.0 - 1.0 range)

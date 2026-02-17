@@ -33,7 +33,7 @@ GLuint create_texture_from_buffer(const std::vector<color>& buffer, int width, i
 		float_data.push_back(static_cast<float>(c.z()));
 	}
 
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB, GL_FLOAT, float_data.data());
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB32F, width, height, 0, GL_RGB, GL_FLOAT, float_data.data());
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 
@@ -184,7 +184,8 @@ int main(int argc, char* argv[]) {
 					//calculate image height automatically
 					cam.image_height = static_cast<int>(cam.image_width / cam.aspect_ratio);
 					ImGui::Text("Locked Height: %d", cam.image_height);
-				} else {
+				}
+				else {
 					//custom mode: height is unlocked
 					if (ImGui::InputInt("Image Height", &cam.image_height)) {
 						if (cam.image_height < 100) {
@@ -276,15 +277,20 @@ int main(int argc, char* argv[]) {
 						bool is_enabled = true;
 						if (p == render_pass::DENOISE) {
 							is_enabled = cam.use_denoiser;
-						} else if (p == render_pass::ALBEDO) {
+						}
+						else if (p == render_pass::ALBEDO) {
 							is_enabled = cam.use_albedo_buffer;
-						} else if (p == render_pass::NORMALS) {
+						}
+						else if (p == render_pass::NORMALS) {
 							is_enabled = cam.use_normal_buffer;
-						} else if (p == render_pass::Z_DEPTH) {
+						}
+						else if (p == render_pass::Z_DEPTH) {
 							is_enabled = cam.use_z_depth_buffer;
-						} else if (p == render_pass::REFLECTIONS) {
+						}
+						else if (p == render_pass::REFLECTIONS) {
 							is_enabled = cam.use_reflection;
-						} else if (p == render_pass::REFRACTIONS) {
+						}
+						else if (p == render_pass::REFRACTIONS) {
 							is_enabled = cam.use_refraction;
 						}
 
@@ -310,19 +316,19 @@ int main(int argc, char* argv[]) {
 				bool is_rendering_now = is_rendering.load();
 				ImGui::BeginDisabled(is_rendering_now);
 
-					ImGui::Checkbox("Denoise", &cam.use_denoiser);
-					ImGui::Checkbox("Albedo", &cam.use_albedo_buffer);
-					ImGui::Checkbox("Normals", &cam.use_normal_buffer);
-					ImGui::Checkbox("Z-Depth", &cam.use_z_depth_buffer);
-					if (cam.use_z_depth_buffer) {
-						ImGui::Indent();
-						if (ImGui::SliderFloat("Max Distance", &my_post.z_depth_max_dist, 0.1f, 50.0f)) {
-							my_post.needs_update = true;
-						}
-						ImGui::Unindent();
+				ImGui::Checkbox("Denoise", &cam.use_denoiser);
+				ImGui::Checkbox("Albedo", &cam.use_albedo_buffer);
+				ImGui::Checkbox("Normals", &cam.use_normal_buffer);
+				ImGui::Checkbox("Z-Depth", &cam.use_z_depth_buffer);
+				if (cam.use_z_depth_buffer) {
+					ImGui::Indent();
+					if (ImGui::SliderFloat("Max Distance", &my_post.z_depth_max_dist, 0.1f, 50.0f)) {
+						my_post.needs_update = true;
 					}
-					ImGui::Checkbox("Reflections(Mirrors)", &cam.use_reflection);
-					ImGui::Checkbox("Refractions(Glass)", &cam.use_refraction);
+					ImGui::Unindent();
+				}
+				ImGui::Checkbox("Reflections(Mirrors)", &cam.use_reflection);
+				ImGui::Checkbox("Refractions(Glass)", &cam.use_refraction);
 
 				ImGui::EndDisabled();
 				ImGui::EndTabItem();
@@ -728,15 +734,26 @@ int main(int argc, char* argv[]) {
 				}
 
 				my_post.needs_update |= ImGui::Checkbox("ACES Tone Mapping", &my_post.use_aces_tone_mapping);
+
 				my_post.needs_update |= ImGui::Checkbox("Auto Exposure", &my_post.use_auto_exposure);
 				if (my_post.use_auto_exposure) {
 					ImGui::Indent();
+
+					//taget luminance slider (Twoje 0.12f)
+					if (ImGui::SliderFloat("Target Luminance", &my_post.target_luminance, 0.01f, 0.50f, "%.2f")) {
+						// Natychmiastowa aktualizacja ekspozycji po zmianie celu
+						my_post.exposure = (float)my_post.apply_auto_exposure(my_post.last_stats);
+						my_post.needs_update = true;
+					}
+
 					//slider in "stops"(EV) units - (+2)lighten or (-2)darken
-					my_post.needs_update |= ImGui::SliderFloat("Exposure Compensation", &my_post.exposure_compensation_stops, -5.0f, 5.0f, "%.1f EV");
+					if (ImGui::SliderFloat("Exposure Compensation", &my_post.exposure_compensation_stops, -5.0f, 5.0f, "%.1f EV")) {
+						my_post.exposure = (float)my_post.apply_auto_exposure(my_post.last_stats);
+						my_post.needs_update = true;
+					}
 					ImGui::Unindent();
-				}
-				else {
-					my_post.needs_update |= ImGui::SliderFloat("Manual Exposure", &my_post.exposure, 0.0f, 5.0f);
+				} else {
+					my_post.needs_update |= ImGui::SliderFloat("Manual Exposure", &my_post.exposure, 0.01f, 5.0f, "%.2f");
 				}
 
 				ImGui::SeparatorText("Color Grade");
@@ -795,7 +812,8 @@ int main(int argc, char* argv[]) {
 
 			if (is_rendering) {
 				ImGui::TextColored(ImVec4(1.0f, 1.0f, 0.0f, 1.0f), "Rendering: %.1f%%", progress * 100.0f);
-			} else {
+			}
+			else {
 				ImGui::TextColored(ImVec4(0.0f, 1.0f, 0.0f, 1.0f), "Render Finished (100%)");
 			}
 			//stop render button
@@ -808,7 +826,8 @@ int main(int argc, char* argv[]) {
 				}
 			}
 			ImGui::PopStyleColor();
-		} else {
+		}
+		else {
 			//start render button
 			ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.1f, 0.4f, 0.1f, 1.0f)); //green color
 			if (ImGui::Button("Render", ImVec2(-1, 0))) {
@@ -900,20 +919,19 @@ int main(int argc, char* argv[]) {
 					//if display rgb or denoise passes apply postprocessing
 					if (cam.current_display_pass == render_pass::RGB || cam.current_display_pass == render_pass::DENOISE) {
 						//analyze buffer for post-processing (e.g. auto-exposure)
-						image_statistics stats = my_post.analyze_framebuffer(cam.final_framebuffer);
+						image_statistics stats = my_post.analyze_framebuffer(cam.render_accumulator);
 						my_post.last_stats = stats;
+
 						//autoexposure
 						if (my_post.use_auto_exposure) {
 							my_post.exposure = (float)my_post.apply_auto_exposure(stats);
 						}
-						//callout post-processing update if needed
-						cam.update_post_processing(my_post, locked_w, locked_h);
-						//create a new texture
-						rendered_texture = create_texture_from_buffer(cam.final_framebuffer, locked_w, locked_h);
-					} else {
-						//other passes are raw datas without post-processing
-						rendered_texture = create_texture_from_buffer(buffer_to_show, locked_w, locked_h);
 					}
+
+					//callout post-processing update if needed
+					cam.update_post_processing(my_post, locked_w, locked_h);
+					//create a new texture
+					rendered_texture = create_texture_from_buffer(cam.final_framebuffer, locked_w, locked_h);
 
 					if (rendering_active) {
 						last_preview_update = now;
@@ -950,7 +968,8 @@ int main(int argc, char* argv[]) {
 				ImGui::SetCursorPos(ImVec2(offset_x, offset_y));
 				//display the image 
 				ImGui::Image((ImTextureID)(intptr_t)rendered_texture, ImVec2(display_w, display_h));
-			} else {
+			}
+			else {
 				ImGui::Text("Ready to render...");
 			}
 			last_rendering_state = rendering_active;
