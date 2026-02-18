@@ -67,9 +67,9 @@ public:
 		"Denoise",
 		"Albedo",
 		"Normals",
-		"Z-Depth",
 		"Reflections",
-		"Refractions"
+		"Refractions", 
+		"Z-Depth"
 	};
 
 	//current render pass for GUI display
@@ -98,14 +98,14 @@ public:
 		case render_pass::NORMALS: {
 			return normal_buffer;
 		}
-		case render_pass::Z_DEPTH: {
-			return z_depth_buffer;
-		}
 		case render_pass::REFLECTIONS: {
 			return reflection_buffer;
 		}
 		case render_pass::REFRACTIONS: {
 			return refraction_buffer;
+		}
+		case render_pass::Z_DEPTH: {
+			return z_depth_buffer;
 		}
 		default:
 			return render_accumulator;
@@ -400,9 +400,9 @@ private:
 					color pixel_color(0.0, 0.0, 0.0);
 					color pixel_albedo(0.0, 0.0, 0.0);
 					color pixel_normal(0.0, 0.0, 0.0);
-					color pixel_zdepth(0.0, 0.0, 0.0);
 					color pixel_reflection(0.0, 0.0, 0.0);
 					color pixel_refraction(0.0, 0.0, 0.0);
+					color pixel_zdepth(0.0, 0.0, 0.0);
 
 					//sampling loop for each pixel 
 					for (int s = 0; s < samples_per_pixel; s++) {

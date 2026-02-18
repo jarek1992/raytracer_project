@@ -264,8 +264,8 @@ int main(int argc, char* argv[]) {
 				if (ImGui::SliderInt("Max Depth", &cam.max_depth, 1, 100)) {
 					should_restart = true;
 				}
+				
 				ImGui::SeparatorText("Render Passes");
-
 				//dropdown passes
 				ImGui::Text("Active View:");
 				//reference to static array of pass names in camera class
@@ -284,16 +284,15 @@ int main(int argc, char* argv[]) {
 						else if (p == render_pass::NORMALS) {
 							is_enabled = cam.use_normal_buffer;
 						}
-						else if (p == render_pass::Z_DEPTH) {
-							is_enabled = cam.use_z_depth_buffer;
-						}
 						else if (p == render_pass::REFLECTIONS) {
 							is_enabled = cam.use_reflection;
 						}
 						else if (p == render_pass::REFRACTIONS) {
 							is_enabled = cam.use_refraction;
 						}
-
+						else if (p == render_pass::Z_DEPTH) {
+							is_enabled = cam.use_z_depth_buffer;
+						}
 						if (!is_enabled && p != render_pass::RGB) {
 							continue;
 						}
@@ -319,6 +318,8 @@ int main(int argc, char* argv[]) {
 				ImGui::Checkbox("Denoise", &cam.use_denoiser);
 				ImGui::Checkbox("Albedo", &cam.use_albedo_buffer);
 				ImGui::Checkbox("Normals", &cam.use_normal_buffer);
+				ImGui::Checkbox("Reflections(Mirrors)", &cam.use_reflection);
+				ImGui::Checkbox("Refractions(Glass)", &cam.use_refraction);
 				ImGui::Checkbox("Z-Depth", &cam.use_z_depth_buffer);
 				if (cam.use_z_depth_buffer) {
 					ImGui::Indent();
@@ -327,13 +328,10 @@ int main(int argc, char* argv[]) {
 					}
 					ImGui::Unindent();
 				}
-				ImGui::Checkbox("Reflections(Mirrors)", &cam.use_reflection);
-				ImGui::Checkbox("Refractions(Glass)", &cam.use_refraction);
 
 				ImGui::EndDisabled();
 				ImGui::EndTabItem();
 			}
-
 			//environment settings tab
 			if (ImGui::BeginTabItem("Environment")) {
 				//buffer definition 
@@ -723,6 +721,26 @@ int main(int argc, char* argv[]) {
 				ImGui::PlotHistogram("##HDR_Histogram",
 					my_post.last_stats.normalized_histogram, 256,
 					0, NULL, 0.0f, 1.0f, ImVec2(-1, 80));
+
+				ImVec2 pos = ImGui::GetItemRectMin();
+				ImVec2 size = ImGui::GetItemRectSize();
+				ImDrawList* draw_list = ImGui::GetWindowDrawList();
+
+				//target luminance line (orange)
+				float target_x = pos.x + (my_post.target_luminance * size.x);
+				draw_list->AddLine(
+					ImVec2(target_x, pos.y), 
+					ImVec2(target_x, pos.y + size.y), 
+					IM_COL32(255, 165, 0, 255), 2.0f
+				);
+
+				//current avg luma (green)
+				float avg_x = pos.x + (std::clamp((float)my_post.last_stats.average_luminance, 0.0f, 1.0f) * size.x);
+				draw_list->AddLine(
+					ImVec2(avg_x, pos.y),
+					ImVec2(avg_x, pos.y + size.y),
+					IM_COL32(0, 255, 0, 255), 1.0f
+				);
 
 				//display crucial luminance stats 
 				ImGui::Text("Avg Luma: %.4f", my_post.last_stats.average_luminance);

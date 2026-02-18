@@ -113,9 +113,9 @@ enum class render_pass : int {
 	DENOISE,
 	ALBEDO,
 	NORMALS,
-	Z_DEPTH,
 	REFLECTIONS,
-	REFRACTIONS
+	REFRACTIONS, 
+	Z_DEPTH
 };
 
 #include "color.hpp"
