@@ -18,6 +18,7 @@
 #include <iostream>
 #include <thread>
 #include <atomic> //for safe communication between threads
+#include <chrono>
 
 GLuint create_texture_from_buffer(const std::vector<color>& buffer, int width, int height) {
 	GLuint textureID;
@@ -84,7 +85,11 @@ int main(int argc, char* argv[]) {
 
 	bool running = true;
 	std::atomic<bool> is_rendering{ false }; //flag to indicate if rendering is in progress
-	bool is_active_session = false;
+	std::chrono::steady_clock::time_point render_start_time; //to measure render duration
+	bool is_active_session = false; 
+	float last_render_duration = 0.0f;
+	bool render_was_cancelled = false;
+	float last_progress_percent = 0.0f;
 	GLuint rendered_texture = 0; //global texture ID for rendered image
 	std::thread render_thread; //thread declaration
 
@@ -184,8 +189,7 @@ int main(int argc, char* argv[]) {
 					//calculate image height automatically
 					cam.image_height = static_cast<int>(cam.image_width / cam.aspect_ratio);
 					ImGui::Text("Locked Height: %d", cam.image_height);
-				}
-				else {
+				} else {
 					//custom mode: height is unlocked
 					if (ImGui::InputInt("Image Height", &cam.image_height)) {
 						if (cam.image_height < 100) {
@@ -818,6 +822,65 @@ int main(int argc, char* argv[]) {
 				}
 				ImGui::EndTabItem();
 			}
+			//export to files tab
+			if (ImGui::BeginTabItem("Export")) {
+				ImGui::SeparatorText("Export Output");
+
+				//block buttons at the beginning and during rendering
+				bool disable_export = !is_rendering && (cam.lines_rendered > 0);
+
+				if (!disable_export) {
+					ImGui::BeginDisabled();
+				}
+
+				//option to save single pass
+				if (ImGui::Button("Save Current Pass", ImVec2(-1, 0))) {
+					std::string pass_name = camera::pass_names[static_cast<int>(cam.current_display_pass)];
+					std::string name = "render_" + pass_name + ".png";
+					cam.save_render_pass(cam.current_display_pass, name, my_post);
+				}
+
+				//option to save all passes at once
+				if (ImGui::Button("Save All Passes", ImVec2(-1, 0))) {
+					for (int n = 0; n < 7; n++) {
+						render_pass p = static_cast<render_pass>(n);
+
+						bool is_enabled = (p == render_pass::RGB); //RGB always enabled
+						if (p == render_pass::DENOISE) {
+							is_enabled = cam.use_denoiser;
+						} else if (p == render_pass::ALBEDO) {
+							is_enabled = cam.use_albedo_buffer;
+						} else if (p == render_pass::NORMALS) {
+							is_enabled = cam.use_normal_buffer;
+						} else if (p == render_pass::REFLECTIONS) {
+							is_enabled = cam.use_reflection;
+						} else if (p == render_pass::REFRACTIONS) {
+							is_enabled = cam.use_refraction;
+						} else if (p == render_pass::Z_DEPTH) {
+							is_enabled = cam.use_z_depth_buffer;
+						}
+
+						if (is_enabled) {
+							std::string pass_name = camera::pass_names[static_cast<int>(p)];
+							std::string name = "render_" + pass_name + ".png";
+							cam.save_render_pass(p, name, my_post);
+						}
+					}
+				}
+
+				if (!disable_export) {
+					ImGui::EndDisabled();
+
+					//logs 
+					if (is_rendering) {
+						ImGui::TextColored(ImVec4(1.0f, 1.0f, 0.0f, 1.0f), "Rendering... wait to enable export.");
+					} else {
+						ImGui::TextColored(ImVec4(0.5f, 0.5f, 0.5f, 1.0f), "No render data.Click Render to start.");
+					} 
+				}
+
+				ImGui::EndTabItem();
+			}
 			ImGui::EndTabBar();
 		}
 
@@ -829,26 +892,61 @@ int main(int argc, char* argv[]) {
 			ImGui::ProgressBar(progress, ImVec2(-1.0f, 0.0f));
 
 			if (is_rendering) {
+				auto current_now = std::chrono::steady_clock::now();
+				std::chrono::duration<float> live_elapsed = current_now - render_start_time;
+
+				float estimated_total = (progress > 0.01f) ? (live_elapsed.count() / progress) : 0.0f;
+
 				ImGui::TextColored(ImVec4(1.0f, 1.0f, 0.0f, 1.0f), "Rendering: %.1f%%", progress * 100.0f);
+				ImGui::SameLine();
+				ImGui::TextColored(ImVec4(1.0f, 1.0f, 0.0f, 1.0f), "(%.2f seconds)", live_elapsed.count());
+
+				if (estimated_total > 0.0f) {
+					ImGui::TextColored(ImVec4(0.8f, 0.8f, 0.8f, 1.0f), "Est. Total: %.2fs | Remaining: %.2fs",
+						estimated_total, estimated_total - live_elapsed.count());
+				}
+			} else if (last_render_duration > 0.0f) {
+				if (render_was_cancelled) {
+					ImGui::TextColored(ImVec4(1.0f, 0.5f, 0.0f, 1.0f), "Render Cancelled at %.1f%%", last_progress_percent);
+					ImGui::TextColored(ImVec4(1.0f, 0.5f, 0.0f, 1.0f), "Elapsed Time: %.2f seconds", last_render_duration);
+				} else {
+					ImGui::TextColored(ImVec4(0.0f, 1.0f, 0.0f, 1.0f), "Render Finished (100%)");
+					ImGui::TextColored(ImVec4(0.0f, 1.0f, 0.0f, 1.0f), "Render Time: %.2f seconds", last_render_duration);
+				}
 			}
-			else {
-				ImGui::TextColored(ImVec4(0.0f, 1.0f, 0.0f, 1.0f), "Render Finished (100%)");
-			}
+
 			//stop render button
-			ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.6f, 0.1f, 0.1f, 1.0f)); //red color
-			if (ImGui::Button("Stop Render", ImVec2(-1, 0))) {
-				is_active_session = false; //stop the render loop in cam.render()
-				is_rendering = false;
-				if (render_thread.joinable()) {
-					render_thread.join(); //wait till the end
+			const char* button_label = is_rendering ? "Stop Render" : "Clear";
+			ImGui::PushStyleColor(ImGuiCol_Button, is_rendering ? ImVec4(0.6f, 0.1f, 0.1f, 1.0f) : ImVec4(0.3f, 0.3f, 0.3f, 1.0f));
+
+			if (ImGui::Button(button_label, ImVec2(-1, 0))) {
+				if (is_rendering) {
+					// 1. TYLKO zatrzymujemy renderowanie i zapisujemy statystyki
+					auto render_end_time = std::chrono::steady_clock::now();
+					std::chrono::duration<float> elapsed = render_end_time - render_start_time;
+					last_render_duration = elapsed.count();
+					last_progress_percent = ((float)cam.lines_rendered / (float)cam.image_height) * 100.0f;
+					render_was_cancelled = true;
+
+					is_rendering = false; // To zatrzyma wątek
+					if (render_thread.joinable()) {
+						render_thread.join();
+					}
+					// NIE ustawiamy is_active_session = false, żeby komunikat został na ekranie!
+				} else {
+					// 2. Jeśli render już nie trwa, to drugie kliknięcie zamyka sesję (czyści GUI)
+					is_active_session = false;
 				}
 			}
 			ImGui::PopStyleColor();
-		}
-		else {
+		} else {
 			//start render button
 			ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.1f, 0.4f, 0.1f, 1.0f)); //green color
 			if (ImGui::Button("Render", ImVec2(-1, 0))) {
+				render_start_time = std::chrono::steady_clock::now(); //start the timer for the new render
+				last_render_duration = 0.0f; //reset last render duration for display purposes
+				render_was_cancelled = false;
+				cam.lines_rendered = 0;
 				is_active_session = true;
 				should_restart = true; //launch central restart system below
 			}
@@ -885,14 +983,18 @@ int main(int argc, char* argv[]) {
 
 			//launch the new thread
 			is_rendering = true;
-			render_thread = std::thread([&is_rendering, &cam, bvh_world, env, my_post]() {
+			render_thread = std::thread([&is_rendering, &cam, bvh_world, env, my_post, &last_render_duration, render_start_time]() {
 				cam.render(*bvh_world, env, my_post, is_rendering);
 
 				//finalize - only if render finished without interrupts
 				if (is_rendering.load() && cam.lines_rendered >= cam.image_height) {
+					auto render_end_time = std::chrono::steady_clock::now();
+					std::chrono::duration<float> elapsed = render_end_time - render_start_time;
+					last_render_duration = elapsed.count();
+
 					is_rendering = false;
 				}
-				});
+			});
 
 			should_restart = false;
 		}

@@ -15,7 +15,6 @@
 #include <thread>
 #include <functional>
 #include <iomanip>
-#include <chrono>
 #include <vector>
 #include <filesystem>
 
@@ -294,6 +293,44 @@ public:
 		// - 5. COMPOSE FINAL FRAMEBUFFER WITH POST-PROCESSING -
 		std::cerr << "Render finished. Finalizing buffers...\n";
 		update_post_processing(post, image_width, image_height);
+	}
+
+	//save passes to .png
+	void save_render_pass(render_pass pass, const std::string& filename, const post_processor& pp) {
+		bool is_data = (pass != render_pass::RGB && pass != render_pass::DENOISE);
+
+		switch (pass) {
+		case render_pass::RGB: {
+			process_framebuffer_to_image(render_accumulator, filename, pp, false, true);
+			break;
+		}
+		case render_pass::DENOISE: {
+			process_framebuffer_to_image(denoise_buffer, filename, pp, false, true);
+			break;
+		}
+		case render_pass::ALBEDO: {
+			process_framebuffer_to_image(albedo_buffer, filename, pp, true, true);
+			break;
+		}
+		case render_pass::NORMALS: {
+			process_framebuffer_to_image(normal_buffer, filename, pp, true, true);
+			break;
+		}
+		case render_pass::REFLECTIONS: {
+			process_framebuffer_to_image(reflection_buffer, filename, pp, true);
+			break;
+		}
+		case render_pass::REFRACTIONS: {
+			process_framebuffer_to_image(refraction_buffer, filename, pp, true);
+			break;
+		}
+		case render_pass::Z_DEPTH: {
+			process_framebuffer_to_image(z_depth_buffer, filename, pp, true, false);
+			break;
+		}
+		default:
+			break;
+		}
 	}
 
 private:
@@ -672,8 +709,7 @@ private:
 					float v = static_cast<float>(j) / (image_height - 1);
 					//ACES, saturation, contrast, vignette, gamma correction
 					pix_color = pp.process(pix_color, u, v);
-				}
-				else {
+				} else {
 					pix_color = color(
 						std::clamp(pix_color.x(), 0.0, 1.0),
 						std::clamp(pix_color.y(), 0.0, 1.0),
