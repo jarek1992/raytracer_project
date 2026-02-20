@@ -16,6 +16,9 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 if (MSVC)
     add_compile_options(/openmp)
+    add_compile_options(/utf-8)
+else()
+	# using linux/macOS OpenMP flags often use find_package(OpenMP) to set the appropriate flags for the platform
 endif()
 
 # Find OpenMP
@@ -28,6 +31,23 @@ set(SDL3_DIR "${LIBS_DIR}/SDL3-3.4.0")
 set(GLAD_DIR "${LIBS_DIR}/glad")
 set(OIDN_DIR "${LIBS_DIR}/oidn")
 
+# Detecting OIDN 
+find_package(OpenImageDenoise QUIET)
+
+if (OpenImageDenoise_FOUND)
+	message(STATUS "Found OIDN in system: ${OpenImageDenoise_DIR}")
+    set(OIDN_LINK_TARGET OpenImageDenoise)
+    set(OIDN_INCLUDE "${OpenImageDenoise_INCLUDE_DIRS}")
+else()
+	message(STATUS "OIDN not found in system, using local path: ${OIDN_DIR}")
+    set(OIDN_INCLUDE "${OIDN_DIR}/include")
+    if (MSVC)
+        set(OIDN_LINK_TARGET "${OIDN_DIR}/lib/OpenImageDenoise.lib")
+    else()
+        set(OIDN_LINK_TARGET "-L${OIDN_DIR}/lib -lOpenImageDenoise")
+    endif()
+endif()
+
 # Include directories
 include_directories(
     ${CMAKE_CURRENT_SOURCE_DIR}
@@ -37,7 +57,7 @@ include_directories(
     ${GLAD_DIR}/include
     ${LIBS_DIR}/stb
     ${LIBS_DIR}/TinyObjLoader
-    ${OIDN_DIR}/include
+    ${OIDN_INCLUDE}
 )
 
 # Add sources
@@ -54,27 +74,37 @@ add_executable(ray_tracer
     ${IMGUI_DIR}/backends/imgui_impl_opengl3.cpp #OpenGL3 backend
 )
 
+if (APPLE)
+	# MacOS links frameworks and libraries .dylib
+    target_link_libraries(ray_tracer 
+		OpenMP::OpenMP_CXX
+		${OIDN_LINK_TARGET}
+        "-L${SDL3_DIR}/lib -lSDL3"
+        "-framework OpenGL"
+        "-framework Cocoa"
+        "-framework IOKit"
+	)
+elseif (MSVC)
+    # Windows links .lib files and .dll for OIDN and SDL3
+    target_link_libraries(ray_tracer 
+        OpenMP::OpenMP_CXX
+        ${OIDN_LINK_TARGET}
+        "${SDL3_DIR}/lib/x64/SDL3.lib"
+        opengl32 # OpenGL on Windows
+    )
+
+    # Copy automatic all the .dll files to the bin folder with file .exe 
+    add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E copy_if_different
+        "${OIDN_DIR}/bin/OpenImageDenoise.dll"
+        "${OIDN_DIR}/bin/OpenImageDenoise_core.dll"
+        "${OIDN_DIR}/bin/OpenImageDenoise_device_cpu.dll"  
+        "${OIDN_DIR}/bin/OpenImageDenoise_device_cuda.dll"
+        "${OIDN_DIR}/bin/tbb12.dll"
+        "${SDL3_DIR}/lib/x64/SDL3.dll"
+        $<TARGET_FILE_DIR:${PROJECT_NAME}>
+    )
+endif()
+
 # Diagnostic messages
-message(STATUS "Searching for OIDN in: ${OIDN_DIR}")
-
-# Link libraries to the ray_tracer executable
-target_link_libraries(ray_tracer 
-    OpenMP::OpenMP_CXX
-    "${OIDN_DIR}/lib/OpenImageDenoise.lib"
-    "${SDL3_DIR}/lib/x64/SDL3.lib" 
-    opengl32 # OpenGL on Windows
-)
-
-# Copy automatic all the .dll files to the bin folder with file .exe 
-add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
-    COMMAND ${CMAKE_COMMAND} -E copy_if_different
-    "${OIDN_DIR}/bin/OpenImageDenoise.dll"
-    "${OIDN_DIR}/bin/OpenImageDenoise_core.dll"
-    "${OIDN_DIR}/bin/OpenImageDenoise_device_cpu.dll"  
-    "${OIDN_DIR}/bin/OpenImageDenoise_device_cuda.dll"
-    "${OIDN_DIR}/bin/tbb12.dll"
-    "${SDL3_DIR}/lib/x64/SDL3.dll"
-    $<TARGET_FILE_DIR:${PROJECT_NAME}>
-)
-
 message(STATUS "Configured for SDL3 + OpenGL + OIDN")
