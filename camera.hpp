@@ -18,6 +18,8 @@
 #include <vector>
 #include <filesystem>
 
+namespace fs = std::filesystem;
+
 class camera {
 public:
 	//image settings
@@ -297,35 +299,44 @@ public:
 
 	//save passes to .png
 	void save_render_pass(render_pass pass, const std::string& filename, const post_processor& pp) {
+		std::string output_folder = "output";
+
+		//create folder if doesnt exist 
+		if (!fs::exists(output_folder)) {
+			fs::create_directory(output_folder);
+		}
+		//connect output folder with filename
+		std::string full_path = output_folder + "/" + filename;
+
 		bool is_data = (pass != render_pass::RGB && pass != render_pass::DENOISE);
 
 		switch (pass) {
 		case render_pass::RGB: {
-			process_framebuffer_to_image(render_accumulator, filename, pp, false, true);
+			process_framebuffer_to_image(render_accumulator, full_path, pp, false, true);
 			break;
 		}
 		case render_pass::DENOISE: {
-			process_framebuffer_to_image(denoise_buffer, filename, pp, false, true);
+			process_framebuffer_to_image(denoise_buffer, full_path, pp, false, true);
 			break;
 		}
 		case render_pass::ALBEDO: {
-			process_framebuffer_to_image(albedo_buffer, filename, pp, true, true);
+			process_framebuffer_to_image(albedo_buffer, full_path, pp, true, true);
 			break;
 		}
 		case render_pass::NORMALS: {
-			process_framebuffer_to_image(normal_buffer, filename, pp, true, true);
+			process_framebuffer_to_image(normal_buffer, full_path, pp, true, true);
 			break;
 		}
 		case render_pass::REFLECTIONS: {
-			process_framebuffer_to_image(reflection_buffer, filename, pp, true);
+			process_framebuffer_to_image(reflection_buffer, full_path, pp, true, true);
 			break;
 		}
 		case render_pass::REFRACTIONS: {
-			process_framebuffer_to_image(refraction_buffer, filename, pp, true);
+			process_framebuffer_to_image(refraction_buffer, full_path, pp, true, true);
 			break;
 		}
 		case render_pass::Z_DEPTH: {
-			process_framebuffer_to_image(z_depth_buffer, filename, pp, true, false);
+			process_framebuffer_to_image(z_depth_buffer, full_path, pp, true, true);
 			break;
 		}
 		default:

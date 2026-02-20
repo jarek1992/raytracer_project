@@ -879,6 +879,20 @@ int main(int argc, char* argv[]) {
 					} 
 				}
 
+				ImGui::Spacing();
+				ImGui::Separator();
+
+				//open folder output
+				if (ImGui::Button("Open Output Folder", ImVec2(-1, 0))) {
+					#ifdef _WIN32
+						system("explorer output");
+					#elif __APPLE__
+						system("open output");
+					#elif __linux__
+						system("xdg-open output");
+					#endif
+				}
+
 				ImGui::EndTabItem();
 			}
 			ImGui::EndTabBar();
