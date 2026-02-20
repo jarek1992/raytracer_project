@@ -15,10 +15,14 @@
 #include "stb_image.h"
 #include "stb_image_write.h"
 
+//multithreading 
+#include <omp.h>
+
 #include <iostream>
 #include <thread>
 #include <atomic> //for safe communication between threads
 #include <chrono>
+#include <cstdarg>
 
 GLuint create_texture_from_buffer(const std::vector<color>& buffer, int width, int height) {
 	GLuint textureID;
@@ -40,6 +44,116 @@ GLuint create_texture_from_buffer(const std::vector<color>& buffer, int width, i
 
 	return textureID;
 }
+
+struct AppLog {
+	std::vector<std::string> items;
+	float frame_times[90] = { 0 }; //circular buffer for frame times (last 90 frames ~ 3 seconds at 30fps)
+	int offset = 0;
+	int last_lines_count = 0;
+
+	void add_log(const char* fmt, ...) {
+		char buf[256];
+		va_list args;
+		va_start(args, fmt);
+		vsnprintf(buf, sizeof(buf), fmt, args);
+		va_end(args);
+		time_t now = time(0);
+		tm* ltm = localtime(&now);
+		char time_buf[16];
+		strftime(time_buf, sizeof(time_buf), "[%H:%M:%S] ", ltm);
+		items.push_back(std::string(time_buf) + buf);
+
+		if (items.size() > 500) {
+			items.erase(items.begin()); //memory limits
+		}
+	}
+
+	void draw_tab_content(const camera& cam, bool is_rendering) {
+		//performance section tab
+		ImGui::TextColored(ImVec4(0.0f, 1.0f, 1.0f, 1.0f), "Performance Metrics");
+
+		float fps = ImGui::GetIO().Framerate;
+		float frame_time = 1000.0f / fps;
+
+		//update circular buffer
+		frame_times[offset] = frame_time;
+		offset = (offset + 1) % 90;
+
+		char overlay[64];
+		sprintf(overlay, "Avg: %.2f ms", frame_time);
+
+		//frame time graph
+		ImGui::PlotLines("##frames", frame_times, 90, offset, overlay, 0.0f, 50.0f, ImVec2(-1, 80));
+
+		ImGui::Text("FPS: %.1f", fps);
+
+		// Obliczamy ile nowych linii przybyło od ostatniego rysowania GUI
+		int lines_this_frame = cam.lines_rendered - last_lines_count;
+		if (lines_this_frame < 0) lines_this_frame = 0; // reset przy nowym renderze
+
+		double rays_this_moment = static_cast<double>(cam.image_width) * lines_this_frame * cam.samples_per_pixel * cam.max_depth;
+
+		float frame_time_sec = 1.0f / ImGui::GetIO().Framerate;
+
+		float mrays_per_sec = 0.0f;
+		if (frame_time_sec > 0 && is_rendering) {
+			mrays_per_sec = static_cast<float>((rays_this_moment / frame_time_sec) / 1000000.0);
+		}
+
+		last_lines_count = cam.lines_rendered;
+
+		ImGui::SameLine(ImGui::GetWindowWidth() * 0.5f);
+		ImGui::Text("Throughput: %.2f Mrays/s", mrays_per_sec);
+
+		ImGui::Spacing();
+		ImGui::Separator();
+		ImGui::Spacing();
+
+		//logs scetion tab
+		ImGui::TextColored(ImVec4(1.0f, 0.8f, 0.0f, 1.0f), "Engine Logs");
+
+		if (ImGui::Button("Clear Log")) {
+			items.clear();
+		}
+
+		ImGui::BeginChild("LogScroll", ImVec2(0, 0), true, ImGuiWindowFlags_HorizontalScrollbar);
+		for (const auto& item : items) {
+			if (strstr(item.c_str(), "[Error]")) { 
+				ImGui::TextColored(ImVec4(1, 0, 0, 1), "%s", item.c_str());
+			} else { 
+				ImGui::TextUnformatted(item.c_str()); 
+			}
+		}
+
+		if (ImGui::GetScrollY() >= ImGui::GetScrollMaxY()) {
+			ImGui::SetScrollHereY(1.0f);
+		}
+
+		ImGui::EndChild();
+
+		ImGui::Spacing();
+		ImGui::SeparatorText("System & Scene Info");
+
+		#ifdef _OPENMP
+			ImGui::BulletText("Hardware Threads: %d", omp_get_max_threads());
+		#else
+			ImGui::BulletText("Hardware Threads: 1 (OpenMP disabled)");
+		#endif
+
+		ImGui::BulletText("Render Resolution: %d x %d", cam.image_width, cam.image_height);
+
+		//VRAM/RAM for frame buffer
+		float mem = (cam.image_width * cam.image_height * 4.0f) / 1048576.0f;
+		ImGui::BulletText("Frame Buffer Memory: %.2f MB", mem);
+
+		if (is_rendering) {
+			float progress = (float)cam.lines_rendered / (float)cam.image_height;
+			ImGui::ProgressBar(progress, ImVec2(-1, 0), "Rendering...");
+		}
+	}
+};
+
+static AppLog engine_info;
 
 int main(int argc, char* argv[]) {
 	// - 1. LOADING MATERIALS FROM THE LIBRARY -
@@ -266,6 +380,7 @@ int main(int argc, char* argv[]) {
 					should_restart = true;
 				}
 				if (ImGui::SliderInt("Max Depth", &cam.max_depth, 1, 100)) {
+					engine_info.add_log("[Config] Max Depth set to %d", cam.max_depth);
 					should_restart = true;
 				}
 				
@@ -838,6 +953,7 @@ int main(int argc, char* argv[]) {
 					std::string pass_name = camera::pass_names[static_cast<int>(cam.current_display_pass)];
 					std::string name = "render_" + pass_name + ".png";
 					cam.save_render_pass(cam.current_display_pass, name, my_post);
+					engine_info.add_log("[Save] Exported pass: %s", name.c_str());
 				}
 
 				//option to save all passes at once
@@ -895,6 +1011,15 @@ int main(int argc, char* argv[]) {
 
 				ImGui::EndTabItem();
 			}
+			//stats and logs tab
+			if (ImGui::BeginTabItem("Stats & Logs")) {
+				engine_info.draw_tab_content(cam, is_rendering);
+
+
+
+				ImGui::EndTabItem();
+			}
+
 			ImGui::EndTabBar();
 		}
 

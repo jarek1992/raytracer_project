@@ -15,8 +15,6 @@ constexpr double infinity = std::numeric_limits<double>::infinity();
 constexpr double pi = 3.14159265358979323846;
 const double ray_epsilon = 0.0001;
 
-//utility functions
-//
 //convert degrees to radians
 inline double degrees_to_radians(double degrees) {
 	return degrees * pi / 180.0;
@@ -117,6 +115,8 @@ enum class render_pass : int {
 	REFRACTIONS, 
 	Z_DEPTH
 };
+
+
 
 #include "color.hpp"
 #include "interval.hpp"
