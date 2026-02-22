@@ -207,7 +207,7 @@ int main(int argc, char* argv[]) {
 
 	// - WINDOW AND OPENGL INITIALIZATION FOR IMGUI DISPLAY OF THE RENDERED IMAGE -
 	SDL_Init(SDL_INIT_VIDEO);
-	SDL_Window* window = SDL_CreateWindow("Ray_Tracer", 1280, 720, SDL_WINDOW_OPENGL);
+	SDL_Window* window = SDL_CreateWindow("Ray_Tracer", 1500, 844, SDL_WINDOW_OPENGL);
 	SDL_GLContext gl_context = SDL_GL_CreateContext(window);
 	gladLoadGLLoader((GLADloadproc)SDL_GL_GetProcAddress);
 
