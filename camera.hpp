@@ -790,12 +790,12 @@ private:
 		vec3 unit_dir = unit_vector(r.direction());
 
 		//solid color background
-		if (env.mode == EnvironmentSettings::SOLID_COLOR) {
+		if (env._mode == EnvironmentSettings::SOLID_COLOR) {
 			return env.background_color * env.intensity;
 		}
 
 		//HDR map background
-		if (env.mode == EnvironmentSettings::HDR_MAP) {
+		if (env._mode == EnvironmentSettings::HDR_MAP) {
 			if (!env.hdr_texture) {
 				return color(0.0, 0.0, 0.0);
 			}

@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 
 #include "vec3.hpp"
 #include "texture.hpp"
@@ -11,10 +11,24 @@ struct EnvironmentSettings {
 		HDR_MAP,
 		SOLID_COLOR
 	};
-	Mode mode = PHYSICAL_SUN;
+
+	Mode _mode = PHYSICAL_SUN;
+
+	bool needs_ui_sync = false;
+
+	//getter and setter for mode changes 
+	Mode mode() const {
+		return _mode;
+	}
+
+	void set_mode(Mode new_mode) {
+		if (_mode != new_mode) {
+			_mode = new_mode;
+			needs_ui_sync = true;
+		}
+	}
 
 	color background_color = color(0.0, 0.0, 0.0);
-
 	std::string current_hdr_name = "None"; //to display in UI
 	std::string current_hdr_path = HDR_DIR; //folder path to hdr maps
 
@@ -25,13 +39,13 @@ struct EnvironmentSettings {
 	double hdri_rotation = 0.0; //yaw rotation in radians
 	double hdri_tilt = 0.0; //pitch/tilt rotation in radians
 	double hdri_roll = 0.0; //roll rotation in radians
-	
+
 	shared_ptr<image_texture> hdr_texture = nullptr;
 
 	//loading hdr maps function
 	void load_hdr(const std::string& path) {
 		if (path.empty()) {
-			this->mode = SOLID_COLOR;
+			set_mode(SOLID_COLOR);
 			this->background_color = color(0.0, 0.0, 0.0); //black
 			this->current_hdr_name = "None (Black)";
 			return;
@@ -45,10 +59,10 @@ struct EnvironmentSettings {
 			current_hdr_path = path;
 
 			//after succesful loading switch mode to HDR
-			mode = HDR_MAP;
+			set_mode(HDR_MAP);
 		}
 		catch (...) {
-			this->mode = SOLID_COLOR;
+			set_mode(SOLID_COLOR);
 			this->background_color = color(0.0, 0.0, 0.0);
 			std::cerr << "[Error] Could not load HDR. Falling back to black.\n";
 		}
@@ -59,5 +73,5 @@ struct EnvironmentSettings {
 	color sun_color = color(1.0, 1.0, 1.0);
 	bool auto_sun_color = true;
 	double sun_intensity = 1.0;
-	double sun_size = 1;
+	double sun_size = 1.0;
 };

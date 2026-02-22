@@ -89,7 +89,9 @@ struct AppLog {
 
 		// Obliczamy ile nowych linii przybyło od ostatniego rysowania GUI
 		int lines_this_frame = cam.lines_rendered - last_lines_count;
-		if (lines_this_frame < 0) lines_this_frame = 0; // reset przy nowym renderze
+		if (lines_this_frame < 0) { 
+			lines_this_frame = 0; // reset przy nowym renderze
+		} 
 
 		double rays_this_moment = static_cast<double>(cam.image_width) * lines_this_frame * cam.samples_per_pixel * cam.max_depth;
 
@@ -118,10 +120,23 @@ struct AppLog {
 
 		ImGui::BeginChild("LogScroll", ImVec2(0, 0), true, ImGuiWindowFlags_HorizontalScrollbar);
 		for (const auto& item : items) {
-			if (strstr(item.c_str(), "[Error]")) { 
-				ImGui::TextColored(ImVec4(1, 0, 0, 1), "%s", item.c_str());
-			} else { 
-				ImGui::TextUnformatted(item.c_str()); 
+			const char* msg = item.c_str();
+
+			if (strstr(msg, "[Error]")) {
+				//red for errors
+				ImGui::TextColored(ImVec4(1.0f, 0.2f, 0.2f, 1.0f), "%s", msg);
+			} else if (strstr(msg, "[Config]")) {
+				//blue for settings changes
+				ImGui::TextColored(ImVec4(0.3f, 0.7f, 1.0f, 1.0f), "%s", msg);
+			} else if (strstr(msg, "[Render]") || strstr(msg, "[System]")) {
+				//green for render status and engine start
+				ImGui::TextColored(ImVec4(0.4f, 1.0f, 0.4f, 1.0f), "%s", msg);
+			} else if (strstr(msg, "[Debug]")) {
+				//yellow for debug modes
+				ImGui::TextColored(ImVec4(1.0f, 0.8f, 0.0f, 1.0f), "%s", msg);
+			} else {
+				//white for everything else
+				ImGui::TextUnformatted(msg);
 			}
 		}
 
@@ -156,6 +171,11 @@ struct AppLog {
 static AppLog engine_info;
 
 int main(int argc, char* argv[]) {
+	engine_info.add_log("[Render] Ray Tracer Engine Started");
+	#ifdef _OPEMMP
+		engine_info.add_log("[Render] OpenMP initialized with %d threads.", omp_get_max_threads());
+	#endif // _OPEMMP
+
 	// - 1. LOADING MATERIALS FROM THE LIBRARY -
 	MaterialLibrary mat_lib;
 	load_materials(mat_lib); //from scene_management.hpp
@@ -324,11 +344,21 @@ int main(int argc, char* argv[]) {
 				//look from
 				if (ImGui::InputScalarN("Look From", ImGuiDataType_Double, lookfrom_buf, 3)) {
 					cam.lookfrom = point3(lookfrom_buf[0], lookfrom_buf[1], lookfrom_buf[2]);
+					engine_info.add_log("[Config] Camera position changed to (%.2f, %.2f, %.2f)", 
+						cam.lookfrom.x(),
+						cam.lookfrom.y(), 
+						cam.lookfrom.z()
+					);
 					should_restart = true;
 				}
 				//look at
 				if (ImGui::InputScalarN("Look At", ImGuiDataType_Double, lookat_buf, 3)) {
 					cam.lookat = point3(lookat_buf[0], lookat_buf[1], lookat_buf[2]);
+					engine_info.add_log("[Config] Camera look-at point changed to (%.2f, %.2f, %.2f)",
+						cam.lookat.x(),
+						cam.lookat.y(),
+						cam.lookat.z()
+					);
 					should_restart = true;
 				}
 				//up vector
@@ -341,17 +371,28 @@ int main(int argc, char* argv[]) {
 				ImGui::PushID("UpVectorFields");
 				if (ImGui::InputScalarN("##vup_input", ImGuiDataType_Double, vup_buf, 3)) {
 					cam.vup = vec3(vup_buf[0], vup_buf[1], vup_buf[2]);
+					engine_info.add_log("[Config] Camera up vector changed to (%.2f, %.2f, %.2f)",
+						cam.vup.x(),
+						cam.vup.y(), 
+						cam.vup.z()
+					);
 					should_restart = true;
 				}
 				ImGui::PopID();
 				//reset and normalize
 				if (ImGui::Button("Reset Up (0,1,0)")) {
 					cam.vup = vec3(0, 1, 0);
+					engine_info.add_log("[Config] Camera up vector reset to (0, 1, 0)");
 					should_restart = true;
 				}
 				ImGui::SameLine();
 				if (ImGui::Button("Normalize Up")) {
 					cam.vup = unit_vector(cam.vup);
+					engine_info.add_log("[Config] Camera up vector normalized to (%.2f, %.2f, %.2f)",
+						cam.vup.x(),
+						cam.vup.y(),
+						cam.vup.z()
+					);
 					should_restart = true;
 				}
 				ImGui::SeparatorText("Optics");
@@ -361,27 +402,44 @@ int main(int argc, char* argv[]) {
 					cam.vfov = static_cast<double>(vfov_f);
 					should_restart = true;
 				}
+				if (ImGui::IsItemDeactivatedAfterEdit()) {
+					engine_info.add_log("[Config] Camera FOV finalized at %.1f degrees", cam.vfov);
+				}
+
 				//aperture (defocus_angle)
 				float aperture_f = static_cast<float>(cam.defocus_angle);
 				if (ImGui::SliderFloat("Aperture", &aperture_f, 0.0f, 5.0f)) {
 					cam.defocus_angle = static_cast<double>(aperture_f);
 					should_restart = true;
 				}
+				if (ImGui::IsItemDeactivatedAfterEdit()) {
+					engine_info.add_log("[Config] Camera aperture finalized at %.2f", cam.defocus_angle);
+				}
+
 				//focus distance
 				float focus_f = static_cast<float>(cam.focus_dist);
 				if (ImGui::SliderFloat("Focus Dist", &focus_f, 0.1f, 50.0f)) {
 					cam.focus_dist = static_cast<double>(focus_f);
 					should_restart = true;
 				}
-
+				if (ImGui::IsItemDeactivatedAfterEdit()) {
+					engine_info.add_log("[Config] Camera focus distance finalized at %.2f", cam.focus_dist);
+				}
+				//samples per pixel
 				ImGui::SeparatorText("Quality");
 				if (ImGui::InputInt("Samples per Pixel", &cam.samples_per_pixel)) {
-					if (cam.samples_per_pixel < 1) cam.samples_per_pixel = 1;
+					if (cam.samples_per_pixel < 1) { 
+						cam.samples_per_pixel = 1; 
+					}
+					engine_info.add_log("[Config] Samples per Pixel set to %d", cam.samples_per_pixel);
 					should_restart = true;
 				}
+				//max depth
 				if (ImGui::SliderInt("Max Depth", &cam.max_depth, 1, 100)) {
-					engine_info.add_log("[Config] Max Depth set to %d", cam.max_depth);
 					should_restart = true;
+				}
+				if (ImGui::IsItemDeactivatedAfterEdit()) {
+					engine_info.add_log("[Config] Max Depth finalized at %d", cam.max_depth);
 				}
 				
 				ImGui::SeparatorText("Render Passes");
@@ -396,20 +454,15 @@ int main(int argc, char* argv[]) {
 						bool is_enabled = true;
 						if (p == render_pass::DENOISE) {
 							is_enabled = cam.use_denoiser;
-						}
-						else if (p == render_pass::ALBEDO) {
+						} else if (p == render_pass::ALBEDO) {
 							is_enabled = cam.use_albedo_buffer;
-						}
-						else if (p == render_pass::NORMALS) {
+						} else if (p == render_pass::NORMALS) {
 							is_enabled = cam.use_normal_buffer;
-						}
-						else if (p == render_pass::REFLECTIONS) {
+						} else if (p == render_pass::REFLECTIONS) {
 							is_enabled = cam.use_reflection;
-						}
-						else if (p == render_pass::REFRACTIONS) {
+						} else if (p == render_pass::REFRACTIONS) {
 							is_enabled = cam.use_refraction;
-						}
-						else if (p == render_pass::Z_DEPTH) {
+						} else if (p == render_pass::Z_DEPTH) {
 							is_enabled = cam.use_z_depth_buffer;
 						}
 						if (!is_enabled && p != render_pass::RGB) {
@@ -419,6 +472,8 @@ int main(int argc, char* argv[]) {
 						if (ImGui::Selectable(camera::pass_names[n], is_selected)) {
 							cam.current_display_pass = p;
 							my_post.needs_update = true;
+
+							engine_info.add_log("[Config] Active view set to %s", camera::pass_names[n]);
 						}
 					}
 					ImGui::EndCombo();
@@ -429,21 +484,44 @@ int main(int argc, char* argv[]) {
 
 				//passes checkboxes for activation (except RGB always active)
 				ImGui::Text("Compute Passes:");
-
 				//block checkboxes during rendering
 				bool is_rendering_now = is_rendering.load();
 				ImGui::BeginDisabled(is_rendering_now);
 
-				ImGui::Checkbox("Denoise", &cam.use_denoiser);
-				ImGui::Checkbox("Albedo", &cam.use_albedo_buffer);
-				ImGui::Checkbox("Normals", &cam.use_normal_buffer);
-				ImGui::Checkbox("Reflections(Mirrors)", &cam.use_reflection);
-				ImGui::Checkbox("Refractions(Glass)", &cam.use_refraction);
-				ImGui::Checkbox("Z-Depth", &cam.use_z_depth_buffer);
+				auto check_pass_safety = [&](bool active, render_pass p) {
+					if (!active && cam.current_display_pass == p) {
+						cam.current_display_pass = render_pass::RGB;
+						my_post.needs_update = true;
+						engine_info.add_log("[Config] Active view reset to RGB because the selected pass was deactivated");
+					}
+				};
+
+
+				if (ImGui::Checkbox("Denoise", &cam.use_denoiser)) {
+					check_pass_safety(cam.use_denoiser, render_pass::DENOISE);
+				}
+				if (ImGui::Checkbox("Albedo", &cam.use_albedo_buffer)) {
+					check_pass_safety(cam.use_albedo_buffer, render_pass::ALBEDO);
+				}
+				if (ImGui::Checkbox("Normals", &cam.use_normal_buffer)) {
+					check_pass_safety(cam.use_normal_buffer, render_pass::NORMALS);
+				}
+				if (ImGui::Checkbox("Reflections(Mirrors)", &cam.use_reflection)) {
+					check_pass_safety(cam.use_reflection, render_pass::REFLECTIONS);
+				}
+				if (ImGui::Checkbox("Refractions(Glass)", &cam.use_refraction)) {
+					check_pass_safety(cam.use_refraction, render_pass::REFRACTIONS);
+				}
+				if (ImGui::Checkbox("Z-Depth", &cam.use_z_depth_buffer)) {
+					check_pass_safety(cam.use_z_depth_buffer, render_pass::Z_DEPTH);
+				}
 				if (cam.use_z_depth_buffer) {
 					ImGui::Indent();
 					if (ImGui::SliderFloat("Max Distance", &my_post.z_depth_max_dist, 0.1f, 50.0f)) {
 						my_post.needs_update = true;
+					}
+					if (ImGui::IsItemDeactivatedAfterEdit()) {
+						engine_info.add_log("[Config] Z-Depth max distance finalized at %.2f", my_post.z_depth_max_dist);
 					}
 					ImGui::Unindent();
 				}
@@ -478,7 +556,8 @@ int main(int argc, char* argv[]) {
 
 
 				//desychronization and crash prevention
-				if (!ImGui::IsAnyItemActive()) {
+				if (!ImGui::IsAnyItemActive() && env.needs_ui_sync) {
+					engine_info.add_log("[Debug] Synchronizing environment buffers with current settings");
 					sun_dir_buf[0] = env.sun_direction.x();
 					sun_dir_buf[1] = env.sun_direction.y();
 					sun_dir_buf[2] = env.sun_direction.z();
@@ -491,52 +570,72 @@ int main(int argc, char* argv[]) {
 					bg_col[1] = (float)env.background_color.y();
 					bg_col[2] = (float)env.background_color.z();
 
+					engine_info.add_log("[System] UI Buffers synchronized with Engine State.");
+					env.needs_ui_sync = false;
+
 				}
 
 				ImGui::SeparatorText("Sky Mode Selection");
 				//switching buttons for environment mode (use enum from EnvironmentSetting)
-				int current_mode = (int)env.mode;
+				int current_mode = (int)env.mode();
 
 				if (ImGui::RadioButton("HDR Map", current_mode == EnvironmentSettings::HDR_MAP)) {
-					env.mode = EnvironmentSettings::HDR_MAP;
+					env.set_mode(EnvironmentSettings::HDR_MAP);
+					engine_info.add_log("[Config] Environment mode set to HDR Map");
 					should_restart = true;
 				}
 				ImGui::SameLine();
 				if (ImGui::RadioButton("Physical Sun", current_mode == EnvironmentSettings::PHYSICAL_SUN)) {
-					env.mode = EnvironmentSettings::PHYSICAL_SUN;
+					env.set_mode(EnvironmentSettings::PHYSICAL_SUN);
+					engine_info.add_log("[Config] Environment mode set to Physical Sun & Sky");
 					should_restart = true;
 				}
 				ImGui::SameLine();
 				if (ImGui::RadioButton("Solid Color", current_mode == EnvironmentSettings::SOLID_COLOR)) {
-					env.mode = EnvironmentSettings::SOLID_COLOR;
+					env.set_mode(EnvironmentSettings::SOLID_COLOR);
+					engine_info.add_log("[Config] Environment mode set to Solid Color");
 					should_restart = true;
 				}
 
 				ImGui::Separator();
 
+				//global intensity
 				float intensity_f = static_cast<float>(env.intensity);
 				if (ImGui::SliderFloat("Global Intensity", &intensity_f, 0.0f, 5.0f)) {
 					env.intensity = static_cast<double>(intensity_f);
 					should_restart = true;
 				}
+				if (ImGui::IsItemDeactivatedAfterEdit()) {
+					engine_info.add_log("[Config] Environment global intensity finalized at %.2f", env.intensity);
+				}
 
 				//environmental fog
 				if (ImGui::CollapsingHeader("Environmental Fog")) {
 					if (ImGui::Checkbox("Enable Fog", &cam.use_fog)) {
+						engine_info.add_log("[Config] Environmental fog %s", cam.use_fog ? "enabled" : "disabled");
 						should_restart = true;
 					}
 					if (cam.use_fog) {
-						if (ImGui::SliderFloat("Density", &cam.fog_density, 0.0001f, 0.05f, "%.4f")) {
+						if (ImGui::SliderFloat("Density", &cam.fog_density, 0.0001f, 0.05f, "%.4f", ImGuiSliderFlags_Logarithmic)) {
 							should_restart = true;
 						}
+						if (ImGui::IsItemDeactivatedAfterEdit()) {
+							engine_info.add_log("[Config] Fog density finalized at %.4f", cam.fog_density);
+						}
+
 						if (ImGui::ColorEdit3("Fog Color", cam.fog_color)) {
+							engine_info.add_log("[Config] Fog color set to (%.2f, %.2f, %.2f)", 
+								cam.fog_color[0],
+								cam.fog_color[1], 
+								cam.fog_color[2]
+							);
 							should_restart = true;
 						}
 					}
 				}
 
 				//HDRI mode settings
-				if (env.mode == EnvironmentSettings::HDR_MAP) {
+				if (env.mode() == EnvironmentSettings::HDR_MAP) {
 					if (!ImGui::IsAnyItemActive()) {
 						rot_deg = static_cast<float>(radians_to_degrees(env.hdri_rotation));
 						tilt_deg = static_cast<float>(radians_to_degrees(env.hdri_tilt));
@@ -554,6 +653,7 @@ int main(int argc, char* argv[]) {
 
 								//loading
 								env.load_hdr(HDR_DIR + cam.hdr_files[n]);
+								engine_info.add_log("[Config] Loaded HDR map: %s", cam.hdr_files[n].c_str());
 
 								//render reset
 								cam.reset_accumulator();
@@ -575,12 +675,14 @@ int main(int argc, char* argv[]) {
 					}
 
 					if (ImGui::Button("Refresh Folder")) {
+						engine_info.add_log("[Debug] Refreshing HDR map list from folder");
 						cam.refresh_hdr_list();
 					}
 
 					ImGui::Separator();
 
 					if (ImGui::Button("Reset Orientation")) {
+						engine_info.add_log("[Config] HDRI orientation reset to default");
 						//reset parameters to default
 						rot_deg = 0.0f;
 						tilt_deg = 0.0f;
@@ -590,58 +692,95 @@ int main(int argc, char* argv[]) {
 						env.hdri_roll = 0.0;
 						should_restart = true;
 					}
+					//Y-axis rotation
 					if (ImGui::SliderFloat("Rotation (Y-axis)", &rot_deg, -180.0f, 180.0f)) {
 						env.hdri_rotation = degrees_to_radians(rot_deg);
 						should_restart = true;
 					}
+					if (ImGui::IsItemDeactivatedAfterEdit()) {
+						engine_info.add_log("[Config] HDRI rotation finalized at %.1f degrees", rot_deg);
+					}
+
+					//X-axis tilt
 					if (ImGui::SliderFloat("Tilt (X-axis)", &tilt_deg, -90.0f, 90.0f)) {
 						env.hdri_tilt = degrees_to_radians(tilt_deg);
 						should_restart = true;
 					}
+					if (ImGui::IsItemDeactivatedAfterEdit()) {
+						engine_info.add_log("[Config] HDRI rotation finalized at %.1f degrees", tilt_deg);
+					}
+
+					//Z-axis roll
 					if (ImGui::SliderFloat("Roll (Z-axis)", &roll_deg, -180.0f, 180.0f)) {
 						env.hdri_roll = degrees_to_radians(roll_deg);
 						should_restart = true;
 					}
+					if (ImGui::IsItemDeactivatedAfterEdit()) {
+						engine_info.add_log("[Config] HDRI rotation finalized at %.1f degrees", roll_deg);
+					}
 				}
 
 				//physical Sun mode settings
-				if (env.mode == EnvironmentSettings::PHYSICAL_SUN) {
+				if (env.mode() == EnvironmentSettings::PHYSICAL_SUN) {
 					ImGui::TextColored(ImVec4(1.0f, 0.9f, 0.4f, 1.0f), "Physical Sun & Sky");
+
 					//sun color
 					//checkbox for sun color blockage 
 					if (ImGui::Checkbox("Auto Sun Color (Atmospheric)", &env.auto_sun_color)) {
+						engine_info.add_log("[Config] Automatic sun color based on elevation %s", env.auto_sun_color ? "enabled" : "disabled");
 						should_restart = true;
 					}
+
 					//visual blockage for ColorEdit
 					if (env.auto_sun_color) {
 						ImGui::BeginDisabled();
 					}
 					if (ImGui::ColorEdit3("Sun Color", sun_col)) {
 						env.sun_color = color(sun_col[0], sun_col[1], sun_col[2]);
+						engine_info.add_log("[Config] Sun color set to (%.2f, %.2f, %.2f)", 
+							env.sun_color.x(), 
+							env.sun_color.y(), 
+							env.sun_color.z()
+						);
 						should_restart = true;
 					}
+
 					//end sun color blockage
 					if (env.auto_sun_color) {
 						ImGui::EndDisabled();
 					}
+
 					//sun intensity
 					float sun_int_f = static_cast<float>(env.sun_intensity);
 					if (ImGui::SliderFloat("Sun Intensity", &sun_int_f, 0.0f, 20.0f)) {
 						env.sun_intensity = static_cast<double>(sun_int_f);
 						should_restart = true;
 					}
+					if (ImGui::IsItemDeactivatedAfterEdit()) {
+						engine_info.add_log("[Config] Sun intensity finalized at %.2f", env.sun_intensity);
+					}
+
 					//sun size
 					float sun_size_f = static_cast<float>(env.sun_size);
 					if (ImGui::SliderFloat("Sun Size", &sun_size_f, 0.0f, 10.0f)) {
 						env.sun_size = static_cast<double>(sun_size_f);
 						should_restart = true;
 					}
+					if (ImGui::IsItemDeactivatedAfterEdit()) {
+						engine_info.add_log("[Config] Sun size finalized at %.2f", env.sun_size);
+					}
 
 					ImGui::Separator();
 
 					//mode switch 
 					static bool use_astro = false;
-					ImGui::Checkbox("Use daylight System (time/data)", &use_astro);
+					static bool last_use_astro = false;
+					if (ImGui::Checkbox("Use daylight System (time/data)", &use_astro)) {
+						if (use_astro != last_use_astro) {
+							engine_info.add_log("[System] Daylight system %s", use_astro ? "enabled" : "disabled");
+							last_use_astro = use_astro;
+						}
+					}
 
 					if (use_astro) {
 						//static variable for converter
@@ -671,10 +810,10 @@ int main(int argc, char* argv[]) {
 							double azimuth = radians_to_degrees(std::acos(std::clamp(cos_az, -1.0, 1.0)));
 							if (hour_angle > 0) {
 								azimuth = 360.0 - azimuth;
+								engine_info.add_log("[Debug] Sun is in the afternoon, adjusting azimuth to %.1f degrees", azimuth);
 							}
 							//update directional vector
 							env.sun_direction = direction_from_spherical(elevation, azimuth);
-
 							//automatic sun color
 							if (env.auto_sun_color) {
 								double s_height = env.sun_direction.y();
@@ -686,6 +825,12 @@ int main(int argc, char* argv[]) {
 								sun_col[0] = (float)env.sun_color.x();
 								sun_col[1] = (float)env.sun_color.y();
 								sun_col[2] = (float)env.sun_color.z();
+
+								engine_info.add_log("[Config] Sun color automatically updated to (%.2f, %.2f, %.2f) based on elevation", 
+									env.sun_color.x(), 
+									env.sun_color.y(), 
+									env.sun_color.z()
+								);
 							}
 
 							//synchronize buffer
@@ -693,7 +838,20 @@ int main(int argc, char* argv[]) {
 							sun_dir_buf[1] = env.sun_direction.y();
 							sun_dir_buf[2] = env.sun_direction.z();
 
+							engine_info.add_log("[Debug] Synchronizing sun direction buffer to (%.2f, %.2f, %.2f)", 
+								sun_dir_buf[0], 
+								sun_dir_buf[1], 
+								sun_dir_buf[2]
+							);
+
 							should_restart = true;
+						}
+						if (ImGui::IsItemDeactivatedAfterEdit()) {
+							engine_info.add_log("[Config] Daylight system parameters finalized: Hour=%.2f, Day=%d, Latitude=%.1f", 
+								sun_time, 
+								sun_day, 
+								latitude
+							);
 						}
 					}
 					//sun direction
@@ -704,6 +862,11 @@ int main(int argc, char* argv[]) {
 					ImGui::Text("Sun Direction (Manual)");
 					if (ImGui::InputScalarN("##sun_dir_input", ImGuiDataType_Double, sun_dir_buf, 3)) {
 						env.sun_direction = vec3(sun_dir_buf[0], sun_dir_buf[1], sun_dir_buf[2]);
+						engine_info.add_log("[Config] Sun direction manually set to (%.2f, %.2f, %.2f)", 
+							env.sun_direction.x(), 
+							env.sun_direction.y(), 
+							env.sun_direction.z()
+						);
 						should_restart = true;
 					}
 					//button to normalize the sun direction vector
@@ -714,6 +877,11 @@ int main(int argc, char* argv[]) {
 						sun_dir_buf[0] = env.sun_direction.x();
 						sun_dir_buf[1] = env.sun_direction.y();
 						sun_dir_buf[2] = env.sun_direction.z();
+						engine_info.add_log("[Config] Sun direction vector normalized to (%.2f, %.2f, %.2f)", 
+							env.sun_direction.x(), 
+							env.sun_direction.y(), 
+							env.sun_direction.z()
+						);
 						should_restart = true;
 					}
 					if (use_astro) {
@@ -723,12 +891,19 @@ int main(int argc, char* argv[]) {
 				}
 
 				//solid background color
-				if (env.mode == EnvironmentSettings::SOLID_COLOR) {
+				if (env._mode == EnvironmentSettings::SOLID_COLOR) {
 					ImGui::TextColored(ImVec4(0.7f, 0.7f, 0.7f, 1.0f), "Solid Color Mode");
 
 					if (ImGui::ColorEdit3("Background Color", bg_col)) {
 						env.background_color = color(bg_col[0], bg_col[1], bg_col[2]);
 						should_restart = true;
+					}
+					if (ImGui::IsItemDeactivatedAfterEdit()) {
+						engine_info.add_log("[Config] Background color finalized at (%.2f, %.2f, %.2f)",
+							env.background_color.x(), 
+							env.background_color.y(), 
+							env.background_color.z()
+						);
 					}
 				}
 
@@ -747,6 +922,7 @@ int main(int argc, char* argv[]) {
 					col_bal[0] = (float)my_post.color_balance.x();
 					col_bal[1] = (float)my_post.color_balance.y();
 					col_bal[2] = (float)my_post.color_balance.z();
+
 				}
 
 				ImGui::SeparatorText("Debug Views");
@@ -764,27 +940,25 @@ int main(int argc, char* argv[]) {
 						pushed_colors++;
 						ImGui::PushStyleVar(ImGuiStyleVar_FrameBorderSize, 1.0f);
 						pushed_vars++;
-					}
-					else {
+					} else {
 						ImGui::PushStyleColor(ImGuiCol_Button, col);
 						pushed_colors++;
 					}
 
 					if (ImGui::Button(id, ImVec2(30, 30))) {
 						flag = !flag; //toggle the debug flag
+						engine_info.add_log("[Debug] Channel %s toggled: %s", id, flag ? "ON" : "OFF");
 						//if color debug mode is activated, deactivate luminance and vice versa
 						if (&flag == &my_post.debug.luminance) {
 							if (my_post.debug.luminance) {
 								//if L on = R, G, B off
 								my_post.debug.red = my_post.debug.green = my_post.debug.blue = false;
-							}
-							else {
+							} else {
 								//if L off = R, G, B on
 								my_post.debug.red = my_post.debug.green = my_post.debug.blue = true;
 							}
-						}
-						else {
-							//if any of the R G B on = L off
+						} else {
+							//if any of the R,G,B on == L off
 							my_post.debug.luminance = false;
 						}
 						my_post.needs_update = true;
@@ -796,11 +970,12 @@ int main(int argc, char* argv[]) {
 
 				//buttons row
 				if (ImGui::Button("N", ImVec2(30, 30))) {
-					my_post.debug.red = true;
-					my_post.debug.green = true;
-					my_post.debug.blue = true;
-					my_post.debug.luminance = false;
-					my_post.needs_update = true;
+					if (!my_post.debug.red || !my_post.debug.green || !my_post.debug.blue || my_post.debug.luminance) {
+						my_post.debug.red = my_post.debug.green = my_post.debug.blue = true;
+						my_post.debug.luminance = false;
+						my_post.needs_update = true;
+						engine_info.add_log("[Debug] View reset to standard RGB mode");
+					}
 				}
 
 				ImGui::SameLine();
@@ -870,47 +1045,101 @@ int main(int argc, char* argv[]) {
 					ImGui::SetTooltip("Logarithmic scale histogram showing HDR distribution.");
 				}
 
-				my_post.needs_update |= ImGui::Checkbox("ACES Tone Mapping", &my_post.use_aces_tone_mapping);
+				//aces tone mapping
+				if (ImGui::Checkbox("ACES Tone Mapping", &my_post.use_aces_tone_mapping)) {
+					my_post.needs_update = true;
+					engine_info.add_log("[Config] ACES Tone Mapping %s", my_post.use_aces_tone_mapping ? "enabled" : "disabled");
+				}
 
-				my_post.needs_update |= ImGui::Checkbox("Auto Exposure", &my_post.use_auto_exposure);
+				//auto-exposure
+				if (ImGui::Checkbox("Auto Exposure", &my_post.use_auto_exposure)) {
+					my_post.needs_update = true;
+					engine_info.add_log("[Config] Auto Exposure %s", my_post.use_auto_exposure ? "enabled" : "disabled");
+				}
+
 				if (my_post.use_auto_exposure) {
 					ImGui::Indent();
 
 					//taget luminance slider (Twoje 0.12f)
 					if (ImGui::SliderFloat("Target Luminance", &my_post.target_luminance, 0.01f, 0.50f, "%.2f")) {
-						// Natychmiastowa aktualizacja ekspozycji po zmianie celu
 						my_post.exposure = (float)my_post.apply_auto_exposure(my_post.last_stats);
 						my_post.needs_update = true;
 					}
+					if (ImGui::IsItemDeactivatedAfterEdit()) {
+						engine_info.add_log("[Config] Auto Exposure target luminance finalized at %.2f", my_post.target_luminance);
+					}
+
 
 					//slider in "stops"(EV) units - (+2)lighten or (-2)darken
 					if (ImGui::SliderFloat("Exposure Compensation", &my_post.exposure_compensation_stops, -5.0f, 5.0f, "%.1f EV")) {
 						my_post.exposure = (float)my_post.apply_auto_exposure(my_post.last_stats);
 						my_post.needs_update = true;
 					}
+					if (ImGui::IsItemDeactivatedAfterEdit()) {
+						engine_info.add_log("[Config] Auto Exposure compensation finalized at %.1f EV", my_post.exposure_compensation_stops);
+					}
 					ImGui::Unindent();
 				} else {
-					my_post.needs_update |= ImGui::SliderFloat("Manual Exposure", &my_post.exposure, 0.01f, 5.0f, "%.2f");
+					if (ImGui::SliderFloat("Manual Exposure", &my_post.exposure, 0.01f, 5.0f, "%.2f")) {
+						my_post.needs_update = true;
+					}
+					if (ImGui::IsItemDeactivatedAfterEdit()) {
+						engine_info.add_log("[Config] Manual exposure finalized at %.2f", my_post.exposure);
+					}
 				}
 
 				ImGui::SeparatorText("Color Grade");
-				my_post.needs_update |= ImGui::SliderFloat("Contrast", &my_post.contrast, 0.5f, 2.0f);
-				my_post.needs_update |= ImGui::SliderFloat("Saturation", &my_post.saturation, 0.0f, 2.0f);
-
-				if (ImGui::ColorEdit3("Color Balance", col_bal)) {
-					my_post.color_balance = vec3(col_bal[0], col_bal[1], col_bal[2]);
+				//contrast
+				if (ImGui::SliderFloat("Contrast", &my_post.contrast, 0.5f, 2.0f)) {
 					my_post.needs_update = true;
 				}
-				my_post.needs_update |= ImGui::SliderFloat("Hue Shift", &my_post.hue_shift, -180.0f, 180.0f);
+				if (ImGui::IsItemDeactivatedAfterEdit()) {
+					engine_info.add_log("[Config] Contrast finalized at %.2f", my_post.contrast);
+				}
+
+				//saturation
+				if (ImGui::SliderFloat("Saturation", &my_post.saturation, 0.0f, 2.0f)) {
+					my_post.needs_update = true;
+				}
+				if (ImGui::IsItemDeactivatedAfterEdit()) {
+					engine_info.add_log("[Config] Saturation finalized at %.2f", my_post.saturation);
+				}
+
+				//color balance
+				if (ImGui::ColorEdit3("Color Balance", col_bal)) {
+					my_post.color_balance = vec3(col_bal[0], col_bal[1], col_bal[2]);
+					engine_info.add_log("[Config] Color balance changed to (%.2f, %.2f, %.2f)", 
+						my_post.color_balance.x(), 
+						my_post.color_balance.y(), 
+						my_post.color_balance.z()
+					);
+					my_post.needs_update = true;
+				}
+
+				//hue shift
+				if (ImGui::SliderFloat("Hue Shift", &my_post.hue_shift, -180.0f, 180.0f, "%.0f degrees")) {
+					my_post.needs_update = true;
+				}
+				if (ImGui::IsItemDeactivatedAfterEdit()) {
+					engine_info.add_log("[Config] Hue shift finalized at %.0f degrees", my_post.hue_shift);
+				}
 
 				ImGui::SeparatorText("Effects");
+				//vignette
 				if (ImGui::SliderFloat("Vignette", &my_post.vignette_intensity, 0.0f, 1.0f)) {
 					my_post.needs_update = true;
 				}
+				if (ImGui::IsItemDeactivatedAfterEdit()) {
+					engine_info.add_log("[Config] Vignette intensity finalized at %.2f", my_post.vignette_intensity);
+				}
 
+				//bloom
 				if (ImGui::CollapsingHeader("Bloom Settings")) {
 					bool changed = false;
-					changed |= ImGui::Checkbox("Enable Bloom", &my_post.use_bloom);
+					if (ImGui::Checkbox("Enable Bloom", &my_post.use_bloom)) {
+						changed = true;
+						engine_info.add_log("[Config] Bloom effect %s", my_post.use_bloom ? "enabled" : "disabled");
+					};
 
 					if (my_post.use_bloom) {
 						ImGui::Indent();
@@ -920,12 +1149,20 @@ int main(int argc, char* argv[]) {
 						ImGui::Unindent();
 					}
 					if (changed) {
-						my_post.needs_update = true; //flag to recalculate post-processing
+						my_post.needs_update = true;
+					}
+					if (my_post.use_bloom && ImGui::IsItemDeactivatedAfterEdit()) {
+						engine_info.add_log("[Config] Bloom params updated: Thr:%.1f, Int:%.1f, Rad:%d",
+							my_post.bloom_threshold,
+							my_post.bloom_intensity,
+							my_post.bloom_radius
+						);
 					}
 				}
 				//sharpening
 				if (ImGui::CollapsingHeader("Sharpening")) {
 					if (ImGui::Checkbox("Enable Sharpen", &my_post.use_sharpening)) {
+						engine_info.add_log("[Config] Sharpening %s", my_post.use_sharpening ? "enabled" : "disabled");
 						my_post.needs_update = true;
 					}
 
@@ -933,6 +1170,9 @@ int main(int argc, char* argv[]) {
 					if (ImGui::SliderFloat("Amount", &sharp_f, 0.0f, 1.0f)) {
 						my_post.sharpen_amount = static_cast<double>(sharp_f);
 						my_post.needs_update = true;
+					}
+					if (my_post.use_sharpening && ImGui::IsItemDeactivatedAfterEdit()) {
+						engine_info.add_log("[Config] Sharpening amount finalized at %.2f", my_post.sharpen_amount);
 					}
 				}
 				ImGui::EndTabItem();
@@ -949,15 +1189,22 @@ int main(int argc, char* argv[]) {
 				}
 
 				//option to save single pass
-				if (ImGui::Button("Save Current Pass", ImVec2(-1, 0))) {
-					std::string pass_name = camera::pass_names[static_cast<int>(cam.current_display_pass)];
+				if (ImGui::Button("Save Current Pass", ImVec2(-1, 40))) {
+					int pass_idx = static_cast<int>(cam.current_display_pass);
+					std::string pass_name = camera::pass_names[pass_idx];
+
 					std::string name = "render_" + pass_name + ".png";
 					cam.save_render_pass(cam.current_display_pass, name, my_post);
-					engine_info.add_log("[Save] Exported pass: %s", name.c_str());
+
+					engine_info.add_log("[Save] Successfully exported %s pass to file: %s",
+						pass_name.c_str(),
+						name.c_str()
+					);
 				}
 
 				//option to save all passes at once
 				if (ImGui::Button("Save All Passes", ImVec2(-1, 0))) {
+					int saved_count = 0;
 					for (int n = 0; n < 7; n++) {
 						render_pass p = static_cast<render_pass>(n);
 
@@ -980,8 +1227,10 @@ int main(int argc, char* argv[]) {
 							std::string pass_name = camera::pass_names[static_cast<int>(p)];
 							std::string name = "render_" + pass_name + ".png";
 							cam.save_render_pass(p, name, my_post);
+							saved_count++;
 						}
 					}
+					engine_info.add_log("[Save] Batch export finished. Saved %d passes to /output folder.", saved_count);
 				}
 
 				if (!disable_export) {
@@ -1015,8 +1264,6 @@ int main(int argc, char* argv[]) {
 			if (ImGui::BeginTabItem("Stats & Logs")) {
 				engine_info.draw_tab_content(cam, is_rendering);
 
-
-
 				ImGui::EndTabItem();
 			}
 
@@ -1029,10 +1276,17 @@ int main(int argc, char* argv[]) {
 			//progress bar
 			float progress = (float)cam.lines_rendered / (float)cam.image_height;
 			ImGui::ProgressBar(progress, ImVec2(-1.0f, 0.0f));
+			static int last_logged_percent = -1;
+			int current_percent = static_cast<int>(progress * 100.0f);
 
 			if (is_rendering) {
 				auto current_now = std::chrono::steady_clock::now();
 				std::chrono::duration<float> live_elapsed = current_now - render_start_time;
+
+				if (current_percent % 10 == 0 && current_percent != last_logged_percent) {
+					engine_info.add_log("[Render] Progress: %d%%, Elapsed: %.2fs", current_percent, live_elapsed.count());
+					last_logged_percent = current_percent;
+				}
 
 				float estimated_total = (progress > 0.01f) ? (live_elapsed.count() / progress) : 0.0f;
 
@@ -1042,13 +1296,24 @@ int main(int argc, char* argv[]) {
 
 				if (estimated_total > 0.0f) {
 					ImGui::TextColored(ImVec4(0.8f, 0.8f, 0.8f, 1.0f), "Est. Total: %.2fs | Remaining: %.2fs",
-						estimated_total, estimated_total - live_elapsed.count());
+						estimated_total, 
+						estimated_total - live_elapsed.count()
+					);
 				}
-			} else if (last_render_duration > 0.0f) {
+			}
+			else if (last_render_duration > 0.0f) {
 				if (render_was_cancelled) {
+					if (last_logged_percent != -2) {
+						engine_info.add_log("[Render] Cancelled by user at %.1f%%.", last_progress_percent);
+						last_logged_percent = -2;
+					}
 					ImGui::TextColored(ImVec4(1.0f, 0.5f, 0.0f, 1.0f), "Render Cancelled at %.1f%%", last_progress_percent);
 					ImGui::TextColored(ImVec4(1.0f, 0.5f, 0.0f, 1.0f), "Elapsed Time: %.2f seconds", last_render_duration);
 				} else {
+					if (last_logged_percent != 100) {
+						engine_info.add_log("[Render] Finished! Total time: %.2f seconds", last_render_duration);
+						last_logged_percent = 100;
+					}
 					ImGui::TextColored(ImVec4(0.0f, 1.0f, 0.0f, 1.0f), "Render Finished (100%)");
 					ImGui::TextColored(ImVec4(0.0f, 1.0f, 0.0f, 1.0f), "Render Time: %.2f seconds", last_render_duration);
 				}
@@ -1060,21 +1325,22 @@ int main(int argc, char* argv[]) {
 
 			if (ImGui::Button(button_label, ImVec2(-1, 0))) {
 				if (is_rendering) {
-					// 1. TYLKO zatrzymujemy renderowanie i zapisujemy statystyki
+					//only stop the render and save statistics
 					auto render_end_time = std::chrono::steady_clock::now();
 					std::chrono::duration<float> elapsed = render_end_time - render_start_time;
 					last_render_duration = elapsed.count();
 					last_progress_percent = ((float)cam.lines_rendered / (float)cam.image_height) * 100.0f;
 					render_was_cancelled = true;
 
-					is_rendering = false; // To zatrzyma wątek
+					is_rendering = false; //stop the thread
+					engine_info.add_log("[Render] User requested stop. Joining threads...");
+
 					if (render_thread.joinable()) {
 						render_thread.join();
 					}
-					// NIE ustawiamy is_active_session = false, żeby komunikat został na ekranie!
 				} else {
-					// 2. Jeśli render już nie trwa, to drugie kliknięcie zamyka sesję (czyści GUI)
 					is_active_session = false;
+					engine_info.add_log("[System] Render session cleared.");
 				}
 			}
 			ImGui::PopStyleColor();
@@ -1088,6 +1354,8 @@ int main(int argc, char* argv[]) {
 				cam.lines_rendered = 0;
 				is_active_session = true;
 				should_restart = true; //launch central restart system below
+
+				engine_info.add_log("[Render] Starting new render session: %dx%d.", cam.image_width, cam.image_height);
 			}
 			ImGui::PopStyleColor();
 		}
@@ -1108,10 +1376,11 @@ int main(int argc, char* argv[]) {
 				color(cam.fog_color[0], cam.fog_color[1], cam.fog_color[2])
 			);
 
-			// 3. Aktualizujemy BVH dla nowej geometrii (w tym mgły)
+			//update BVH for a new geometry(fog included)
 			bvh_world = make_shared<bvh_node>(world);
+			engine_info.add_log("[System] Scene geometry rebuilt. BVH acceleration structure updated.");
 
-			// 4. Resetujemy akumulator i licznik próbek (zgodnie z wcześniejszą naprawą)
+			//reset accumulator and sample count 
 			cam.reset_accumulator();
 
 			//prepare datas for a new render
@@ -1120,6 +1389,7 @@ int main(int argc, char* argv[]) {
 				cam.image_height = 1;
 			}
 
+			engine_info.add_log("[Render] Thread launched. Target resolution: %dx%d", cam.image_width, cam.image_height);
 			//launch the new thread
 			is_rendering = true;
 			render_thread = std::thread([&is_rendering, &cam, bvh_world, env, my_post, &last_render_duration, render_start_time]() {
@@ -1150,6 +1420,10 @@ int main(int argc, char* argv[]) {
 			bool rendering_active = is_rendering.load();
 			//crucial moment when progress bar finished 
 			bool just_finished = (last_rendering_state == true && rendering_active == false);
+
+			if (just_finished) {
+				engine_info.add_log("[System] Render finished. Performing final post-processing pass.");
+			}
 
 			//check if e.i. 100ms pasted from the last buffer copy
 			auto now = std::chrono::steady_clock::now();
@@ -1212,8 +1486,7 @@ int main(int argc, char* argv[]) {
 					//image is wider than window -> fit to width
 					display_w = avail_size.x;
 					display_h = avail_size.x / image_aspect;
-				}
-				else {
+				} else {
 					//image is higher than window -> fit to height
 					display_h = avail_size.y;
 					display_w = avail_size.y * image_aspect;
@@ -1227,8 +1500,7 @@ int main(int argc, char* argv[]) {
 				ImGui::SetCursorPos(ImVec2(offset_x, offset_y));
 				//display the image 
 				ImGui::Image((ImTextureID)(intptr_t)rendered_texture, ImVec2(display_w, display_h));
-			}
-			else {
+			} else {
 				ImGui::Text("Ready to render...");
 			}
 			last_rendering_state = rendering_active;
