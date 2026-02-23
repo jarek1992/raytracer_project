@@ -20,7 +20,8 @@ A high-performance, physically-based path tracing engine built with C++20. This 
 <details>
   <summary><b>Camera & Optics System</b></summary>
   <br>
-  <blockquote>
+  <ul>
+    <li>
 
 | **Feature** | **Description** | **Key Parameters** |
 | :--- | :--- | :--- |
@@ -29,7 +30,8 @@ A high-performance, physically-based path tracing engine built with C++20. This 
 | Interactive Navigation | *Smooth 3D space movement and orientation* | *LookAt, LookFrom, Up Vector* |
 | Sample Jittering | *High-quality sub-pixel anti-aliasing* | *Stratified Sampling (per pixel)* |
 
-  </blockquote>
+   </li>
+  </ul>
 </details>
 
 #### Camera & Optics System
