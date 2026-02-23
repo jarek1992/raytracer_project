@@ -55,9 +55,8 @@ A high-performance, physically-based path tracing engine built with C++20. This 
           <li><b>Celestial Math:</b><i> Implementation of solar declination, hour angle, azimuth, and elevation algorithms to ensure pinpoint accuracy.</i></li>
           <br>
         </ul>
-      </ul>
-      <li><b>Manual Mode:</b><i> Provides direct control over the sun's direction vector for artistic lighting setups.</i></li>
-      <li><b>Auto-Sun Color:</b><i> Dynamically adjusts the solar spectrum based on the altitude angle. It transitions from warm, golden hues during sunrise/sunset to cool, crisp white at the zenith, driven by the vertical Y component of the sun vector.</i></li>
+        <li><b>Manual Mode:</b><i> Provides direct control over the sun's direction vector for artistic lighting setups.</i></li>
+        <li><b>Auto-Sun Color:</b><i> Dynamically adjusts the solar spectrum based on the altitude angle. It transitions from warm, golden hues during sunrise/sunset to cool, crisp white at the zenith, driven by the vertical Y component of the sun vector.</i></li>
         <br>
       </ul>
       <li><b>Solid Background:</b></li>
