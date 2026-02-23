@@ -34,8 +34,7 @@ A high-performance, physically-based path tracing engine built with C++20. This 
   </ul>
 
 <ul style="list-style-type: none;">
-  <li>
-    <details>
+  <details>
       <summary><b>Environment & Lighting Systems</b></summary>
       <br>
       <p>The engine provides a versatile lighting suite, allowing users to switch between physical sky simulations, image-based lighting, and studio backgrounds.</p>
@@ -46,7 +45,6 @@ A high-performance, physically-based path tracing engine built with C++20. This 
         <li><b>Solid Background:</b></li>
       </ul>
     </details>
-  </li>
 </ul>
 
 
