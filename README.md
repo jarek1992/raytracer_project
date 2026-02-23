@@ -5,7 +5,6 @@ A high-performance, physically-based path tracing engine built with C++20. This 
 <ul style="list-style-type: none;"> <!-- Zewnętrzna lista bez kropki -->
   <details>
     <summary><b>Engine Specifications</b></summary>
-    <ul style="list-style-type: disc; margin-left: 20px;"> <!-- Wymuszenie pełnych kropek -->
     <li><b>Language:</b> C++20 (utilizing modern standards: std::clamp, std::shared_ptr, and advanced lambdas)</li>
     <li><b>Rendering Model:</b> Progressive Path Tracing (real-time sample accumulation)</li>
     <li><b>Integration Method:</b> Monte Carlo (stochastic sampling of light paths)</li>
