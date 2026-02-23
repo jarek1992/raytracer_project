@@ -33,16 +33,20 @@ A high-performance, physically-based path tracing engine built with C++20. This 
   </details>
   </ul>
 
-<ul>
-  <details>
-    <summary><b>Environment & Lighting Systems</b></summary>
-    <summary>The engine provides a versatile lighting suite, allowing users to switch between physical sky simulations, image-based lighting, and studio backgrounds.</summary>
-    <ul> 
-      <p><li><b>HDRI Maps(IBL):</b> C++20 (utilizing modern standards: std::clamp, std::shared_ptr, and advanced lambdas)</li>
-        <li><b>Astronomical Daylight System:</b> Progressive Path Tracing (real-time sample accumulation)</li>
-        <li><b>Solid Background:</b> Monte Carlo (stochastic sampling of light paths)</li>
-    </ul>
-  </details>
+<ul style="list-style-type: none;">
+  <li>
+    <details>
+      <summary><b>Environment & Lighting Systems</b></summary>
+      <br>
+      <p>The engine provides a versatile lighting suite, allowing users to switch between physical sky simulations, image-based lighting, and studio backgrounds.</p>
+      <br>
+      <ul style="list-style-type: disc; margin-left: 20px;"> 
+        <li><b>HDRI Maps(IBL):</b></li>
+        <li><b>Astronomical Daylight System:</b></li>
+        <li><b>Solid Background:</b></li>
+      </ul>
+    </details>
+  </li>
 </ul>
 
 
