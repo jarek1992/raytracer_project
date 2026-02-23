@@ -68,7 +68,9 @@ A high-performance, physically-based path tracing engine built with C++20. This 
   </details>
 </ul>
 
+Diagnostic G-Buffer Visualizer
 
+Cinematic Post-Process Pipeline
 
 ### 🕹 Interactive UI Overview
 
