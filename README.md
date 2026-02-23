@@ -51,7 +51,6 @@ A high-performance, physically-based path tracing engine built with C++20. This 
       <ul>
         <li><b>Astronomical Mode:</b><i> Calculates the sun's position automatically using geographical and temporal data.</i></li>
         <ul style="list-style-type: disc; margin-left: 20px;">
-          <br>
           <li><b>Parameters:</b><i> Latitude (coordinates), Day of the Year (1-365), and Time of Day (0-24h).</i></li>
           <li><b>Celestial Math:</b><i> Implementation of solar declination, hour angle, azimuth, and elevation algorithms to ensure pinpoint accuracy.</i></li>
           <br>
