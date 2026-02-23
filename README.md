@@ -22,10 +22,7 @@ A high-performance, physically-based path tracing engine built with C++20. This 
       <summary><b>Camera & Optics System</b></summary>
       <br>
       <ul>
-        <li style="list-style-type: none;">
-
-
-
+        
 | **Feature** | **Description** | **Key Parameters** |
 | :--- | :--- | :--- |
 | Thin Lens Model | *Simulation of a physical lens for realistic bokeh effects* | *Aperture (f-stop), Focus Distance* |
@@ -33,8 +30,7 @@ A high-performance, physically-based path tracing engine built with C++20. This 
 | Interactive Navigation | *Smooth 3D space movement and orientation* | *LookAt, LookFrom, Up Vector* |
 | Sample Jittering | *High-quality sub-pixel anti-aliasing* | *Stratified Sampling (per pixel)* |
 
-        </li>
-      </ul>
+    </ul>
     </details>
   </li>
 </ul>
