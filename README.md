@@ -40,6 +40,7 @@ A high-performance, physically-based path tracing engine built with C++20. This 
     <ul> 
       <p><li><b>HDRI Maps(IBL):</b></li>
       <p>For photorealistic reflections and complex ambient lighting, the engine supports industry-standard High Dynamic Range images.</p>
+      <ul style="list-style-type: disc; margin-left: 20px;">
         <li><b>Technology:</b> Native support for 32-bit .hdr files (IBL) providing a massive range of luminance data.</li>
         <li><b>3-Axis Transformation:</b> Full spherical orientation control using Yaw, Pitch, and Roll to align the environment with your scene geometry perfectly.</li>
         <li><b>Asset Management:</b> Integrated file observer allows for dynamic refreshing of the HDRI library. Add new maps to the directory and select them in-app without a restart.</li>
@@ -47,6 +48,7 @@ A high-performance, physically-based path tracing engine built with C++20. This 
       </ul>
       <li><b>Astronomical Daylight System:</b></li>
       <p>This module simulates the sun's position and color based on real-world celestial mechanics. It offers two distinct modes of operation:</p>
+      <ul style="list-style-type: disc; margin-left: 20px;">
         <li><b>Astronomical Mode:</b> Calculates the sun's position automatically using geographical and temporal data.</li>
         <ul>
           <li><b>Parameters:</b> Latitude (coordinates), Day of the Year (1-365), and Time of Day (0-24h).</li>
@@ -58,6 +60,7 @@ A high-performance, physically-based path tracing engine built with C++20. This 
       </ul>
       <li><b>Solid Background:</b></li>
       <p>Designed for product photography and clean architectural presentations.</p>
+      <ul style="list-style-type: disc; margin-left: 20px;">
         <li><b>Control:</b> Full RGB spectrum selection via a precision color picker.</li>
         <li><b>Intensity:</b> Adjustable background radiance, allowing for neutral studio setups that don't overpower the scene's primary light sources.</li>
       </ul>
