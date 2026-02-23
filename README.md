@@ -9,6 +9,14 @@ A high-performance, physically-based path tracing engine built with C++20. This 
 
 ### 📈 Performance & Optimization
 
+### 📸 Gallery & Showcase
+🖥 Interface in Action
+
+    Tip: Tutaj wstaw GIF-a pokazującego jak przesuwasz slider godziny (słońce się porusza) lub jak zmieniasz tryby G-Buffera.
+📊 Real-time Analytics
+
+    Tip: Tutaj wstaw screenshot z histogramem i aktywnymi kanałami RGB.
+
 
 
 
