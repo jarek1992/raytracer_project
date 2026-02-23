@@ -17,10 +17,10 @@ A high-performance, physically-based path tracing engine built with C++20. This 
 </ul>
 
 <ul style="list-style-type: none;">
-    <details>
-      <summary><b>Camera & Optics System</b></summary>
-      <br>
-      <ul>
+  <details>
+    <summary><b>Camera & Optics System</b></summary>
+    <br>
+    <ul>
         
 | **Feature** | **Description** | **Key Parameters** |
 | :--- | :--- | :--- |
