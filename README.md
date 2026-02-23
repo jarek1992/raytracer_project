@@ -10,6 +10,14 @@ A high-performance, physically-based path tracing engine built with C++20. This 
   * Data Structures: BVH (Bounding Volume Hierarchy) – accelerating intersection tests from O(N) to O(logN).
   * Memory Management: Dirty Flag System (needs_update, needs_ui_sync) – intelligent buffer reloading triggered only upon parameter changes.
 
+#### Camera & Optics System
+Feature | Description | Key Parameters
+| :--- | ---: | :---:
+Thin Lens Model  | Simulation of a physical lens for realistic bokeh effects. | Aperture (f-stop), Focus Distance.
+Dynamic FOV  | Full perspective control for architectural or macro shots. | Vertical FOV (degrees).
+Interactive Navigation  | Smooth 3D space movement and orientation. | LookAt, LookFrom, Up Vector.
+Sample Jittering  | High-quality sub-pixel anti-aliasing. | Stratified Sampling (per pixel).
+
 
 
 
