@@ -39,8 +39,24 @@ A high-performance, physically-based path tracing engine built with C++20. This 
     <p>The engine provides a versatile lighting suite, allowing users to switch between physical sky simulations, image-based lighting, and studio backgrounds.</p>
     <ul> 
       <p><li><b>HDRI Maps(IBL):</b></li>
-        <li><b>Astronomical Daylight System:</b></li>
-        <li><b>Solid Background:</b></li>
+      <p>For photorealistic reflections and complex ambient lighting, the engine supports industry-standard High Dynamic Range images.</p>
+      <ul style="list-style-type: disc; margin-left: 20px;">
+        <li><b>Technology:</b> Native support for 32-bit .hdr files (IBL) providing a massive range of luminance data.</li>
+        <li><b>3-Axis Transformation:</b> Full spherical orientation control using Yaw, Pitch, and Roll to align the environment with your scene geometry perfectly.</li>
+        <li><b>Asset Management:</b> Integrated file observer allows for dynamic refreshing of the HDRI library. Add new maps to the directory and select them in-app without a restart.</li>
+      </ul>
+      <li><b>Astronomical Daylight System:</b></li>
+      <p>This module simulates the sun's position and color based on real-world celestial mechanics. It offers two distinct modes of operation:</p>
+      <ul style="list-style-type: disc; margin-left: 20px;">
+        <li><b>Astronomical Mode:</b> Calculates the sun's position automatically using geographical and temporal data.</li>
+        <ul>
+          <li><b>Parameters:</b> Latitude (coordinates), Day of the Year (1-365), and Time of Day (0-24h).</li>
+          <li><b>Celestial Math:</b> Implementation of solar declination, hour angle, azimuth, and elevation algorithms to ensure pinpoint accuracy.</li>
+        </ul>
+        <li><b>Manual Mode:</b> Provides direct control over the sun's direction vector for artistic lighting setups.</li>
+        <li><b>Auto-Sun Color:</b> Dynamically adjusts the solar spectrum based on the altitude angle. It transitions from warm, golden hues during sunrise/sunset to cool, crisp white at the zenith, driven by the vertical Y component of the sun vector.</li>
+      </ul>
+      <li><b>Solid Background:</b></li>
     </ul>
   </details>
 </ul>
