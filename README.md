@@ -18,7 +18,10 @@ A high-performance, physically-based path tracing engine built with C++20. This 
   Interactive Navigation  | _Smooth 3D space movement and orientation_ | _LookAt, LookFrom, Up Vector_
   Sample Jittering  | _High-quality sub-pixel anti-aliasing_ | _Stratified Sampling (per pixel)_
 
-
+<details>
+    <summary>Title 1</summary>
+    <p>Lorem ipsum dolor sit amet, ...</p>
+</details>
 
 
 
