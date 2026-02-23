@@ -41,28 +41,28 @@ A high-performance, physically-based path tracing engine built with C++20. This 
       <p><li><b>HDRI Maps(IBL):</b></li>
       <p>For photorealistic reflections and complex ambient lighting, the engine supports industry-standard High Dynamic Range images.</p>
       <ul>
-        <li><b><i>Technology:</b> Native support for 32-bit .hdr files (IBL) providing a massive range of luminance data.</li>
-        <li><b>3-Axis Transformation:</b> Full spherical orientation control using Yaw, Pitch, and Roll to align the environment with your scene geometry perfectly.</li>
-        <li><b>Asset Management:</b> Integrated file observer allows for dynamic refreshing of the HDRI library. Add new maps to the directory and select them in-app without a restart.</i></li>
+        <li><b>Technology:</b><i> Native support for 32-bit .hdr files (IBL) providing a massive range of luminance data.</i></li>
+        <li><b>3-Axis Transformation:</b><i> Full spherical orientation control using Yaw, Pitch, and Roll to align the environment with your scene geometry perfectly.</i></li>
+        <li><b>Asset Management:</b><i> Integrated file observer allows for dynamic refreshing of the HDRI library. Add new maps to the directory and select them in-app without a restart.</i></li>
         <br>
       </ul>
       <li><b>Astronomical Daylight System:</b></li>
       <p>This module simulates the sun's position and color based on real-world celestial mechanics. It offers two distinct modes of operation:</p>
       <ul style="list-style-type: disc; margin-left: 20px;">
-        <li><b>Astronomical Mode:</b> Calculates the sun's position automatically using geographical and temporal data.</li>
+        <li><b>Astronomical Mode:</b><i> Calculates the sun's position automatically using geographical and temporal data.</i></li>
         <ul>
-          <li><b>Parameters:</b> Latitude (coordinates), Day of the Year (1-365), and Time of Day (0-24h).</li>
-          <li><b>Celestial Math:</b> Implementation of solar declination, hour angle, azimuth, and elevation algorithms to ensure pinpoint accuracy.</li>
+          <li><b>Parameters:</b><i> Latitude (coordinates), Day of the Year (1-365), and Time of Day (0-24h).</i></li>
+          <li><b>Celestial Math:</b><i> Implementation of solar declination, hour angle, azimuth, and elevation algorithms to ensure pinpoint accuracy.</i></li>
         </ul>
-        <li><b>Manual Mode:</b> Provides direct control over the sun's direction vector for artistic lighting setups.</li>
-        <li><b>Auto-Sun Color:</b> Dynamically adjusts the solar spectrum based on the altitude angle. It transitions from warm, golden hues during sunrise/sunset to cool, crisp white at the zenith, driven by the vertical Y component of the sun vector.</li>
+        <li><b>Manual Mode:</b><i> Provides direct control over the sun's direction vector for artistic lighting setups.</i></li>
+        <li><b>Auto-Sun Color:</b><i> Dynamically adjusts the solar spectrum based on the altitude angle. It transitions from warm, golden hues during sunrise/sunset to cool, crisp white at the zenith, driven by the vertical Y component of the sun vector.</i></li>
         <br>
       </ul>
       <li><b>Solid Background:</b></li>
       <p>Designed for product photography and clean architectural presentations.</p>
       <ul style="list-style-type: disc; margin-left: 20px;">
-        <li><b>Control:</b> Full RGB spectrum selection via a precision color picker.</li>
-        <li><b>Intensity:</b> Adjustable background radiance, allowing for neutral studio setups that don't overpower the scene's primary light sources.</li>
+        <li><b><i>Control:</b> Full RGB spectrum selection via a precision color picker.</i></li>
+        <li><b><i>Intensity:</b> Adjustable background radiance, allowing for neutral studio setups that don't overpower the scene's primary light sources.</i></li>
       </ul>
   </details>
 </ul>
