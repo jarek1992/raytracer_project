@@ -36,7 +36,6 @@ A high-performance, physically-based path tracing engine built with C++20. This 
 <ul style="list-style-type: none;">
   <details>
     <summary><b>Environment & Lighting Systems</b></summary>
-    <br>
     <p>The engine provides a versatile lighting suite, allowing users to switch between physical sky simulations, image-based lighting, and studio backgrounds.</p>
     <ul> 
       <p><li><b>HDRI Maps(IBL):</b></li>
@@ -57,9 +56,14 @@ A high-performance, physically-based path tracing engine built with C++20. This 
         </ul>
         <li><b>Manual Mode:</b> Provides direct control over the sun's direction vector for artistic lighting setups.</li>
         <li><b>Auto-Sun Color:</b> Dynamically adjusts the solar spectrum based on the altitude angle. It transitions from warm, golden hues during sunrise/sunset to cool, crisp white at the zenith, driven by the vertical Y component of the sun vector.</li>
+        <br>
       </ul>
       <li><b>Solid Background:</b></li>
-    </ul>
+      <p>Designed for product photography and clean architectural presentations.</p>
+      <ul style="list-style-type: disc; margin-left: 20px;">
+        <li><b>Control:</b> Full RGB spectrum selection via a precision color picker.</li>
+        <li><b>Intensity:</b> Adjustable background radiance, allowing for neutral studio setups that don't overpower the scene's primary light sources.</li>
+      </ul>
   </details>
 </ul>
 
