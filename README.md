@@ -68,11 +68,13 @@ A high-performance, physically-based path tracing engine built with C++20. This 
   </details>
 </ul>
 
-Diagnostic G-Buffer Visualizer
+Material Library (PBR)
 
 Cinematic Post-Process Pipeline
 
 ### 🕹 Interactive UI Overview
+
+Diagnostic G-Buffer Visualizer
 
 ### 🏗 Build & Requirements
 
