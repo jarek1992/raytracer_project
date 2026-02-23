@@ -37,10 +37,10 @@ A high-performance, physically-based path tracing engine built with C++20. This 
   <details>
     <summary><b>Environment & Lighting Systems</b></summary>
     <br>
-    <ul>
-      <summary>The engine provides a versatile lighting suite, allowing users to switch between physical sky simulations, image-based lighting, and studio backgrounds.</summary>
-      <br>
-        <p><li><b>Language:</b> C++20 (utilizing modern standards: std::clamp, std::shared_ptr, and advanced lambdas)</li>
+    <summary>The engine provides a versatile lighting suite, allowing users to switch between physical sky simulations, image-based lighting, and studio backgrounds.</summary>
+    <br>
+    <ul> 
+      <p><li><b>Language:</b> C++20 (utilizing modern standards: std::clamp, std::shared_ptr, and advanced lambdas)</li>
         <li><b>Rendering Model:</b> Progressive Path Tracing (real-time sample accumulation)</li>
         <li><b>Integration Method:</b> Monte Carlo (stochastic sampling of light paths)</li>
         <li><b>Hardware Acceleration(CPU):</b> OpenMP (parallelized computation across all available processor threads)</li>
