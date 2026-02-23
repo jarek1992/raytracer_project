@@ -11,12 +11,12 @@ A high-performance, physically-based path tracing engine built with C++20. This 
   * Memory Management: Dirty Flag System (needs_update, needs_ui_sync) – intelligent buffer reloading triggered only upon parameter changes.
 
 #### Camera & Optics System
-__Feature__ | __Description__ | __Key Parameters__
-| :--- | :--- | :---
-Thin Lens Model  | _Simulation of a physical lens for realistic bokeh effects_ | _Aperture (f-stop), Focus Distance_
-Dynamic FOV  | _Full perspective control for architectural or macro shots_ | _Vertical FOV (degrees)_
-Interactive Navigation  | _Smooth 3D space movement and orientation_ | _LookAt, LookFrom, Up Vector_
-Sample Jittering  | _High-quality sub-pixel anti-aliasing_ | _Stratified Sampling (per pixel)_
+  __Feature__ | __Description__ | __Key Parameters__
+  | :--- | :--- | :---
+  Thin Lens Model  | _Simulation of a physical lens for realistic bokeh effects_ | _Aperture (f-stop), Focus Distance_
+  Dynamic FOV  | _Full perspective control for architectural or macro shots_ | _Vertical FOV (degrees)_
+  Interactive Navigation  | _Smooth 3D space movement and orientation_ | _LookAt, LookFrom, Up Vector_
+  Sample Jittering  | _High-quality sub-pixel anti-aliasing_ | _Stratified Sampling (per pixel)_
 
 
 
