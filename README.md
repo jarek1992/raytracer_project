@@ -1,7 +1,12 @@
 🚀 Interactive C++ Path Tracing Engine
 A high-performance, physically-based path tracing engine built with C++20. This project features a robust real-time diagnostic UI, sophisticated environmental lighting, and a professional post-processing pipeline. 
 
+Project Title
 
+Simple overview of use/purpose.
+Description
+
+An in-depth paragraph about your project and overview of use.
 
 
 
