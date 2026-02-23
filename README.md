@@ -3,16 +3,16 @@ A high-performance, physically-based path tracing engine built with C++20. This 
 
 ### 🛠 Core Technical Features
 <ul style="list-style-type: none;"> <!-- Zewnętrzna lista bez kropki -->
-  <details>
-    <ul>
-      <summary><b>Engine Specifications</b></summary>
-      <li><b>Language:</b> C++20 (utilizing modern standards: std::clamp, std::shared_ptr, and advanced lambdas)</li>
-      <li><b>Rendering Model:</b> Progressive Path Tracing (real-time sample accumulation)</li>
-      <li><b>Integration Method:</b> Monte Carlo (stochastic sampling of light paths)</li>
-      <li><b>Hardware Acceleration (CPU):</b> OpenMP (parallelized computation across all available processor threads)</li>
-      <li><b>Data Structures:</b> BVH (Bounding Volume Hierarchy) – accelerating intersection tests from O(N) to O(logN)</li>
-      <li><b>Memory Management:</b> Dirty Flag System (needs_update, needs_ui_sync)</li>
-    <ul>
+      <ul>
+        <details>
+          <summary><b>Engine Specifications</b></summary>
+          <li><b>Language:</b> C++20 (utilizing modern standards: std::clamp, std::shared_ptr, and advanced lambdas)</li>
+          <li><b>Rendering Model:</b> Progressive Path Tracing (real-time sample accumulation)</li>
+          <li><b>Integration Method:</b> Monte Carlo (stochastic sampling of light paths)</li>
+          <li><b>Hardware Acceleration (CPU):</b> OpenMP (parallelized computation across all available processor threads)</li>
+          <li><b>Data Structures:</b> BVH (Bounding Volume Hierarchy) – accelerating intersection tests from O(N) to O(logN)</li>
+          <li><b>Memory Management:</b> Dirty Flag System (needs_update, needs_ui_sync)</li>
+    
   </details>
 </ul>
 
