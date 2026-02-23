@@ -14,10 +14,9 @@ A high-performance, physically-based path tracing engine built with C++20. This 
           <li><b>Data Structures:</b> Progressive Path Tracing (real-time sample accumulation)</li>
           <li><b>Memory Management:</b> Dirty Flag System (needs_update, needs_ui_sync) – intelligent buffer reloading triggered only upon parameter changes</li>
       </ul>
-    </li>
-    </ul>
-    </p>
-    </details>
+   </details>
+  </li>
+</ul>
 
 <details>
   <summary><b>Camera & Optics System</b></summary>
