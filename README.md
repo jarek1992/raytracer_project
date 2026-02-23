@@ -48,15 +48,16 @@ A high-performance, physically-based path tracing engine built with C++20. This 
       </ul>
       <li><b>Astronomical Daylight System:</b></li>
       <p>This module simulates the sun's position and color based on real-world celestial mechanics. It offers two distinct modes of operation:</p>
-      <ul style="list-style-type: disc; margin-left: 20px;">
+      <ul>
         <li><b>Astronomical Mode:</b><i> Calculates the sun's position automatically using geographical and temporal data.</i></li>
         <ul style="list-style-type: disc; margin-left: 20px;">
           <li><b>Parameters:</b><i> Latitude (coordinates), Day of the Year (1-365), and Time of Day (0-24h).</i></li>
           <li><b>Celestial Math:</b><i> Implementation of solar declination, hour angle, azimuth, and elevation algorithms to ensure pinpoint accuracy.</i></li>
           <br>
         </ul>
-        <li><b>Manual Mode:</b><i> Provides direct control over the sun's direction vector for artistic lighting setups.</i></li>
-        <li><b>Auto-Sun Color:</b><i> Dynamically adjusts the solar spectrum based on the altitude angle. It transitions from warm, golden hues during sunrise/sunset to cool, crisp white at the zenith, driven by the vertical Y component of the sun vector.</i></li>
+      </ul>
+      <li><b>Manual Mode:</b><i> Provides direct control over the sun's direction vector for artistic lighting setups.</i></li>
+      <li><b>Auto-Sun Color:</b><i> Dynamically adjusts the solar spectrum based on the altitude angle. It transitions from warm, golden hues during sunrise/sunset to cool, crisp white at the zenith, driven by the vertical Y component of the sun vector.</i></li>
         <br>
       </ul>
       <li><b>Solid Background:</b></li>
