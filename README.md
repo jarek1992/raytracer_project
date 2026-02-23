@@ -2,21 +2,43 @@
 A high-performance, physically-based path tracing engine built with C++20. This project features a robust real-time diagnostic UI, sophisticated environmental lighting, and a professional post-processing pipeline. 
 
 ### 🛠 Core Technical Features
-#### Engine Specifications
-  * Language: C++20 (utilizing modern standards: std::clamp, std::shared_ptr, and advanced lambdas).
-  * Rendering Model: Progressive Path Tracing (real-time sample accumulation).
-  * Integration Method: Monte Carlo (stochastic sampling of light paths).
-  * Hardware Acceleration (CPU): OpenMP (parallelized computation across all available processor threads).
-  * Data Structures: BVH (Bounding Volume Hierarchy) – accelerating intersection tests from O(N) to O(logN).
-  * Memory Management: Dirty Flag System (needs_update, needs_ui_sync) – intelligent buffer reloading triggered only upon parameter changes.
+<details>
+  <summary><b>Engine Specifications</b></summary>
+    <ul>
+     <p><li><b>Language:</b> C++20 (utilizing modern standards: std::clamp, std::shared_ptr, and advanced lambdas)</li>
+     <li><b>Rendering Model:</b> Progressive Path Tracing (real-time sample accumulation)</li>
+     <li><b>Integration Method:</b> Monte Carlo (stochastic sampling of light paths)</li>
+     <li><b>Hardware Acceleration(CPU):</b> OpenMP (parallelized computation across all available processor threads)</li>
+     <li><b>Data Structures:</b> Progressive Path Tracing (real-time sample accumulation)</li>
+     <li><b>Memory Management:</b> Dirty Flag System (needs_update, needs_ui_sync) – intelligent buffer reloading triggered only upon parameter changes</li>
+    </ul>
+</li>
+</ul>
+</p>
+</details>
+
+<details>
+  <summary><b>Camera & Optics System</b></summary>
+  <br>
+| **Feature** | **Description** | **Key Parameters** |
+| :--- | :--- | :--- |
+| Thin Lens Model | *Simulation of a physical lens for realistic bokeh effects* | *Aperture (f-stop), Focus Distance* |
+| Dynamic FOV | *Full perspective control for architectural or macro shots* | *Vertical FOV (degrees)* |
+| Interactive Navigation | *Smooth 3D space movement and orientation* | *LookAt, LookFrom, Up Vector* |
+| Sample Jittering | *High-quality sub-pixel anti-aliasing* | *Stratified Sampling (per pixel)* |
+
+</details>
+
+#### Camera & Optics System
+  __Feature__ | __Description__ | __Key Parameters__
+  | :--- | :--- | :---
+  Thin Lens Model  | _Simulation of a physical lens for realistic bokeh effects_ | _Aperture (f-stop), Focus Distance_
+  Dynamic FOV  | _Full perspective control for architectural or macro shots_ | _Vertical FOV (degrees)_
+  Interactive Navigation  | _Smooth 3D space movement and orientation_ | _LookAt, LookFrom, Up Vector_
+  Sample Jittering  | _High-quality sub-pixel anti-aliasing_ | _Stratified Sampling (per pixel)_
 
 
 
-
-
-| Attempt | #1 | #2 | #3 | #4 | #5 | #6 | #7 | #8 | #9 | #10 | #11 | #12 |
-| :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
-| Seconds | 301 | 283 | 290 | 286 | 289 | 285 | 287 | 287 | 272 | 276 | 269 | 254 |
 
 ### 🕹 Interactive UI Overview
 
