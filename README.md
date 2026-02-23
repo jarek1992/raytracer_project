@@ -22,10 +22,12 @@ A high-performance, physically-based path tracing engine built with C++20. This 
     <ul>
       | <b>Feature<b> | <b>Description<b> | <b>Key Parameters<b> |
       | :--- | :--- | :--- |
-      | Thin Lens Model | *Simulation of a physical lens for realistic bokeh effects* | *Aperture (f-stop), Focus Distance* |
-      | Dynamic FOV | *Full perspective control for architectural or macro shots* | *Vertical FOV (degrees)* |
-      | Interactive Navigation | *Smooth 3D space movement and orientation* | *LookAt, LookFrom, Up Vector* |
-      | Sample Jittering | *High-quality sub-pixel anti-aliasing* | *Stratified Sampling (per pixel)* |
+      Thin Lens Model | *Simulation of a physical lens for realistic bokeh effects* | *Aperture (f-stop), Focus Distance*
+      Dynamic FOV | *Full perspective control for architectural or macro shots* | *Vertical FOV (degrees)*
+      Interactive Navigation | *Smooth 3D space movement and orientation* | *LookAt, LookFrom, Up Vector*
+      Sample Jittering | *High-quality sub-pixel anti-aliasing* | *Stratified Sampling (per pixel)*
+    </ul>
+  </details>
 
 </details>
 
