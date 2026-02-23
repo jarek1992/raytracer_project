@@ -2,7 +2,7 @@
 A high-performance, physically-based path tracing engine built with C++20. This project features a robust real-time diagnostic UI, sophisticated environmental lighting, and a professional post-processing pipeline. 
 
 ### 🛠 Core Technical Features
-#### Core Engine Specifications
+#### 🏗️ Core Engine Specifications
 
 * Language: C++20 (utilizing modern standards: std::clamp, std::shared_ptr, and advanced lambdas).
 * Rendering Model: Progressive Path Tracing (real-time sample accumulation).
