@@ -12,7 +12,7 @@ A high-performance, physically-based path tracing engine built with C++20. This 
 
 #### Camera & Optics System
 Feature | Description | Key Parameters
-| :--- | ---: | :---:
+| :---: | :---: | :---:
 Thin Lens Model  | _Simulation of a physical lens for realistic bokeh effects_ | _Aperture (f-stop), Focus Distance_
 Dynamic FOV  | _Full perspective control for architectural or macro shots_ | _Vertical FOV (degrees)_
 Interactive Navigation  | _Smooth 3D space movement and orientation_ | _LookAt, LookFrom, Up Vector_
