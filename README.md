@@ -28,6 +28,23 @@ A high-performance, physically-based path tracing engine built with C++20. This 
     <p>  * Memory Management: Dirty Flag System (needs_update, needs_ui_sync) – intelligent buffer reloading triggered only upon parameter changes.</p>
 </details>
 
+<details>
+  <summary><b>__Engine Specifications__</b></summary>
+  <p>
+    <ul>
+      <li><b>Language: C++20</b>
+        <ul style="list-style-type: circle; margin-left: 40px;">
+          <li>utilizing modern standards</li>
+          <li>std::clamp</li>
+          <li>std::shared_ptr</li>
+          <li>advanced lambdas</li>
+        </ul>
+      </li>
+      <li><b>Rendering Model:</b> Progressive Path Tracing</li>
+      <li>...reszta punktów...</li>
+    </ul>
+  </p>
+</details>
 
 
 ### 🕹 Interactive UI Overview
