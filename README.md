@@ -1,6 +1,9 @@
 ## 🚀 Interactive C++ Path Tracing Engine
 A high-performance, physically-based path tracing engine built with C++20. This project features a robust real-time diagnostic UI, sophisticated environmental lighting, and a professional post-processing pipeline. 
 
+🌟<b>Key Achievements:</b>
+- Silnik obsługuje Global Illumination (pośrednie odbicia światła) „out of the box” dzięki algorytmowi Path Tracingu. To brzmi dumniej niż samo „Monte Carlo”.
+
 ### 🛠 Core Technical Features
 <ul>
   <details>
@@ -116,13 +119,6 @@ A high-performance, physically-based path tracing engine built with C++20. This 
     </ul>
   </details>
 </ul>
-
-<ul style="list-style-type: none;">
-    <b>Key Achievements:</b>
-</ul>
-
-Key Achievements
-- Silnik obsługuje Global Illumination (pośrednie odbicia światła) „out of the box” dzięki algorytmowi Path Tracingu. To brzmi dumniej niż samo „Monte Carlo”.
 
 ### 🕹 Interactive UI Overview
 
