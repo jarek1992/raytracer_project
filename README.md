@@ -70,7 +70,17 @@ A high-performance, physically-based path tracing engine built with C++20. This 
 
 Material Library (PBR)
 
+| **Material** | **Physical Property** | **Key Features** |
+| :--- | :--- | :--- |
+| Lambertian | *Ideal Diffuse* | *Simulates matte surfaces with perfect light scattering.* |
+| Metal | *Specular Reflection* | *Includes a <b>Fuzz</b> parameter to control surface roughness/blurriness of reflections.* |
+| Dielectric | *Refraction* | *Handles transparent materials like glass or water with <b>IOR</b> (Index of Refraction) and Total Internal Reflection.* |
+| Emissive | *Light Emission* | *Turns any geometry into a physical light source (<b>Area Light</b>) with adjustable radiance.* |
+
 Cinematic Post-Process Pipeline
+
+Key Achievements
+- Silnik obsługuje Global Illumination (pośrednie odbicia światła) „out of the box” dzięki algorytmowi Path Tracingu. To brzmi dumniej niż samo „Monte Carlo”.
 
 ### 🕹 Interactive UI Overview
 
