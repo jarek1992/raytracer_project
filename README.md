@@ -76,7 +76,7 @@ A high-performance, physically-based path tracing engine built with C++20. This 
         
 | **Material** | **Physical Property** | **Key Features** |
 | :--- | :--- | :--- |
-| Lambertian | *Ideal Diffuse* | *Simulates matte surfaces with perfect light scattering.* |
+| Lambertian | *Ideal Diffuse* | *<p>Simulates matte surfaces with perfect light scattering.</p> <p>Supported(Albedo Maps)*</p> |
 | Metal | *Specular Reflection* | *Includes a <b>Fuzz</b> parameter to control surface roughness/blurriness of reflections.* |
 | Dielectric | *Refraction* | *Handles transparent materials like glass or water with <b>IOR</b> (Index of Refraction) and Total Internal Reflection.* |
 | Emissive | *Light Emission* | *Turns any geometry into a physical light source (<b>Area Light</b>) with adjustable radiance.* |
