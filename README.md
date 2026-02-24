@@ -92,7 +92,7 @@ The engine's material system is built on physical principles, ensuring that ever
 - <b>Texture-Material Integration:</b> The engine supports mapping textures to any geometric primitive. You can blend procedural or image-based textures with any PBR material (e.g., a textured metal or a patterned emissive surface).
 - <b>Bump Mapping (Beta):</b> Preliminary support for Bump Mapping is available for basic primitives, allowing for fine-grained surface detail without increasing polygon count.
 <ul>
-    - <li><i>Note: Currently, Bump Mapping is not supported for .obj triangle meshes; this is planned for a future update.</i></li>
+  <li><i>Note: Currently, Bump Mapping is not supported for .obj triangle meshes; this is planned for a future update.</i></li>
 </ul>
 
 </ul>
