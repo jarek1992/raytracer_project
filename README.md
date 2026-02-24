@@ -4,7 +4,7 @@ A high-performance, physically-based path tracing engine built with C++20. This 
 🌟<b>Key Achievements:</b>
 - Silnik obsługuje Global Illumination (pośrednie odbicia światła) „out of the box” dzięki algorytmowi Path Tracingu. To brzmi dumniej niż samo „Monte Carlo”.
 
-#### 🛠 Core Technical Features
+### 🛠 <b>Core Technical Features</b>
 <ul>
   <details>
     <summary><b>Engine Specifications</b></summary>
