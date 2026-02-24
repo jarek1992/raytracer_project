@@ -81,7 +81,7 @@ A high-performance, physically-based path tracing engine built with C++20. This 
 | Dielectric | *Refraction* | *<p>Handles transparent materials like glass or water with <b>IOR</b> (Index of Refraction) and Total Internal Reflection.</p> <p>Procedural Tinting*</p> |
 | Emissive | *Light Emission* | *<p>Turns any geometry into a physical light source (<b>Area Light</b>) with adjustable radiance.</p> <p>Supported (Light Maps)*</p> |
 
-<p><b>Technical Highlights & Material System</b>
+<p><li><b>Technical Highlights & Material System</b></li>
 <p>The engine's material system is built on physical principles, ensuring that every interaction between light and geometry behaves as it would in the real world.</p>
 <ul> 
   <li><b>Energy Conservation:</b><i> Every material is mathematically constrained to ensure reflected light never exceeds incoming energy, preserving physical consistency and preventing "unrealistic glowing" artifacts.</i></li>
@@ -89,7 +89,7 @@ A high-performance, physically-based path tracing engine built with C++20. This 
   <li><b>Ray-Material Interaction:</b><i> ach material implements a unique scattering function. Based on physical constants (like IOR or Fuzz), the engine decides whether a ray is absorbed, reflected, or refracted.</i></li>
   <br>
 </ul>
-  <p><b>Texture & Surface Mapping</b></p>
+  <p><li><b>Texture & Surface Mapping</b></li>
   <ul>
     <li><b>Texture-Material Integration:</b><i> The engine supports mapping textures to any geometric primitive. You can blend procedural or image-based textures with any PBR material(e.g., a textured metal or a patterned emissive surface).</i></li>
     <li><b>Bump Mapping(Beta):</b><i> Preliminary support for Bump Mapping is available for basic primitives, allowing for fine-grained surface detail without increasing polygon count.</i></li>
