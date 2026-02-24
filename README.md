@@ -179,16 +179,17 @@ The engine features a deeply integrated communication layer between the Dear ImG
 
 
 
-
-
-
-
-
 ### 🏗 Build & Requirements
 
 ### 📈 Performance & Optimization
 
 ### 📸 Gallery & Showcase
+
+### 🗺 Future Roadmap (Gdzie projekt zmierza).
+
+
+
+
 🖥 Interface in Action
 
     Tip: Tutaj wstaw GIF-a pokazującego jak przesuwasz slider godziny (słońce się porusza) lub jak zmieniasz tryby G-Buffera.
