@@ -118,9 +118,7 @@ A high-performance, physically-based path tracing engine built with C++20. This 
 </ul>
 
 <ul style="list-style-type: none;">
-  <li>
     <b>Key Achievements:</b>
-  </li>
 </ul>
 
 Key Achievements
