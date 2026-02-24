@@ -8,7 +8,7 @@ A high-performance, physically-based path tracing engine built with C++20. This 
 - <b>High-Performance Scalability:</b> <i>O(logN)</i> ray-traversal via custom <b>BVH structures</b> and 100% CPU utilization via <b>OpenMP</b>.
 - <b>Interactive Diagnostic Suite:</b> Real-time G-Buffer visualization (Normals, Albedo, Depth) and a live Luminance Histogram.
 - <b>Intelligent State Synchronization:</b> Decoupled UI and Render states using a <b>Dirty Flag system</b>, allowing for fluid parameter manipulation with smart accumulator management.
-
+<br>
 
 ### 🛠 Core Technical Features
 <ul>
