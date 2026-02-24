@@ -81,7 +81,7 @@ A high-performance, physically-based path tracing engine built with C++20. This 
 | Dielectric | *Refraction* | *<p>Handles transparent materials like glass or water with <b>IOR</b> (Index of Refraction) and Total Internal Reflection.</p> <p>Procedural Tinting*</p> |
 | Emissive | *Light Emission* | *<p>Turns any geometry into a physical light source (<b>Area Light</b>) with adjustable radiance.</p> <p>Supported (Light Maps)*</p> |
 
-<p><b>Technical Highlights & Material System</b></p>
+<b>Technical Highlights & Material System</b>
 <p>The engine's material system is built on physical principles, ensuring that every interaction between light and geometry behaves as it would in the real world.</p>
 <ul> 
   <li><b>Energy Conservation:</b><i> Every material is mathematically constrained to ensure reflected light never exceeds incoming energy, preserving physical consistency and preventing "unrealistic glowing" artifacts.</i></li>
