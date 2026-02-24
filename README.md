@@ -77,6 +77,20 @@ A high-performance, physically-based path tracing engine built with C++20. This 
 | Dielectric | *Refraction* | *Handles transparent materials like glass or water with <b>IOR</b> (Index of Refraction) and Total Internal Reflection.* |
 | Emissive | *Light Emission* | *Turns any geometry into a physical light source (<b>Area Light</b>) with adjustable radiance.* |
 
+<b>Technical Highlights & Material System</b>
+The engine's material system is built on physical principles, ensuring that every interaction between light and geometry behaves as it would in the real world.
+
+- <b>Energy Conservation:</b> Every material is mathematically constrained to ensure reflected light never exceeds incoming energy, preserving physical consistency and preventing "unrealistic glowing" artifacts.
+- <b>Stochastic Importance Sampling:</b> Reflection and refraction directions are calculated using Monte Carlo importance sampling. This enables the simulation of complex optical effects like soft reflections and frosted glass with high efficiency.
+- <b>Ray-Material Interaction:</b> Each material implements a unique scattering function. Based on physical constants (like IOR or Fuzz), the engine decides whether a ray is absorbed, reflected, or refracted.
+
+<b>Texture & Surface Mapping</b>
+- <b>Texture-Material Integration:</b> The engine supports mapping textures to any geometric primitive. You can blend procedural or image-based textures with any PBR material (e.g., a textured metal or a patterned emissive surface).
+- <b>Bump Mapping (Beta):</b> Preliminary support for Bump Mapping is available for basic primitives, allowing for fine-grained surface detail without increasing polygon count.
+    - <i>Note: Currently, Bump Mapping is not supported for .obj triangle meshes; this is planned for a future update.</i>
+
+
+
 <b>Cinematic Post-Process Pipeline</b>
 
 Key Achievements
