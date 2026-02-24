@@ -117,16 +117,6 @@ A high-performance, physically-based path tracing engine built with C++20. This 
   </details>
 </ul>
     
-
-
-<b>Cinematic Post-Process Pipeline</b>
-Beyond path tracing, the engine includes a high-performance post-processing stack to achieve a production-ready look.
-- <b>ACES Tone Mapping:</b> Implementation of the Academy Color Encoding System to transform High Dynamic Range (HDR) data into cinematic Low Dynamic Range (LDR) output.
-- <b>Bloom Engine:</b> A physically-inspired glow effect that extracts highlights and bleeds them into surrounding pixels using a configurable threshold and blur radius.
-- <b>Exposure Control:</b>
-  - <b>Auto-Exposure:</b> Dynamically calculates scene luminance to adjust brightness.
-  - <b>EV Compensation:</b> Photographic control allowing for ±5.0 stops of brightness adjustment.
-
 Key Achievements
 - Silnik obsługuje Global Illumination (pośrednie odbicia światła) „out of the box” dzięki algorytmowi Path Tracingu. To brzmi dumniej niż samo „Monte Carlo”.
 
