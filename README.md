@@ -123,7 +123,7 @@ A high-performance, physically-based path tracing engine built with C++20. This 
 </ul>
 <p><li><b>Texture & Surface Mapping</b></li>
 <ul>
-  <li><b>Texture-Material Integration:</b><i> The engine supports mapping textures to any geometric primitive. You can blend procedural or image-based textures with any PBR material(e.g., a textured metal or a patterned emissive surface).</i></li>
+  <p><li><b>Texture-Material Integration:</b><i> The engine supports mapping textures to any geometric primitive. You can blend procedural or image-based textures with any PBR material(e.g., a textured metal or a patterned emissive surface).</i></li>
   <li><b>Bump Mapping(Beta):</b><i> Preliminary support for Bump Mapping is available for basic primitives, allowing for fine-grained surface detail without increasing polygon count.</i></li>
     <ul>
       <li><i>Note: Currently, Bump Mapping is not supported for .obj triangle meshes; this is planned for a future update.</i></li>
