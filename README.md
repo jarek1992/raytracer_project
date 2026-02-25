@@ -22,8 +22,16 @@ A high-performance, physically-based path tracing engine built with C++20. This 
     <ul>
       <p><li><b>Language:</b> <b>C++20</b> (utilizing modern standards: <code>std::clamp</code>, <code>std::shared_ptr</code>, and advanced lambdas).</li>
         <li><b>Rendering Model:</b> Progressive Path Tracing (real-time sample accumulation).</li>
-        <li><b>Integration Method:</b> Monte Carlo (stochastic sampling of light paths).</li>
-        <li><b>Hardware Acceleration(CPU):</b> <b>OpenMP</b> (parallelized computation across all available processor threads).</li>
+        <li><b>Integration Method:</b> Monte Carlo (stochastic sampling of light paths).
+          
+    // ACES Tone Mapping Curve
+    inline color apply_aces(color x) {
+        const double a = 2.51;
+        const double b = 0.03;
+        // ... (rest of your clamp logic)
+    }
+  </li>
+  <li><b>Hardware Acceleration(CPU):</b> <b>OpenMP</b> (parallelized computation across all available processor threads).</li>
          
       #pragma omp parallel for schedule(dynamic)
       for (int j = 0; j < image_height; ++j) {
