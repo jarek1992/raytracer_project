@@ -164,12 +164,12 @@ A high-performance, physically-based path tracing engine built with C++20. This 
     <summary><b>Cinematic Post-Process Pipeline</b></summary>
     <p>Beyond path tracing, the engine includes a high-performance post-processing stack to achieve a production-ready look.</p>
     <ul>
-      <li><b>ACES Tone Mapping:</b><i> Implementation of the Academy Color Encoding System to transform High Dynamic Range (HDR) data into cinematic Low Dynamic Range (LDR) output.</i></li>
-      <li><b>Bloom Engine:</b><i> A physically-inspired glow effect that extracts highlights and bleeds them into surrounding pixels using a configurable threshold and blur radius.</i></li>
+      <li><b>ACES Tone Mapping:</b>Implementation of the Academy Color Encoding System to transform High Dynamic Range (HDR) data into cinematic Low Dynamic Range (LDR) output.</li>
+      <li><b>Bloom Engine:</b> A physically-inspired glow effect that extracts highlights and bleeds them into surrounding pixels using a configurable threshold and blur radius.</li>
       <li><b>Exposure Control:</b>
         <ul>
-          <li><b>Auto-Exposure:</b> Note: Currently, Bump Mapping is not supported for .obj triangle meshes; this is planned for a future update.</li>
-          <li><b>EV Compensation:</b>Photographic control allowing for ±5.0 stops of brightness adjustment.</li>
+          <li><b>Auto-Exposure:</b><i> Note: Dynamically calculates scene luminance to adjust brightness.</li></i>
+          <li><b>EV Compensation:</b><i> Photographic control allowing for ±5.0 stops of brightness adjustment.</li></i>
         </ul>
       </li>
     </ul>
