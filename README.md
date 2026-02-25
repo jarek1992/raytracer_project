@@ -178,7 +178,6 @@ A high-performance, physically-based path tracing engine built with C++20. This 
     <li><b>Luminance Histogram:</b><i> Monitor brightness distribution to prevent highlight clipping.</i></li>
     <li><b>Debug Channels:</b><i> Toggle <b>R, G, B,</b> and <b>Luminance</b> views for precise noise analysis. </i></li>
     <ul>
-      
       <p><i>Technical Detail: Controlled via <code>debug_mode</code> flags in the post-processing shader.</i></p>
     </ul>
   </ul>
