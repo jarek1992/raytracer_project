@@ -191,9 +191,7 @@ A high-performance, physically-based path tracing engine built with C++20. This 
    <summary><b>Diagnostic G-Buffer Visualizer</b></summary>
     <p>Real-time inspection of internal engine passes to verify scene integrity.</p>
     <ul>
-    <br>
-    <code> Grafika: Tu idealnie pasuje tzw. "Grid View" (jeden screen podzielony na 4 części: Final Render, Normals, Albedo, Depth).</code>
-    <br>    
+      
 | **Albedo Pass** | **Normal Pass** | **Z-Depth Pass** |
 | :--- | :--- | :--- |
 | *Raw material colors* | *Surface orientation* | *Spatial distance* |
