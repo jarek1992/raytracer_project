@@ -196,6 +196,7 @@ A high-performance, physically-based path tracing engine built with C++20. This 
 | :--- | :--- | :--- |
 | *Raw material colors* | *Surface orientation* | *Spatial distance* |
 
+<p><code>IMAGE: obrazek z rgb/albedo/normals/z-depth</code></p>
   </ul>
   </details>
   </ul>
