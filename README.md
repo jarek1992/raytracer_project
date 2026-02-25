@@ -62,7 +62,7 @@ A high-performance, physically-based path tracing engine built with C++20. This 
 | Sample Jittering | *High-quality sub-pixel anti-aliasing* | *Stratified Sampling (per pixel)* |
 
 <br>
-<i>IMAGE: Ray-Material Interaction: Demonstrating how surface roughness (Fuzz) affects the scattering of light rays, resulting in sharp reflections or soft, "frosted" appearances.</i>
+<code>IMAGE: Ray-Material Interaction: Demonstrating how surface roughness (Fuzz) affects the scattering of light rays, resulting in sharp reflections or soft, "frosted" appearances.</code>
 <br>
 
 
