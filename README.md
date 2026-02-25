@@ -44,17 +44,17 @@ A high-performance, physically-based path tracing engine built with C++20. This 
 <ul style="list-style-type: none;">
   <details>
     <summary><b>Environment & Lighting Systems</b></summary>
-    <ul>
-      <p>The engine provides a versatile lighting suite, allowing users to switch between physical sky simulations, image-based lighting, and studio backgrounds.</p>
-      <ul> 
-        <p><li><b>HDRI Maps(IBL):</b></li>
-        <p>For photorealistic reflections and complex ambient lighting, the engine supports industry-standard High Dynamic Range images.</p>
-        <ul>
-          <li><b>Technology:</b><i> Native support for 32-bit .hdr files (IBL) providing a massive range of luminance data.</i></li>
-          <li><b>3-Axis Transformation:</b><i> Full spherical orientation control using Yaw, Pitch, and Roll to align the environment with your scene geometry perfectly.</i></li>
-          <li><b>Asset Management:</b><i> Integrated file observer allows for dynamic refreshing of the HDRI library. Add new maps to the directory and select them in-app without a restart.</i></li>
-          <br>
-        </ul>
+    <br>
+    <p>The engine provides a versatile lighting suite, allowing users to switch between physical sky simulations, image-based lighting, and studio backgrounds.</p>
+    <ul> 
+      <p><li><b>HDRI Maps(IBL):</b></li>
+      <p>For photorealistic reflections and complex ambient lighting, the engine supports industry-standard High Dynamic Range images.</p>
+      <ul>
+        <li><b>Technology:</b><i> Native support for 32-bit .hdr files (IBL) providing a massive range of luminance data.</i></li>
+        <li><b>3-Axis Transformation:</b><i> Full spherical orientation control using Yaw, Pitch, and Roll to align the environment with your scene geometry perfectly.</i></li>
+        <li><b>Asset Management:</b><i> Integrated file observer allows for dynamic refreshing of the HDRI library. Add new maps to the directory and select them in-app without a restart.</i></li>
+        <br>
+      </ul>
       <li><b>Astronomical Daylight System:</b></li>
       <p>This module simulates the sun's position and color based on real-world celestial mechanics. It offers two distinct modes of operation:</p>
       <ul>
