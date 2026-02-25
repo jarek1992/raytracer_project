@@ -28,8 +28,8 @@ A high-performance, physically-based path tracing engine built with C++20. This 
         <ul>
           <br>
           <code> Left: A complex mesh partitioned into AABBs (Axis-Aligned Bounding Boxes). Right: The resulting tree structure used for O(logN) traversal.</code>
-          <br>
         </ul>
+      <br>
         <li><b>Memory Management:</b> Dirty Flag System (<code>needs_update</code>, <code>needs_ui_sync</code>) – intelligent buffer reloading triggered only upon parameter changes.</li>
     </ul>
   </details>
