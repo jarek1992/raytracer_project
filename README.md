@@ -126,18 +126,7 @@ A high-performance, physically-based path tracing engine built with C++20. This 
   </details>
 </ul>
 
-
-
-
-
-
-
-
-
-
-
 ### 🕹 Interactive UI Overview
-
 
 <ul style="list-style-type: none;">
   <details>
@@ -153,20 +142,27 @@ A high-performance, physically-based path tracing engine built with C++20. This 
   </details>
   </ul>
 
-  
-
-2.Real-Time Analytics & Control
-Professional tools for lighting and exposure management.
-
+<ul style="list-style-type: none;">
+  <details>
+    <summary><b>Real-Time Analytics & Control</b></summary>
+    <p>Professional tools for lighting and exposure management.</p>
+    
     [!TIP]
     Live Histogram & Channel Isolation
     Tutaj idealnie pasuje GIF pokazujący, jak zmieniasz ekspozycję suwakiem, a wykres histogramu „pływa” w czasie rzeczywistym.
-
-  - <b>Luminance Histogram:</b> Monitor brightness distribution to prevent highlight clipping.
-  - <b>Debug Channels:</b> Toggle <b>R, G, B,</b> and <>Luminance</b> views for precise noise analysis.
+    
+  <ul>
+    <li><b>Luminance Histogram:</b><i> Monitor brightness distribution to prevent highlight clipping.</i></li>
+    <li><b>Debug Channels:</b><i> Toggle <b>R, G, B,</b> and <b>Luminance</b> views for precise noise analysis. </i></li>
     <ul>
-      <i>Technical Detail: Controlled via debug_mode flags in the post-processing shader.</i>
+    <p><i>Technical Detail: Controlled via <code>debug_mode</code> flags in the post-processing shader.</i></p>
     </ul>
+  </ul>
+  </details>
+  </ul>
+    
+    
+ 
 
 3.Fluid Interaction System
 The engine features a deeply integrated communication layer between the Dear ImGui interface and the rendering core, focusing on a seamless user experience.
