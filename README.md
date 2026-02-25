@@ -85,10 +85,10 @@ A high-performance, physically-based path tracing engine built with C++20. This 
         
 | **Material** | **Physical Property** | **Key Features** |
 | :--- | :--- | :--- |
-| Lambertian | *Ideal Diffuse* | *<p>Simulates matte surfaces with perfect light scattering.</p><br>Supported(Albedo Maps)*</br> |
-| Metal | *Specular Reflection* | *Includes a <b>Fuzz</b> parameter to control surface roughness/blurriness of reflections.<br>Supported (Fuzz/Color Maps)* |
-| Dielectric | *Refraction* | *<p>Handles transparent materials like glass or water with <b>IOR</b> (Index of Refraction) and Total Internal Reflection.</p><p>Procedural Tinting*</p> |
-| Emissive | *Light Emission* | *<p>Turns any geometry into a physical light source (<b>Area Light</b>) with adjustable radiance.</p><p>Supported (Light Maps)*</p> |
+| Lambertian | *Ideal Diffuse* | *Simulates matte surfaces with perfect light scattering.<br><b>Supported(Albedo Maps)</b>* |
+| Metal | *Specular Reflection* | *Includes a <b>Fuzz</b> parameter to control surface roughness/blurriness of reflections.<br><b>Supported (Fuzz/Color Maps)</b>* |
+| Dielectric | *Refraction* | *Handles transparent materials like glass or water with <b>IOR</b> (Index of Refraction) and Total Internal Reflection.<br><b>Procedural Tinting</b>* |
+| Emissive | *Light Emission* | *Turns any geometry into a physical light source (<b>Area Light</b>) with adjustable radiance.<br><b>Supported (Light Maps)</b>* |
 
 <p><li><b>Technical Highlights & Material System</b></li>
 <p>The engine's material system is built on physical principles, ensuring that every interaction between light and geometry behaves as it would in the real world.</p>
