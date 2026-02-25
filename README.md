@@ -30,8 +30,10 @@ A high-performance, physically-based path tracing engine built with C++20. This 
           <code> IMAGE: Left: A complex mesh partitioned into AABBs (Axis-Aligned Bounding Boxes). Right: The resulting tree structure used for O(logN) traversal.</code>
         </ul>
       <br>
-      <li><b>Memory Management:</b> Dirty Flag System (<code>needs_update</code>, <code>needs_ui_sync</code>) – intelligent buffer reloading triggered only upon parameter changes.</li>
+      <li>
+        <b>Memory Management:</b> Dirty Flag System (<code>needs_update</code>, <code>needs_ui_sync</code>) – intelligent buffer reloading triggered only upon parameter changes.
 
+      ```cpp
       // Example of smart state synchronization
       if (ImGui::SliderFloat("Aperture", &cam.aperture, 0.0f, 0.5f)) {
           my_post.needs_update = true; // Trigger post-process recalculation
@@ -40,6 +42,7 @@ A high-performance, physically-based path tracing engine built with C++20. This 
       if (ImGui::IsItemDeactivatedAfterEdit()) {
           reset_accumulator(); // Only reset samples when user finishes interaction
       }
+  </li>
       
 <br>
 </ul>
