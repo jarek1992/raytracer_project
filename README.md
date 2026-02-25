@@ -137,6 +137,23 @@ A high-performance, physically-based path tracing engine built with C++20. This 
 
 ### 🕹 Interactive UI Overview
 
+
+<ul style="list-style-type: none;">
+  <details>
+   <summary><b>Environment & Lighting Systems</b></summary>
+    <p>Real-time inspection of internal engine passes to verify scene integrity.</p>
+    <ul>
+        
+| **Albedo Pass** | **Normal Pass** | **Z-Depth Pass** |
+| :--- | :--- | :--- |
+| *Raw material colors* | *Surface orientation* | *Spatial distance* |
+
+  </ul>
+  </details>
+  </ul>
+
+
+
 1.Diagnostic G-Buffer Visualizer
 Real-time inspection of internal engine passes to verify scene integrity.
 | **Albedo Pass** | **Normal Pass** | **Z-Depth Pass** |
