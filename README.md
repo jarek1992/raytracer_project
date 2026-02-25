@@ -173,8 +173,8 @@ A high-performance, physically-based path tracing engine built with C++20. This 
       <li><b>Non-Blocking Real-Time Updates:</b><i> Key parameters—including <b>Sun Position, Light Intensity,</b> and <b>Focus Distance</b>—provide immediate visual feedback, allowing for rapid look-dev and lighting adjustments.</i></li>
       <li><b>Architectural Console & Logging:</b><i> A custom-built engine console provides categorized, filtered feedback.</i></li>
       <ul>
-        <p><b>Smart Categorization:</b><i> Logs are tagged as <code>[System]</code>, <code>[Config]</code>, or <code>[Debug]</code> for easy navigation.</i></p>
-        <p><b>Anti-Spam Logic:</b><i> Prevents log flooding during rapid parameter changes, ensuring that critical engine messages remain visible and the UI stays responsive.</i></p>
+        <li><b>Smart Categorization:</b><i> Logs are tagged as <code>[System]</code>, <code>[Config]</code>, or <code>[Debug]</code> for easy navigation.</i></li>
+        <li><b>Anti-Spam Logic:</b><i> Prevents log flooding during rapid parameter changes, ensuring that critical engine messages remain visible and the UI stays responsive.</i></li>
     </ul>
   </ul>
   </details>
