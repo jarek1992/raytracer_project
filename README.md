@@ -211,8 +211,8 @@ A high-performance, physically-based path tracing engine built with C++20. This 
     Tutaj idealnie pasuje GIF pokazujący, jak zmieniasz ekspozycję suwakiem, a wykres histogramu „pływa” w czasie rzeczywistym.
     
   <ul>
-    <li><b>Luminance Histogram:</b><i> Monitor brightness distribution to prevent highlight clipping.</i></li>
-    <li><b>Debug Channels:</b><i> Toggle <b>R, G, B,</b> and <b>Luminance</b> views for precise noise analysis. </i></li>
+    <li><b>Luminance Histogram:</b> Monitor brightness distribution to prevent highlight clipping.</li>
+    <li><b>Debug Channels:</b> Toggle <b>R, G, B,</b> and <b>Luminance</b> views for precise noise analysis.</li>
     <ul>
       <p><i>Technical Detail: Controlled via <code>debug_mode</code> flags in the post-processing shader.</i></p>
     </ul>
@@ -226,10 +226,11 @@ A high-performance, physically-based path tracing engine built with C++20. This 
   <details>
     <summary><b>Fluid Interaction System</b></summary>
     <p>The engine features a deeply integrated communication layer between the Dear ImGui interface and the rendering core, focusing on a seamless user experience.</p>
+    <p><code>IMAGE: G-Buffer GIF, jak przełączasz się między Normals a Final Render</code></p>
     <ul>
-      <li><b>Smart Accumulator Sync:</b><i> To prevent constant frame flickering during UI interaction, the path-tracing accumulator only resets when a change is "finalized" (utilizing <code>IsItemDeactivatedAfterEdit</code>). This allows you to explore parameters smoothly, with the engine only committing to a full re-render once you release a slider.</i></li>
-      <li><b>Non-Blocking Real-Time Updates:</b><i> Key parameters—including <b>Sun Position, Light Intensity,</b> and <b>Focus Distance</b>—provide immediate visual feedback, allowing for rapid look-dev and lighting adjustments.</i></li>
-      <li><b>Architectural Console & Logging:</b><i> A custom-built engine console provides categorized, filtered feedback.</i></li>
+      <li><b>Smart Accumulator Sync:</b> To prevent constant frame flickering during UI interaction, the path-tracing accumulator only resets when a change is "finalized" (utilizing <code>IsItemDeactivatedAfterEdit</code>). This allows you to explore parameters smoothly, with the engine only committing to a full re-render once you release a slider.</li>
+      <li><b>Non-Blocking Real-Time Updates:</b> Key parameters—including <b>Sun Position, Light Intensity,</b> and <b>Focus Distance</b>—provide immediate visual feedback, allowing for rapid look-dev and lighting adjustments.</li>
+      <li><b>Architectural Console & Logging:</b> A custom-built engine console provides categorized, filtered feedback.</li>
       <ul>
         <li><b>Smart Categorization:</b><i> Logs are tagged as <code>[System]</code>, <code>[Config]</code>, or <code>[Debug]</code> for easy navigation.</i></li>
         <li><b>Anti-Spam Logic:</b><i> Prevents log flooding during rapid parameter changes, ensuring that critical engine messages remain visible and the UI stays responsive.</i></li>
