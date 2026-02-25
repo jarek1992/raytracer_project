@@ -119,7 +119,7 @@ A high-performance, physically-based path tracing engine built with C++20. This 
 <ul> 
   <li><b>Energy Conservation:</b><i> Every material is mathematically constrained to ensure reflected light never exceeds incoming energy, preserving physical consistency and preventing "unrealistic glowing" artifacts.</i></li>
   <li><b>Stochastic Importance Sampling:</b><i> Reflection and refraction directions are calculated using Monte Carlo importance sampling. This enables the simulation of complex optical effects like soft reflections and frosted glass with high efficiency.</i></li>
-  <li><b>Ray-Material Interaction:</b><i> ach material implements a unique scattering function. Based on physical constants (like IOR or Fuzz), the engine decides whether a ray is absorbed, reflected, or refracted.</i></li>
+  <li><b>Ray-Material Interaction:</b><i> Each material implements a unique scattering function. Based on physical constants (like IOR or Fuzz), the engine decides whether a ray is absorbed, reflected, or refracted.</i></li>
   <br>
 </ul>
   <p><li><b>Texture & Surface Mapping</b></li>
