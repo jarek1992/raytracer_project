@@ -27,10 +27,23 @@ A high-performance, physically-based path tracing engine built with C++20. This 
         <li><b>Data Structures:</b> <b>BVH(Bounding Volume Hierarchy)</b> – optimizes ray-object intersection tests from <i>O(N)</i> to <i>O(logN)</i>.</li>
         <ul>
           <br>
-          <code> Left: A complex mesh partitioned into AABBs (Axis-Aligned Bounding Boxes). Right: The resulting tree structure used for O(logN) traversal.</code>
+          <code> IMAGE: Left: A complex mesh partitioned into AABBs (Axis-Aligned Bounding Boxes). Right: The resulting tree structure used for O(logN) traversal.</code>
         </ul>
       <br>
         <li><b>Memory Management:</b> Dirty Flag System (<code>needs_update</code>, <code>needs_ui_sync</code>) – intelligent buffer reloading triggered only upon parameter changes.</li>
+      <ul>
+        <br>
+        <code>// Example of smart state synchronization
+          if (ImGui::SliderFloat("Aperture", &cam.aperture, 0.0f, 0.5f)) {
+    my_post.needs_update = true; // Trigger post-process recalculation
+}
+
+if (ImGui::IsItemDeactivatedAfterEdit()) {
+    reset_accumulator(); // Only reset samples when user finishes interaction
+}
+</code>
+<br>
+</ul>
     </ul>
   </details>
 </ul>
