@@ -181,30 +181,6 @@ A high-performance, physically-based path tracing engine built with C++20. This 
   </ul>
  
 
-
-
-3.Fluid Interaction System
-The engine features a deeply integrated communication layer between the Dear ImGui interface and the rendering core, focusing on a seamless user experience.
-- <b>Smart Accumulator Sync:</b> To prevent constant frame flickering during UI interaction, the path-tracing accumulator only resets when a change is "finalized" (utilizing <code>IsItemDeactivatedAfterEdit</code>). This allows you to explore parameters smoothly, with the engine only committing to a full re-render once you release a slider.
-- <b>Non-Blocking Real-Time Updates:</b> Key parameters—including <b>Sun Position, Light Intensity,</b> and <b>Focus Distance</b>—provide immediate visual feedback, allowing for rapid look-dev and lighting adjustments.
-- <b>Architectural Console & Logging:</b> A custom-built engine console provides categorized, filtered feedback.
-  - <b>Smart Categorization:</b> Logs are tagged as <code>[System]</code>, <code>[Config]</code>, or <code>[Debug]</code> for easy navigation.
-  - <b>Anti-Spam Logic:</b> Prevents log flooding during rapid parameter changes, ensuring that critical engine messages remain visible and the UI stays responsive.
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 ### 🏗 Build & Requirements
 
 ### 📈 Performance & Optimization
