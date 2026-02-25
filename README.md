@@ -173,8 +173,10 @@ A high-performance, physically-based path tracing engine built with C++20. This 
       <ul>
         <li><b>Auto-Exposure:</b><i> Note: Dynamically calculates scene luminance to adjust brightness.</li></i>
           <ul>
+            <br>
            <code>IMAGE: HISTOGRAM LUMINANCE - mały zrzut ekranu samej konsoli/histogramu obok opisu Auto-Exposure. To pokaże, że Twoja "automatyka" opiera się na rzeczywistych danych statystycznych obrazu.</code>
           </ul>
+          <br>
         <li><b>EV Compensation:</b><i> Photographic control allowing for ±5.0 stops of brightness adjustment.</li></i>
       </ul>
         </li>
