@@ -31,17 +31,18 @@ A high-performance, physically-based path tracing engine built with C++20. This 
         </ul>
       <br>
         <li><b>Memory Management:</b> Dirty Flag System (<code>needs_update</code>, <code>needs_ui_sync</code>) – intelligent buffer reloading triggered only upon parameter changes.</li>
-      <ul>
-        <br>
-        <code>// Example of smart state synchronization
-          if (ImGui::SliderFloat("Aperture", &cam.aperture, 0.0f, 0.5f)) {
-    my_post.needs_update = true; // Trigger post-process recalculation
-}
+      <br><br>
 
-if (ImGui::IsItemDeactivatedAfterEdit()) {
-    reset_accumulator(); // Only reset samples when user finishes interaction
-}
-</code>
+      ```cpp
+      // Example of smart state synchronization
+      if (ImGui::SliderFloat("Aperture", &cam.aperture, 0.0f, 0.5f)) {
+          my_post.needs_update = true; // Trigger post-process recalculation
+      }
+      
+      if (ImGui::IsItemDeactivatedAfterEdit()) {
+          reset_accumulator(); // Only reset samples when user finishes interaction
+      }
+      
 <br>
 </ul>
     </ul>
