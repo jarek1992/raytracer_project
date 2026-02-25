@@ -71,7 +71,6 @@ A high-performance, physically-based path tracing engine built with C++20. This 
 <code>IMAGE: Ray-Material Interaction: Demonstrating how surface roughness (Fuzz) affects the scattering of light rays, resulting in sharp reflections or soft, "frosted" appearances.</code>
 <br>
 
-
   </ul>
   </details>
   </ul>
@@ -152,6 +151,17 @@ A high-performance, physically-based path tracing engine built with C++20. This 
     <p>Beyond path tracing, the engine includes a high-performance post-processing stack to achieve a production-ready look.</p>
     <ul>
       <li><b>ACES Tone Mapping:</b><i> Implementation of the Academy Color Encoding System to transform High Dynamic Range (HDR) data into cinematic Low Dynamic Range (LDR) output.</i></li>
+      <ul>
+     
+    ```cpp
+    // ACES Tone Mapping Curve
+    inline color apply_aces(color x) {
+        const double a = 2.51;
+        const double b = 0.03;
+        // ... (rest of your clamp logic)
+    }
+      
+  </ul>
       <li><b>Bloom Engine:</b><i> A physically-inspired glow effect that extracts highlights and bleeds them into surrounding pixels using a configurable threshold and blur radius.</i></li>
       <li><b>Exposure Control:</b>
         <ul>
