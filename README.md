@@ -120,12 +120,10 @@ A high-performance, physically-based path tracing engine built with C++20. This 
   <li><b>Energy Conservation:</b><i> Every material is mathematically constrained to ensure reflected light never exceeds incoming energy, preserving physical consistency and preventing "unrealistic glowing" artifacts.</i></li>
   <li><b>Stochastic Importance Sampling:</b><i> Reflection and refraction directions are calculated using Monte Carlo importance sampling. This enables the simulation of complex optical effects like soft reflections and frosted glass with high efficiency.</i></li>
   <li><b>Ray-Material Interaction:</b><i> Each material implements a unique scattering function. Based on physical constants (like IOR or Fuzz), the engine decides whether a ray is absorbed, reflected, or refracted.</i></li>
-  <br>
 </ul>
-  <p><li><b>Texture & Surface Mapping</b></li>
-  <br>
-  </ul>
-  <li><b>Texture-Material Integration:</b><i> The engine supports mapping textures to any geometric primitive. You can blend procedural or image-based textures with any PBR material(e.g., a textured metal or a patterned emissive surface).</i></li>
+<p><li><b>Texture & Surface Mapping</b></li>
+<ul>
+    <li><b>Texture-Material Integration:</b><i> The engine supports mapping textures to any geometric primitive. You can blend procedural or image-based textures with any PBR material(e.g., a textured metal or a patterned emissive surface).</i></li>
     <li><b>Bump Mapping(Beta):</b><i> Preliminary support for Bump Mapping is available for basic primitives, allowing for fine-grained surface detail without increasing polygon count.</i></li>
     <ul>
       <li><i>Note: Currently, Bump Mapping is not supported for .obj triangle meshes; this is planned for a future update.</i></li>
