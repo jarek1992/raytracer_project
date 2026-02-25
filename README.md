@@ -24,11 +24,17 @@ A high-performance, physically-based path tracing engine built with C++20. This 
         <li><b>Rendering Model:</b> Progressive Path Tracing (real-time sample accumulation).</li>
         <li><b>Integration Method:</b> Monte Carlo (stochastic sampling of light paths).
           
-    // ACES Tone Mapping Curve
+    // ACES Tone Mapping to map HDR radiance to [0.0, 1.0] display range
     inline color apply_aces(color x) {
         const double a = 2.51;
         const double b = 0.03;
-        // ... (rest of your clamp logic)
+        const double c = 2.43;
+        const double d = 0.59;
+        const double e = 0.14;
+        return color(
+            std::clamp((x.x() * (a * x.x() + b)) / (x.x() * (c * x.x() + d) + e), 0.0, 1.0),
+            // ... applied to all channels
+        );
     }
   </li>
   <li><b>Hardware Acceleration(CPU):</b> <b>OpenMP</b> (parallelized computation across all available processor threads).</li>
