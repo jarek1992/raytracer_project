@@ -217,11 +217,11 @@ A high-performance, physically-based path tracing engine built with C++20. This 
     <p><code>IMAGE: G-Buffer GIF, jak przełączasz się między Normals a Final Render</code></p>
     <ul>
       <li><b>Smart Accumulator Sync:</b> To prevent constant frame flickering during UI interaction, the path-tracing accumulator only resets when a change is "finalized" (utilizing <code>IsItemDeactivatedAfterEdit</code>). This allows you to explore parameters smoothly, with the engine only committing to a full re-render once you release a slider.</li>
-      <li><b>Non-Blocking Real-Time Updates:</b> Key parameters—including <b>Sun Position, Light Intensity,</b> and <b>Focus Distance</b>—provide immediate visual feedback, allowing for rapid look-dev and lighting adjustments.</li>
-      <li><b>Architectural Console & Logging:</b> A custom-built engine console provides categorized, filtered feedback.</li>
+      <li><b>Non-Blocking Real-Time Updates:</b> Key parameters—including <b>Sun Position, Light Intensity,</b> and <b>Focus Distance</b>—provide immediate visual feedback, allowing for rapid look-dev and lighting adjustments without breaking the creative flow.</li>
+      <li><b>Architectural Console & Logging:</b> A custom-built engine console provides categorized, filtered feedback directly within the viewport.</li>
       <ul>
-        <li><b>Smart Categorization:</b><i> Logs are tagged as <code>[System]</code>, <code>[Config]</code>, or <code>[Debug]</code> for easy navigation.</i></li>
-        <li><b>Anti-Spam Logic:</b><i> Prevents log flooding during rapid parameter changes, ensuring that critical engine messages remain visible and the UI stays responsive.</i></li>
+        <li><b>Smart Categorization:</b><i> Logs are tagged as <code>[System]</code>, <code>[Config]</code>, or <code>[Debug]</code> for easy navigation and troubleshooting.</i></li>
+        <li><b>Anti-Spam Logic:</b><i> Prevents log flooding during rapid parameter changes, ensuring that critical engine messages remain visible and the UI stays responsive even under heavy interaction.</i></li>
     </ul>
   </ul>
   </details>
