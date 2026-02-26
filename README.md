@@ -207,9 +207,7 @@ A high-performance, physically-based path tracing engine built with C++20. This 
   </ul>
   </details>
   </ul>
-
-
-    
+   
 <ul style="list-style-type: none;">
   <details>
     <summary><b>Fluid Interaction System</b></summary>
@@ -256,6 +254,15 @@ A high-performance, physically-based path tracing engine built with C++20. This 
       <p><li><b>OS:</b> Windows 10/11, macOS (Intel/Apple Silicon), or Linux.</li>
       <li><b>CPU:</b> Multi-core processor with OpenMP support (essential for real-time performance).</li>
       <li><b>GPU:</b> OpenGL 3.3 compatible (used for hardware-accelerated frame buffer display).</li>
+      </p>
+    </ul>
+
+<ul style="list-style-type: none;">
+  <details>
+    <summary><b>Software Prerequisites</b></summary>
+    <ul>
+      <p><li><b>Compiler:</b> A C++20 compliant compiler (e.g., <b>MSVC 2019 v16.8+</b>, <b>GCC 10+</b>, or <b>Clang 10+</b>).</li>
+      <li><b>Build System:</b> <b>CMake 3.16+</b> (or a configured IDE project like Visual Studio).</li>
       </p>
     </ul>
     
