@@ -225,6 +225,11 @@ A high-performance, physically-based path tracing engine built with C++20. This 
   </details>
   </ul>
 
+
+
+
+
+
 ### 🏗 Build & Requirements
 <ul>
   This project is built using modern C++ standards and relies on a few industry-standard libraries for window management and UI. Designed to be cross-platform, supporting Windows, Linux and macOS. It utilizes CMake for automated dependency management.
@@ -238,6 +243,8 @@ A high-performance, physically-based path tracing engine built with C++20. This 
       <li><b>GPU:</b> OpenGL 3.3 compatible (used for hardware-accelerated frame buffer display).</li>
       </p>
     </ul>
+  </details>
+</ul>
 
 <ul style="list-style-type: none;">
   <details>
@@ -247,6 +254,14 @@ A high-performance, physically-based path tracing engine built with C++20. This 
       <li><b>Build System:</b> <b>CMake 3.16+</b> (or a configured IDE project like Visual Studio).</li>
       </p>
     </ul>
+  </details>
+</ul>
+
+
+
+
+
+
     
 ### 📈 Performance & Optimization
 
