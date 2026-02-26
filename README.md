@@ -77,9 +77,7 @@ A high-performance, physically-based path tracing engine built with C++20. This 
 | Interactive Navigation | *Smooth 3D space movement and orientation* | *LookAt, LookFrom, Up Vector* |
 | Sample Jittering | *High-quality sub-pixel anti-aliasing* | *Stratified Sampling (per pixel)* |
 
-<br>
-<code>IMAGE: Ray-Material Interaction: Demonstrating how surface roughness (Fuzz) affects the scattering of light rays, resulting in sharp reflections or soft, "frosted" appearances.</code>
-<br>
+<p><code>IMAGE: Ray-Material Interaction: Demonstrating how surface roughness (Fuzz) affects the scattering of light rays, resulting in sharp reflections or soft, "frosted" appearances.</code></p>
 
   </ul>
   </details>
@@ -134,9 +132,7 @@ A high-performance, physically-based path tracing engine built with C++20. This 
 | Dielectric | *Refraction* | *Handles transparent materials like glass or water with <b>IOR</b> (Index of Refraction) and Total Internal Reflection.<br><b>Procedural Tinting</b>* |
 | Emissive | *Light Emission* | *Turns any geometry into a physical light source (<b>Area Light</b>) with adjustable radiance.<br><b>Supported (Light Maps)</b>* |
 
-<br>
-<code>IMAGE: kule obok siebie z roznymi materialami - diffused lambertian, bumped metal, glass(dielectric), emissive.</code> 
-<br>
+<p><code>IMAGE: kule obok siebie z roznymi materialami - diffused lambertian, bumped metal, glass(dielectric), emissive.</code></p>
 
 <p><li><b>Technical Highlights & Material System</b></li>
 <p>The engine's material system is built on physical principles, ensuring that every interaction between light and geometry behaves as it would in the real world.</p>
@@ -148,7 +144,7 @@ A high-performance, physically-based path tracing engine built with C++20. This 
 <p><li><b>Texture & Surface Mapping</b></li>
 <ul>
   <p><li><b>Texture-Material Integration:</b><i> The engine supports mapping textures to any geometric primitive. You can blend procedural or image-based textures with any PBR material(e.g., a textured metal or a patterned emissive surface).</i></li>
-  <li><b>Bump Mapping(Beta):</b><i> Preliminary support for Bump Mapping is available for basic primitives, allowing for fine-grained surface detail without increasing polygon count.</i></li>
+  <li><b>Bump Mapping(Beta):</b><i> Preliminary support for Bump Mapping is available for basic primitives(cube and sphere), allowing for fine-grained surface detail without increasing polygon count.</i></li>
   <ul style="list-style-type: none;">
     <p><i>Note: Currently, Bump Mapping is not supported for .obj triangle meshes; this is planned for a future update.</i></p>
 </ul>
