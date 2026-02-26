@@ -229,12 +229,12 @@ A high-performance, physically-based path tracing engine built with C++20. This 
  
 
 ### 🏗 Build & Requirements
-This project is built using modern C++ standards and relies on a few industry-standard libraries for window management and UI. Designed to be cross-platform, supporting Windows, Linux and macOS. It utilizes CMake for automated dependency management.
+<p>This project is built using modern C++ standards and relies on a few industry-standard libraries for window management and UI. Designed to be cross-platform, supporting Windows, Linux and macOS. It utilizes CMake for automated dependency management.</p>
 <ul>
   <details>
     <summary><b>Hardware & System Requirements</b></summary>
     <ul>
-      <li><b>OS:</b> Windows 10/11, macOS (Intel/Apple Silicon), or Linux.</li>
+      <p><li><b>OS:</b> Windows 10/11, macOS (Intel/Apple Silicon), or Linux.</li>
       <li><b>CPU:</b> Multi-core processor with OpenMP support (essential for real-time performance).</li>
       <li><b>Integration Method:</b> Monte Carlo (stochastic sampling of light paths).
 
