@@ -273,6 +273,31 @@ A high-performance, physically-based path tracing engine built with C++20. This 
   </details>
 </ul>
 
+<ul style="list-style-type: none;">
+  <details>
+    <summary><b>Build the Project</b></summary>
+    <p>1. Clone the repository:
+      
+    git clone https://github.com/jarek1992/raytracer_project.git
+ 
+  or use SSH:
+  
+    git clone https://github.com/jarek1992/raytracer_project.git
+    
+    
+  </p>
+    <ul>
+      <p>
+        <li><b>SDL3:</b> Used for window management and input handling.</li>
+        <li><b>OpenMP:</b> Powers the multi-threaded rendering core.</li>
+        <li><b>Intel Open Image Denoise (OIDN):</b> High-performance AI denoising.</li>
+        <li><b>OpenGL:</b> Native graphics API for viewport rendering.</li>
+        <li><b>DearImGui & Glad:</b> Integrated within the source tree.</li>
+      </p>
+    </ul>
+  </details>
+</ul>
+
 
 
 
