@@ -1,7 +1,15 @@
+#CMake build folder
 build/
-.vscode
-*.ppm
+out/
+
+# Vcpkg specific
+vcpkg_installed/
+
+# User-specific/IDE
 .vs/
+.vscode/
+bin/
+obj/
 
 # Prerequisites
 *.d
@@ -10,7 +18,6 @@ build/
 *.slo
 *.lo
 *.o
-*.obj
 
 # Precompiled Headers
 *.gch
@@ -36,4 +43,9 @@ build/
 *.out
 *.app
 
+# Engine specific
+*.ppm
+*.png
+*.jpg
 
+/output
