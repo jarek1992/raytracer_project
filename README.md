@@ -1,11 +1,7 @@
 ## 🚀 Interactive C++ Path Tracing Engine
 A high-performance, physically-based path tracing engine built with C++20. This project features a robust real-time diagnostic UI, sophisticated environmental lighting, and a professional post-processing pipeline. 
 
-<br>
-
-<code>[Image: Główny render Twojego silnika – np. scena z efektownym oświetleniem, odbiciami i bloomem]</code>
-
-<br>
+<p><code>[Image: Główny render Twojego silnika – np. scena z efektownym oświetleniem, odbiciami i bloomem]</code></p>
 
 ### 🌟 <b>Key Project Highlights:</b>
 - <b>Global Illumination Out-of-the-box:</b> Full Monte Carlo Path Tracing that naturally handles indirect lighting, soft shadows, and color bleeding.
