@@ -225,11 +225,6 @@ A high-performance, physically-based path tracing engine built with C++20. This 
   </details>
   </ul>
 
-
-
-
-
-
 ### 🏗 Build & Requirements
 <ul>
   This project is built using modern C++ standards and relies on a few industry-standard libraries for window management and UI. Designed to be cross-platform, supporting Windows, Linux and macOS. It utilizes CMake for automated dependency management.
@@ -276,25 +271,18 @@ A high-performance, physically-based path tracing engine built with C++20. This 
 <ul style="list-style-type: none;">
   <details>
     <summary><b>Build the Project</b></summary>
+    <ul>
     <p>1. Clone the repository:
       
     git clone https://github.com/jarek1992/raytracer_project.git
  
   or use SSH:
   
-    git clone https://github.com/jarek1992/raytracer_project.git
+    git clone git@github.com:jarek1992/university_database.git
     
     
   </p>
-    <ul>
-      <p>
-        <li><b>SDL3:</b> Used for window management and input handling.</li>
-        <li><b>OpenMP:</b> Powers the multi-threaded rendering core.</li>
-        <li><b>Intel Open Image Denoise (OIDN):</b> High-performance AI denoising.</li>
-        <li><b>OpenGL:</b> Native graphics API for viewport rendering.</li>
-        <li><b>DearImGui & Glad:</b> Integrated within the source tree.</li>
-      </p>
-    </ul>
+  </ul>
   </details>
 </ul>
 
