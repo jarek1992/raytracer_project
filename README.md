@@ -86,7 +86,9 @@ A high-performance, physically-based path tracing engine built with C++20. This 
 <ul style="list-style-type: none;">
   <details>
     <summary><b>Environment & Lighting Systems</b></summary>
-    <p>The engine provides a versatile lighting suite, allowing users to switch between physical sky simulations, image-based lighting, and studio backgrounds.</p>
+    <ul>
+      The engine provides a versatile lighting suite, allowing users to switch between physical sky simulations, image-based lighting, and studio backgrounds.
+    </ul>
     <ul> 
       <p><li><b>HDRI Maps(IBL):</b></li>
       <p>For photorealistic reflections and complex ambient lighting, the engine supports industry-standard High Dynamic Range images.</p>
