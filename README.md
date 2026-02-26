@@ -226,6 +226,23 @@ A high-performance, physically-based path tracing engine built with C++20. This 
   </ul>
   </details>
   </ul>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
  
 
 ### 🏗 Build & Requirements
@@ -238,16 +255,34 @@ A high-performance, physically-based path tracing engine built with C++20. This 
     <ul>
       <p><li><b>OS:</b> Windows 10/11, macOS (Intel/Apple Silicon), or Linux.</li>
       <li><b>CPU:</b> Multi-core processor with OpenMP support (essential for real-time performance).</li>
-      <li><b>Integration Method:</b> Monte Carlo (stochastic sampling of light paths).
+      <li><b>GPU:</b> OpenGL 3.3 compatible (used for hardware-accelerated frame buffer display).</li>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 ### 📈 Performance & Optimization
 
 ### 📸 Gallery & Showcase
 
 ### 🗺 Future Roadmap (Gdzie projekt zmierza).
-
-
-
 
 🖥 Interface in Action
 
