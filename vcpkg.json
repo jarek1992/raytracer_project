@@ -1,0 +1,10 @@
+﻿{
+  "name": "ray-tracer",
+  "version-string": "1.0.0",
+  "dependencies": [
+    "sdl3",
+    "openimagedenoise",
+    "imgui",
+    "glad"
+  ]
+}
