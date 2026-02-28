@@ -1,51 +1,53 @@
-#CMake build folder
+# build and IDE specific
 build/
 out/
-
-# Vcpkg specific
-vcpkg_installed/
-
-# User-specific/IDE
 .vs/
 .vscode/
 bin/
 obj/
+vcpkg_installed/
 
-# Prerequisites
-*.d
-
-# Compiled Object files
-*.slo
-*.lo
-*.o
-
-# Precompiled Headers
-*.gch
-*.pch
-
-# Compiled Dynamic libraries
-*.so
-*.dylib
-*.dll
-
-# Fortran module files
-*.mod
-*.smod
-
-# Compiled Static libraries
-*.lai
-*.la
-*.a
-*.lib
-
-# Executables
+# compiled binaries (global)
 *.exe
 *.out
 *.app
+*.o
+*.obj
+*.slo
+*.lo
+*.so
+*.dylib
+*.dll
+*.lib
+*.a
+*.la
+*.lai
 
-# Engine specific
+# OIDN structure preservation
+!libs/oidn/
+!libs/oidn/bin/
+!libs/oidn/lib/
+!libs/oidn/include/
+
+!**/ .gitkeep
+
+# assets & textures
+!assets/
+!assets/**/*.png
+!assets/**/*.jpg
+!assets/**/*.hdr
+!assets/**/*.obj
+
+# render outputs (igonre)
 *.ppm
 *.png
 *.jpg
+/output/
+/screenshots/
 
-/output
+# temporary/misc
+*.d
+*.gch
+*.pch
+*.mod
+*.smod

@@ -13,22 +13,21 @@ find_package(SDL3 CONFIG REQUIRED)
 find_package(imgui CONFIG REQUIRED)
 find_package(glad CONFIG REQUIRED)
 
-# Intel OIDN library manual setup
+# Intel OIDN setup
 if (WIN32)
-    # Twój sprawdzony setup dla Windows
     set(OIDN_DIR "${CMAKE_CURRENT_SOURCE_DIR}/libs/oidn")
     set(OIDN_INCLUDE "${OIDN_DIR}/include")
     set(OIDN_LIB "${OIDN_DIR}/lib/OpenImageDenoise.lib")
     message(STATUS "Using local OIDN binaries for Windows")
 else()
-    # Standardowe szukanie na Linux/macOS (np. po 'brew install openimagedenoise')
     find_package(OpenImageDenoise REQUIRED)
-    set(OIDN_INCLUDE "") # find_package sam doda œcie¿ki do targetu
+    # Na Linux/Mac find_package definiuje OpenImageDenoise_INCLUDE_DIRS
+    set(OIDN_INCLUDE "${OpenImageDenoise_INCLUDE_DIRS}")
     set(OIDN_LIB OpenImageDenoise)
     message(STATUS "Using system OIDN via find_package")
 endif()
 
-# add sources 
+# Add sources 
 add_executable(${PROJECT_NAME} 
     main.cpp
     stb_impl.cpp
@@ -62,8 +61,9 @@ if (MSVC)
         "${OIDN_DIR}/bin/OpenImageDenoise_device_cpu.dll"
         "${OIDN_DIR}/bin/tbb12.dll"
         $<TARGET_FILE_DIR:${PROJECT_NAME}>
+        COMMENT "Copying OIDN Runtime DLLs..."
     )
 endif()
 
 # Diagnostic messages
-message(STATUS "Full vcpkg build: SDL3 + ImGui + Glad")
+message(STATUS "Build configured for: SDL3, ImGui, Glad, OIDN")
