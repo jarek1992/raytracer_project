@@ -1,8 +1,8 @@
-﻿#include "libs/glad/include/glad/glad.h"
+﻿#include "glad/glad.h"
 #include "SDL3/SDL.h"
-#include "libs/imgui/imgui.h"
-#include "libs/imgui/backends/imgui_impl_sdl3.h"
-#include "libs/imgui/backends/imgui_impl_opengl3.h"
+#include "imgui.h"
+#include "imgui_impl_sdl3.h"
+#include "imgui_impl_opengl3.h"
 
 #include "rtweekend.hpp"
 

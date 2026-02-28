@@ -3,7 +3,10 @@
   "version-string": "1.0.0",
   "dependencies": [
     "sdl3",
-    "imgui",
+    {
+      "name": "imgui",
+      "features": [ "sdl3-binding", "opengl3-binding" ]
+    },
     "glad"
   ]
 }

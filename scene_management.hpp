@@ -3,6 +3,7 @@
 //basic types and material library
 #include "rtweekend.hpp"
 #include "material_library.hpp"
+
 //geometry (shapes)
 #include "hittable_list.hpp"
 #include "sphere.hpp"
@@ -10,6 +11,7 @@
 #include "triangle.hpp"
 #include "model.hpp"
 #include "constant_medium.hpp" //fog
+
 //transformation and instances
 #include "material_instance.hpp"
 #include "translate.hpp"
