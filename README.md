@@ -274,11 +274,7 @@ A high-performance, physically-based path tracing engine built with C++20. This 
     <ul>
       <p><li>1. Clone the repository:
         
-    git clone https://github.com/jarek1992/raytracer_project.git
-
- or use SSH:
- 
-    git clone git@github.com:jarek1992/university_database.git
+    git clone --recursive https://github.com/jarek1992/raytracer_project.git
     
   </p></li>
   </ul>
