@@ -171,7 +171,7 @@ struct AppLog {
 static AppLog engine_info;
 
 int main(int argc, char* argv[]) {
-	engine_info.add_log("[Render] Ray Tracer Engine Started");
+	engine_info.add_log("[Render] -Zenith Engine Started");
 	#ifdef _OPEMMP
 		engine_info.add_log("[Render] OpenMP initialized with %d threads.", omp_get_max_threads());
 	#endif // _OPEMMP

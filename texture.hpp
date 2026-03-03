@@ -11,13 +11,20 @@ public:
 
 class image_texture : public texture {
 public:
-	image_texture(const char* filename, bool is_hdr = false) {
+	image_texture(const char* filename, bool is_hdr = false)
+		: width(0)
+		, height(0)
+		, data_f(nullptr)
+		, data_u(nullptr)
+	{
 		int components = 3;
 		if (is_hdr) {
 			//loading data as a float (32-bit per canal)
 			data_f = stbi_loadf(filename, &width, &height, &components, 3);
 			if (!data_f) {
 				std::cerr << "ERROR: Could not load HDR: " << filename << "\n";
+				width = 0; 
+				height = 0;
 			}
 		} else {
 			//loading data as unsigned char (8-bit per canal)
@@ -25,6 +32,8 @@ public:
 
 			if (!data_u) {
 				std::cerr << "ERROR: Could not load texture: " << filename << "\n";
+				width = 0;
+				height = 0;
 			}
 		}
 	}
@@ -40,8 +49,8 @@ public:
 
 	color value(double u, double v, const point3& p) const override {
 		//if no texture data, return solid cyan as debugging aid
-		if (width <= 0 || height <= 0) {
-			return color(0, 1, 1); //magenta debug color
+		if (!data_f && !data_u) {
+			return color(0.0, 1.0, 1.0);
 		}
 
 		//clamp and UV wrap
@@ -53,25 +62,19 @@ public:
 		int i = static_cast<int>(u * width);
 		int j = static_cast<int>(v * height);
 
-		//clamp integer mapping
-		if (i >= width) {
-			i = width - 1;
-		}
-		if (j >= height) {
-			j = height - 1;
-		}
+		i = std::clamp(i, 0, width - 1);
+		j = std::clamp(j, 0, height - 1);
 
 		if (data_f) {
 			auto pixel = data_f + j * width * 3 + i * 3;
 			return color(pixel[0], pixel[1], pixel[2]);
-		}
-		else if (data_u) {
+		} else if (data_u) {
 			const double scale = 1.0 / 255.0;
 			auto pixel = data_u + j * width * 3 + i * 3;
 			return color(scale * pixel[0], scale * pixel[1], scale * pixel[2]);
 		}
 
-		return color(0, 0, 0);
+		return color(0.0, 0.0, 0.0);
 	}
 
 private:
