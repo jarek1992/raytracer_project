@@ -178,6 +178,98 @@ A high-performance, physically-based path tracing engine built with C++20. This 
   </details>
 </ul>
 
+
+
+
+
+### 🎬 Scene Configuration & Workflow
+<ul>
+  The entire scene configuration is centralized in <code>scene_management.hpp</code>. You don't need to recompile the core engine to swap assets or materials.
+</ul>
+<ul style="list-style-type: none;">
+  <details>
+    <summary><b></b>Assets Loader</b></summary>
+    <p>A dedicated struct <code>sceneAssetsLoader</code> for pre-loading heavy <code>.obj</code> models (like the included <code>teapot.obj</code> or <code>bowl.obj</code>) into memory once and stored as shared pointers to optimize RAM usage. Models can be placed <code>/assets/models/</code></p>
+    <ul>
+      
+    struct sceneAssetsLoader {
+        shared_ptr<model> teapot;
+
+	      sceneAssetsLoader() {
+		      teapot = make_shared<model>("assets/models/teapot.obj", nullptr, 0.4);
+		      //add more .obj models here...
+	      }
+    };
+  </ul>
+  </details>
+</ul>
+
+<ul style="list-style-type: none;">
+  <details>
+    <summary><b>Material Library & Instancing</b></summary>
+    <p>Zenith Engine features a high-performance Material Library system that separates surface properties from geometric data. This allows for massive memory savings through the Flyweight pattern.</p>
+    <ul>
+      <li><b>Centralized Registry:</b> Define all your materials once in a global library <code>(load_materials)</code>. It supports <b>lambertian</b>, <b>metal</b>, <b>dielectric(glass)</b>, and <b>emissive</b>.</li>
+      <li><b>Texture & Bump Mapping:</b> Enhance surface detail using high-resolution texture and bump maps. Pass an <code>image_texture</code> to the material constructor to add tactile depth. Place your own textures directly into <code>/assets/textures/</code> and bump maps inside <code>/assets/bump_maps/</code></li>
+      
+    void load_materials(MaterialLibrary& mat_lib) {
+        //bump map textures
+	      auto wood_bump = make_shared<image_texture>("assets/bump_maps/wood_bump_map.jpg");
+        //... more bump maps as needed
+
+        //add some predefined materials to the library
+        mat_lib.add("wood_bumpy_texture", 
+            make_shared<lambertian>(make_shared<image_texture>("assets/textures/fine-wood.jpg"), wood_bump, 2.0));
+        //... add more materials as needed 
+    }
+  <i>Note: Currently, Bump Mapping is not supported for <code>.obj</code> triangle meshes; this is planned for a future update.</i>
+  <li><b>Zero-Copy Instancing:</b> Instead of duplicating heavy geometry, use a <code>material_instance</code> class to wrap a shared mesh with a specific material. This allows you to render hundreds of unique-looking objects while keeping only one copy of the mesh in RAM.</li>
+    
+    void load_materials(MaterialLibrary& mat_lib) {
+        auto wood_bump = make_shared<image_texture>("assets/bump_maps/wood_bump_map.jpg");
+    
+        //define a "bumpy" wood material in the library
+        mat_lib.add("wood_bumpy", make_shared<lambertian>(
+            make_shared<image_texture>("assets/textures/fine-wood.jpg"), 
+            wood_bump, 2.0));
+    }
+
+    //in build_geometry: Reuse the same sphere geometry with different materials
+    auto sphere_geom = make_shared<sphere>(point3(0,0,0), 1.0, nullptr);
+    world.add(make_shared<material_instance>(sphere_geom, mat_lib.get("wood_bumpy")));
+    world.add(make_shared<material_instance>(sphere_geom, mat_lib.get("gold_mat")));
+   </ul>
+  </details>
+</ul>
+
+<ul style="list-style-type: none;">
+  <details>
+    <summary><b></b>Scene geometry</b></summary>
+    <p>Place a geometry inside <code>build_geometry()</code> to compose your world. Use <code>material_instance</code> to apply shared materials to different shapes.</p>
+    <ul>
+      <li><b>Transformations:</b> Easily wrap objects in <code>translate, rotate_x/y/z</code>, and <code>scale</code> instances.</li>
+      
+    //cube
+	  auto big_cube_geom = make_shared<cube>(point3(0.0, 0.0, 0.0), nullptr);
+	  auto big_cube_instance = make_shared<material_instance>(big_cube_geom, mat_lib.get("foggy_glass"));
+	  world.add(make_shared<translate>(big_cube_instance, point3(0.0, 1.0, 2.5)));
+<li><b>Volumetric Fog:</b> Enable global environmental fog by setting <code>use_fog</code> to true and adjusting <code>fog_density</code> and <code>fog_color</code>.</li>
+
+    // - 5. environmental fog
+    if (use_fog) {
+		    //set radius and center of the fog volume (can be adjusted to fit the scene better)
+		    auto fog_boundary = make_shared<sphere>(point3(0.0, 0.0, 0.0), 50.0, nullptr);
+		    //fog density 0.1 is extremely high (impenetrable wall). 
+		    //values 0.001 - 0.02 gives best visual results.
+		    world.add(make_shared<constant_medium>(fog_boundary, fog_density, fog_color));
+	  }
+</ul>
+  </details>
+</ul>
+
+
+
+
 ### 🕹 Interactive UI Overview 
 <ul>
   The engine features a custom-built, real-time diagnostic interface powered by Dear ImGui, providing deep insights into the path-tracing process and color pipeline. It supports Windows, Linux, and macOS.
