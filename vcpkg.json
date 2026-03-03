@@ -1,5 +1,5 @@
 ﻿{
-  "name": "ray-tracer",
+  "name": "zenith-path-tracer",
   "version-string": "1.0.0",
   "dependencies": [
     "sdl3",
