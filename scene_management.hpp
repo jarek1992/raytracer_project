@@ -47,11 +47,13 @@ void load_materials(MaterialLibrary& mat_lib) {
 	mat_lib.add("water", make_shared<dielectric>(1.33, water_bump, 0.8));
 	mat_lib.add("turquoise_water", make_shared<dielectric>(1.33, color(0.85, 1.0, 0.98), water_bump, 2.0));
 	mat_lib.add("red_diffuse", make_shared<lambertian>(color(0.8, 0.1, 0.1)));
+	mat_lib.add("copper", make_shared<metal>(color(0.95, 0.64, 0.54), 0.0));
+	mat_lib.add("rough_copper", make_shared<metal>(color(0.89, 0.58, 0.51), 0.2));
 	mat_lib.add("rough_gold", make_shared<metal>(color(1.0, 0.84, 0.0), 0.15));
 	mat_lib.add("light_blue_diffuse", make_shared<lambertian>(color(0.1, 0.4, 0.9)));
 	mat_lib.add("white_diffuse", make_shared<lambertian>(color(0.9, 0.9, 0.9)));
 	mat_lib.add("wood_texture", make_shared<lambertian>(make_shared<image_texture>("assets/textures/fine-wood.jpg")));
-	mat_lib.add("wood_bumpy_texture", make_shared<lambertian>(make_shared<image_texture>("assets/textures/fine-wood.jpg"), wood_bump, 2.0));
+	mat_lib.add("wood_bumpy_texture", make_shared<lambertian>(make_shared<image_texture>("assets/textures/fine-wood.jpg"), wood_bump, 8.0));
 	mat_lib.add("gold_mat", make_shared<metal>(color(1.0, 0.8, 0.4), 0.0));
 	mat_lib.add("scratched_gold_mat", make_shared<metal>(color(1.0, 0.8, 0.4), 0.0, scratches_bump, -2.0));
 	mat_lib.add("mirror", make_shared<metal>(color(1.0, 1.0, 1.0), 0.0));
@@ -77,7 +79,6 @@ void load_materials(MaterialLibrary& mat_lib) {
 	//floor checker material 
 	auto checker = make_shared<checker_texture>(0.5, color(0.1, 0.1, 0.1), color(0.9, 0.9, 0.9));
 	mat_lib.add("reflective_checker_mat", make_shared<metal>(checker, 0.02));
-
 }
 
 //build scene geometry
@@ -105,16 +106,16 @@ hittable_list build_geometry(MaterialLibrary& mat_lib, const sceneAssetsLoader& 
 
 	//small sphere #1
 	auto small_sphere_geom = make_shared<sphere>(point3(0.0, 0.0, 0.0), 0.5, nullptr);
-	auto small_sphere_instance = make_shared<material_instance>(small_sphere_geom, mat_lib.get("scratched_gold_mat"));
+	auto small_sphere_instance = make_shared<material_instance>(small_sphere_geom, mat_lib.get("wood_bumpy_texture"));
 	world.add(make_shared<translate>(small_sphere_instance, point3(3.0, 0.5, -1.0)));
 
 	//small sphere #2
-	auto small_bubble_instance = make_shared<material_instance>(small_sphere_geom, mat_lib.get("wood_bumpy_texture"));
+	auto small_bubble_instance = make_shared<material_instance>(small_sphere_geom, mat_lib.get("glass_bubble"));
 	world.add(make_shared<translate>(small_bubble_instance, point3(3.0, 0.5, 1.0)));
 
 	//cube
 	auto big_cube_geom = make_shared<cube>(point3(0.0, 0.0, 0.0), nullptr);
-	auto big_cube_instance = make_shared<material_instance>(big_cube_geom, mat_lib.get("foggy_glass"));
+	auto big_cube_instance = make_shared<material_instance>(big_cube_geom, mat_lib.get("copper"));
 	world.add(make_shared<translate>(big_cube_instance, point3(0.0, 1.0, 2.5)));
 
 	// - 3. RANDOM SPREADED GEOMETRIES
@@ -139,21 +140,21 @@ hittable_list build_geometry(MaterialLibrary& mat_lib, const sceneAssetsLoader& 
 				double dice_roll = random_double();
 
 				//1. Probability distribution
-				if (dice_roll < 0.25 && !neon_mats.empty()) {
+				if (dice_roll < 0.15 && !neon_mats.empty()) {
 					//25% chance to draw neon material
 					int max_idx = static_cast<int>(neon_mats.size()) - 1;
 					selected_mat_name = neon_mats[random_int(0, max_idx)];
 					geometry = master_cube;
 					//scale
-					scale_v = vec3(0.4, random_double(1.5, 4.5), 0.4);
-				} else if (dice_roll < 0.55) {
-					//30% chance to draw glass material(0.25 + 0.3 = 0.55)
+					scale_v = vec3(0.4, random_double(0.4, 1.5), 0.4);
+				} else if (dice_roll < 0.45) {
+					//30% chance to draw glass material(0.15 + 0.30 = 0.45)
 					selected_mat_name = (random_double() < 0.7) ? "glass" : "glass_bubble";
 					geometry = master_sphere;
 					double s = random_double(0.5, 1.0);
 					scale_v = vec3(s, s, s);
 				} else {
-					//45% left draw random material left materials from the list (excluding emissive/neaons using regular_mats)
+					//55% left draw random material left materials from the list (excluding emissive/neaons using regular_mats)
 					int random_idx = random_int(0, static_cast<int>(regular_mats.size()) - 1);
 					selected_mat_name = regular_mats[random_idx];
 
@@ -166,7 +167,6 @@ hittable_list build_geometry(MaterialLibrary& mat_lib, const sceneAssetsLoader& 
 					//scale to difference
 					double s = random_double(0.8, 1.2);
 					scale_v = vec3(s, s, s);
-
 				}
 
 				//2. get material
@@ -203,6 +203,5 @@ hittable_list build_geometry(MaterialLibrary& mat_lib, const sceneAssetsLoader& 
 		//values 0.001 - 0.02 gives best visual results.
 		world.add(make_shared<constant_medium>(fog_boundary, fog_density, fog_color));
 	}
-
 	return world;
 }

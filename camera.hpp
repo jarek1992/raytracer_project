@@ -190,11 +190,13 @@ public:
 				//c contains exposure, bloom and sharpening if enabled
 				//apply processonly for aces, contrast and gamma 
 				final_framebuffer[idx] = post.process(c, u, v);
-			} else if (is_light) {
+			}
+			else if (is_light) {
 				//for reflection/refraction only exposure + process
 				double ev_multiplier = std::pow(2.0, post.exposure);
 				final_framebuffer[idx] = post.process(c * ev_multiplier, u, v);
-			} else {
+			}
+			else {
 				//(albedo, normals, z-depth)
 				//clamp and gamma
 				c = color(std::clamp(c.x(), 0.0, 1.0),
@@ -703,6 +705,39 @@ private:
 		const post_processor& pp,
 		bool is_data_pass = false,
 		bool apply_gamma = true) {
+
+		//create a copy of the buffer for bloom processing if needed, to avoid modifying the original data
+		std::vector<color> bloom_buffer = buffer;
+
+		double ev_multiplier = std::pow(2.0, (double)pp.exposure);
+
+		//apply bloom
+		if (!is_data_pass && pp.use_bloom) {
+			//prepare buffer for bloom detection (multiply by EV)
+			for (auto& pix : bloom_buffer) {
+				pix *= ev_multiplier;
+			}
+
+			//generate effects
+			std::vector<color> bloom_overlay(bloom_buffer.size(), color(0.0, 0.0, 0.0));
+			bloom_filter bloom(pp.bloom_threshold, pp.bloom_intensity, pp.bloom_radius);
+			bloom.generate_bloom_overlay(bloom_buffer, bloom_overlay, image_width, image_height, 1.0f);
+
+			//add to original buffer in base scale
+			double inv_ev = 1.0 / ev_multiplier;
+			for (size_t i = 0; i < bloom_buffer.size(); ++i) {
+				bloom_buffer[i] = buffer[i] + (bloom_overlay[i] * inv_ev);
+			}
+		} else {
+			bloom_buffer = buffer;
+		}
+
+		//apply sharpening
+		if (!is_data_pass && pp.use_sharpening) {
+			//apply sharpening directly to bloom_buffer
+			pp.apply_sharpening(bloom_buffer, image_width, image_height, pp.sharpen_amount);
+		}
+
 		//conversion framebuffer → RGB
 		std::vector<unsigned char> image_data(image_width * image_height * 3);
 
@@ -717,8 +752,9 @@ private:
 					//calculate normalized u,v (0.0 - 1.0 range)
 					float u = static_cast<float>(i) / (image_width - 1);
 					float v = static_cast<float>(j) / (image_height - 1);
+
 					//ACES, saturation, contrast, vignette, gamma correction
-					pix_color = pp.process(pix_color, u, v);
+					pix_color = pp.process(pix_color, u, v, render_pass::RGB);
 				} else {
 					pix_color = color(
 						std::clamp(pix_color.x(), 0.0, 1.0),
@@ -730,7 +766,7 @@ private:
 					}
 				}
 
-				size_t idx = (static_cast<size_t>(j) * image_width + i) * 3;
+				size_t idx = pixel_idx * 3;
 				image_data[idx + 0] = static_cast<unsigned char>(255.999 * pix_color.x());
 				image_data[idx + 1] = static_cast<unsigned char>(255.999 * pix_color.y());
 				image_data[idx + 2] = static_cast<unsigned char>(255.999 * pix_color.z());

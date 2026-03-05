@@ -74,8 +74,8 @@ public:
 
 	color process(color exposed_color, float u = 0.5f, float v = 0.5f, render_pass current_pass = render_pass::RGB) const {
 		//apply full process to beauty, denoise passes and debug modes
-		bool is_beauty_pass = (current_pass == render_pass::RGB || 
-							   current_pass == render_pass::DENOISE);
+		bool is_beauty_pass = (current_pass == render_pass::RGB ||
+			current_pass == render_pass::DENOISE);
 		//ignore post-processing effects if any pass is on
 		if (!is_beauty_pass && !debug.any_active()) {
 			//for Z-Depth save clamp and gamma for and overview

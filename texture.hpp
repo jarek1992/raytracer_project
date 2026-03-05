@@ -116,12 +116,12 @@ public:
 	{}
 
 	color value(double u, double v, const point3& p) const override {
+
 		auto xInteger = static_cast<int>(std::floor(inv_scale * p.x()));
 		auto yInteger = static_cast<int>(std::floor(inv_scale * p.y()));
 		auto zInteger = static_cast<int>(std::floor(inv_scale * p.z()));
 
 		bool isEven = (xInteger + yInteger + zInteger) % 2 == 0;
-
 		return isEven ? even->value(u, v, p) : odd->value(u, v, p);
 	}
 
