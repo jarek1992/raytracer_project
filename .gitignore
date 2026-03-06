@@ -6,7 +6,6 @@ out/
 bin/
 obj/
 vcpkg_installed/
-vcpkg/
 
 # compiled binaries (global)
 *.exe
@@ -44,9 +43,11 @@ screenshots/
 !media/**/*.jpg
 
 # OIDN structure preservation
-libs/oidn/bin/*
-libs/oidn/lib/*
-libs/oidn/include/*
+libs/oidn/**
+
+!libs/oidn/bin/
+!libs/oidn/lib/
+!libs/oidn/include/
 
 !**/.gitkeep
 
