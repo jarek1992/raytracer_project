@@ -90,26 +90,26 @@ public:
 	//choose the buffer function
 	const std::vector<color>& get_active_buffer() {
 		switch (current_display_pass) {
-		case render_pass::DENOISE: {
-			return denoise_buffer;
-		}
-		case render_pass::ALBEDO: {
-			return albedo_buffer;
-		}
-		case render_pass::NORMALS: {
-			return normal_buffer;
-		}
-		case render_pass::REFLECTIONS: {
-			return reflection_buffer;
-		}
-		case render_pass::REFRACTIONS: {
-			return refraction_buffer;
-		}
-		case render_pass::Z_DEPTH: {
-			return z_depth_buffer;
-		}
-		default:
-			return render_accumulator;
+			case render_pass::DENOISE: {
+				return denoise_buffer;
+			}
+			case render_pass::ALBEDO: {
+				return albedo_buffer;
+			}
+			case render_pass::NORMALS: {
+				return normal_buffer;
+			}
+			case render_pass::REFLECTIONS: {
+				return reflection_buffer;
+			}
+			case render_pass::REFRACTIONS: {
+				return refraction_buffer;
+			}
+			case render_pass::Z_DEPTH: {
+				return z_depth_buffer;
+			}
+			default:
+				return render_accumulator;
 		}
 	}
 
@@ -933,44 +933,53 @@ private:
 		for (int i = 0; i < depth; i++) {
 			hit_record rec;
 
-			if (!world.hit(cur_ray, interval(0.001, infinity), rec)) {
-				accumulated_light += accumulated_attenuation * get_background_color(cur_ray, env);
-				break;
+			//check the hit
+			if (!world.hit(cur_ray, interval(0.001, infinity), rec, 0, global_settings::bvh_debug_mode)) {
+				if (global_settings::bvh_debug_mode) {
+					return accumulated_light;
+				}
+				return accumulated_light + accumulated_attenuation * get_background_color(cur_ray, env);
 			}
 
-			ray scattered;
-			color attenuation;
-			//get emission color from material and pass u, v , p to emitted functions
+			//emission
 			color emitted = rec.mat->emitted(rec.u, rec.v, rec.p);
 
+			if (global_settings::bvh_debug_mode) {
+				//if we hit the frame (emitted > 0) = fully smitted
+				if (emitted.length() > 0.001) {
+					return emitted;
+				}
+				//if hit a geometry that is not highlighted(emitted == 0)
+				//make it very dark and semi-transparent visually
+				return color(0.01, 0.01, 0.01);
+			}
+
+			//in normal mode, we add emission to the light pool
 			accumulated_light += accumulated_attenuation * emitted;
 
-			//if material scatters light, return bounce ray color multiplied by attenuation
+			//scatter
+			ray scattered;
+			color attenuation;
+
 			if (rec.mat->scatter(cur_ray, rec, attenuation, scattered)) {
 				accumulated_attenuation *= attenuation;
 				cur_ray = scattered;
 
-				//early termination if the ray is very weak after 10 bounces
-				if (i > 10 && accumulated_attenuation.length() < 0.00001) {
+				//early termination for very weak rays
+				if (i > 10 && accumulated_attenuation.length() < 0.0001) {
 					break;
 				}
 			} else {
-				//material absorbed the ray, no more light is gathered
 				break;
 			}
 
-			//optimization "russian roulette" (for rays bouncing optimazation e.g. after 10 hits)
+			//russian roulette
 			if (i > 10) {
-				//chance of survival based on the strongest color channel (luminance)
 				double p = std::max({ accumulated_attenuation.x(), accumulated_attenuation.y(), accumulated_attenuation.z() });
-
-				//prevent division by zero and too small values
 				p = std::clamp(p, 0.05, 0.95);
-				//if the ray is very weak, we give it a chance to survive (e.g., 50% or p)
 				if (random_double() > p) {
-					break; //ray terminated
+					break;
 				}
-				// Boost the energy to account for the survival probability
 				accumulated_attenuation /= p;
 			}
 		}

@@ -14,7 +14,7 @@ public:
 		, mat_ptr(m) //material pointer for the triangle
 	{}
 
-	virtual bool hit(const ray& r, interval ray_t, hit_record& rec) const {
+	virtual bool hit(const ray& r, interval ray_t, hit_record& rec, int depth = 0, bool debug_wire = false) const {
 		//edges
 		vec3 edge1 = v1 - v0;
 		vec3 edge2 = v2 - v0;

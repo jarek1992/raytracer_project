@@ -12,7 +12,7 @@ public:
 		bbox = ptr->bounding_box() + offset;
 	}
 
-	virtual bool hit(const ray& r, interval ray_t, hit_record& rec) const override {
+	virtual bool hit(const ray& r, interval ray_t, hit_record& rec, int depth = 0, bool debug_wire = false) const override {
 		//world -> local(move ray in opposite direction of offset)
 		ray moved_r(
 			r.origin() - offset, 

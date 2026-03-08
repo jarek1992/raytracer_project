@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 
 #include "interval.hpp"
 
@@ -41,7 +41,7 @@ public:
 		}
 	}
 
-	bool hit(const ray& r, interval  ray_t) const {
+	bool hit(const ray& r, interval& ray_t) const {
 		for (int a = 0; a < 3; a++) {
 			auto invD = 1.0 / r.direction()[a];
 			auto origin = r.origin()[a];
@@ -65,15 +65,13 @@ public:
 		return true;
 	}
 
-	bool is_on_edge(const point3& p, double thickness) {
-		//check the distance from the point to each edge on each axis(x,y,z)
-		bool near_x_edge = std::abs(p.x() - x.min) < thickness || std::abs(p.x() - x.max) < thickness;
-		bool near_y_edge = std::abs(p.y() - y.min) < thickness || std::abs(p.y() - y.max) < thickness;
-		bool near_z_edge = std::abs(p.z() - z.min) < thickness || std::abs(p.z() - z.max) < thickness;
+	bool is_on_edge(const point3& p, double thickness) const {
+		//check if the point is inside the small margin at each wall
+		auto x_edge = (p.x() < x.min + thickness) || (p.x() > x.max - thickness);
+		auto y_edge = (p.y() < y.min + thickness) || (p.y() > y.max - thickness);
+		auto z_edge = (p.z() < z.min + thickness) || (p.z() > z.max - thickness);
 
-		//the point is considered to be on the edge if it is near the edge on at least two axes
-		return (near_x_edge && near_y_edge) || (near_x_edge && near_z_edge) || (near_y_edge && near_z_edge);
-
+		return (x_edge && y_edge) || (x_edge && z_edge) || (y_edge && z_edge);
 	}
 };
 

@@ -17,7 +17,7 @@ public:
 		bbox = aabb(min_p, max_p);
 	}
 
-	bool hit(const ray& r, interval ray_t, hit_record& rec) const override {
+	bool hit(const ray& r, interval ray_t, hit_record& rec, int depth = 0, bool debug_wire = false) const override {
 		point3 local_origin(r.origin().x() / s.x(), r.origin().y() / s.y(), r.origin().z() / s.z());
 		vec3 local_dir(r.direction().x() / s.x(), r.direction().y() / s.y(), r.direction().z() / s.z());
 

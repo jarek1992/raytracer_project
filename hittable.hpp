@@ -30,7 +30,7 @@ class hittable {
 public:
 	virtual ~hittable() = default;
 	//pure virtual method that must be implemented by derived classes
-	virtual bool hit(const ray& r, interval ray_t, hit_record& rec) const = 0;
+	virtual bool hit(const ray& r, interval ray_t, hit_record& rec, int depth = 0, bool debug_wire = false) const = 0;
 	//for bounding box computation to return aabb of the object
 	virtual aabb bounding_box() const = 0;
 };

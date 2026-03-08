@@ -38,7 +38,7 @@ public:
         bbox = aabb(min, max);
     }
 
-    bool hit(const ray& r, interval ray_t, hit_record& rec) const override {
+    bool hit(const ray& r, interval ray_t, hit_record& rec, int depth = 0, bool debug_wire = false) const override {
         auto origin = r.origin();
         auto direction = r.direction();
 

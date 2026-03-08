@@ -117,6 +117,12 @@ enum class render_pass : int {
 	Z_DEPTH
 };
 
+namespace global_settings {
+	inline bool bvh_debug_mode = false;
+	inline float bvh_thickness = 0.01f;
+	inline int debug_bvh_level = -1;
+}
+
 #include "color.hpp"
 #include "interval.hpp"
 #include "ray.hpp"

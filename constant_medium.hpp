@@ -36,7 +36,7 @@ public:
 		, phase_function(make_shared<isovolumetric>(c))
 	{}
 
-	bool hit(const ray& r, interval ray_t, hit_record& rec) const override {
+	bool hit(const ray& r, interval ray_t, hit_record& rec, int depth = 0, bool debug_wire = false) const override {
 		hit_record rec1, rec2;
 
 		if (!boundary->hit(r, interval::universe, rec1)) {

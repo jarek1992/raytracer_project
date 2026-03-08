@@ -102,7 +102,7 @@ public:
 		std::cout << "New Min: " << final_box.x.min << ", " << final_box.y.min << "\n";
 	}
 
-	bool hit(const ray& r, interval ray_t, hit_record& rec) const override {
+	bool hit(const ray& r, interval ray_t, hit_record& rec, int depth = 0, bool debug_wire = false) const override {
 		return mesh_bvh->hit(r, ray_t, rec);
 	}
 

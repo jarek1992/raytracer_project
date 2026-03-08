@@ -32,10 +32,11 @@ struct debug_flags {
 	bool green = false;
 	bool blue = false;
 	bool luminance = false;
+	bool bvh = false;
 
 	//check if any debug mode is active
 	bool any_active() const {
-		return red || green || blue || luminance;
+		return red || green || blue || luminance || bvh;
 	}
 };
 
@@ -262,6 +263,12 @@ private:
 				return color(0.1, 0.0, 0.2);
 			}
 		}
+
+		//if bvh mode on = return rgb 
+		if (debug.bvh) {
+			return c;
+		}
+
 		//rgb channels mix
 		double r = debug.red ? c.x() : 0.0;
 		double g = debug.green ? c.y() : 0.0;

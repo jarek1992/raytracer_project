@@ -38,7 +38,7 @@ public:
 		bbox = aabb(min, max);
 	}
 
-	virtual bool hit(const ray& r, interval ray_t, hit_record& rec) const override {
+	virtual bool hit(const ray& r, interval ray_t, hit_record& rec, int depth = 0, bool debug_wire = false) const override {
 
 		//World -> local
 		point3 origin = r.origin();

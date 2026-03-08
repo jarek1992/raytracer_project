@@ -542,6 +542,7 @@ int main(int argc, char* argv[]) {
 				ImGui::EndDisabled();
 				ImGui::EndTabItem();
 			}
+			
 			//environment settings tab
 			if (ImGui::BeginTabItem("Environment")) {
 				//buffer definition 
@@ -984,9 +985,16 @@ int main(int argc, char* argv[]) {
 
 				//buttons row
 				if (ImGui::Button("N", ImVec2(30, 30))) {
-					if (!my_post.debug.red || !my_post.debug.green || !my_post.debug.blue || my_post.debug.luminance) {
+					if (!my_post.debug.red || !my_post.debug.green || !my_post.debug.blue || my_post.debug.luminance || my_post.debug.bvh) {
+
 						my_post.debug.red = my_post.debug.green = my_post.debug.blue = true;
 						my_post.debug.luminance = false;
+						my_post.debug.bvh = false;
+
+						global_settings::bvh_debug_mode = false;
+
+						cam.reset_accumulator();
+						should_restart = true; 
 						my_post.needs_update = true;
 						engine_info.add_log("[Debug] View reset to standard RGB mode");
 					}
@@ -1001,25 +1009,92 @@ int main(int argc, char* argv[]) {
 				ImGui::SameLine();
 				DebugToggle("L", my_post.debug.luminance, ImVec4(0.4f, 0.4f, 0.4f, 1.0f));
 
+				//BVH button
+				ImGui::SameLine();
+				if (ImGui::Button("V", ImVec2(30, 30))) {
+					my_post.debug.bvh = !my_post.debug.bvh;
+
+					global_settings::bvh_debug_mode = my_post.debug.bvh;
+
+					if (my_post.debug.bvh) {
+						//when bvh on = all other debug modes off
+						my_post.debug.red = my_post.debug.green = my_post.debug.blue = true;
+						my_post.debug.luminance = false;
+					} else {
+						//when bvh off = reset to standard RGB mode
+						my_post.debug.red = my_post.debug.green = my_post.debug.blue = true;
+					}
+					cam.reset_accumulator();
+					should_restart = true;
+					my_post.needs_update = true;
+
+					engine_info.add_log("[Debug] BVH mode %s", global_settings::bvh_debug_mode ? "ON" : "OFF");
+				}
+
+				//bvh activation 
+				if (my_post.debug.bvh) {
+					ImGui::Text("BVH Controls:");
+
+					//thickness slidder
+					ImGui::SetNextItemWidth(120.0f);
+					if (ImGui::SliderFloat("Thick", &global_settings::bvh_thickness, 0.001f, 0.05f, "%.3f")) {
+						cam.reset_accumulator();
+						should_restart = true;
+					}
+
+					ImGui::SameLine();
+
+					//levels slidder
+					ImGui::SetNextItemWidth(120.0f);
+					//range -1 to 20
+					if (ImGui::SliderInt("Level", &global_settings::debug_bvh_level, -1, 20,
+						global_settings::debug_bvh_level == -1 ? "Show: LEAVES" : "Level: %d")) {
+						cam.reset_accumulator();
+						should_restart = true;
+					}
+				}
+
 				//display legend only if LUMINANCE debug mode on
 				if (my_post.debug.luminance) {
 					ImGui::Spacing();
 					ImGui::Text("Luminance False Color Legend:");
 
 					//lambda function to draw small color squares with infos
-					auto ColorLabel = [](const char* label, ImVec4 color) {
+					auto colorLabel = [](const char* label, ImVec4 color) {
 						ImGui::ColorButton(label, color, ImGuiColorEditFlags_NoTooltip, ImVec2(20, 20));
 						ImGui::SameLine();
 						ImGui::Text("%s", label);
 					};
 
-					ColorLabel("100%+ (Clipping)", ImVec4(1.0f, 1.0f, 1.0f, 1.0f));
-					ColorLabel("95%-100% (Near Clip)", ImVec4(1.0f, 0.0f, 0.0f, 1.0f));
-					ColorLabel("70%-95% (Highlights)", ImVec4(1.0f, 1.0f, 0.0f, 1.0f));
-					ColorLabel("40%-70% (Midtones)", ImVec4(0.5f, 0.5f, 0.5f, 1.0f));
-					ColorLabel("10%-40% (Shadow Detail)", ImVec4(0.0f, 0.5f, 0.0f, 1.0f));
-					ColorLabel("2%-10% (Deep Shadows)", ImVec4(0.0f, 0.0f, 1.0f, 1.0f));
-					ColorLabel("0%-2% (Black Out)", ImVec4(0.1f, 0.0f, 0.2f, 1.0f));
+					colorLabel("100%+ (Clipping)", ImVec4(1.0f, 1.0f, 1.0f, 1.0f));
+					colorLabel("95%-100% (Near Clip)", ImVec4(1.0f, 0.0f, 0.0f, 1.0f));
+					colorLabel("70%-95% (Highlights)", ImVec4(1.0f, 1.0f, 0.0f, 1.0f));
+					colorLabel("40%-70% (Midtones)", ImVec4(0.5f, 0.5f, 0.5f, 1.0f));
+					colorLabel("10%-40% (Shadow Detail)", ImVec4(0.0f, 0.5f, 0.0f, 1.0f));
+					colorLabel("2%-10% (Deep Shadows)", ImVec4(0.0f, 0.0f, 1.0f, 1.0f));
+					colorLabel("0%-2% (Black Out)", ImVec4(0.1f, 0.0f, 0.2f, 1.0f));
+				}
+
+				//display legend only if BVH debug mode on
+				if (my_post.debug.bvh) {
+					ImGui::Spacing();
+					ImGui::Text("BVH Tree Depth Legend:");
+
+					auto colorLabel = [](const char* label, ImVec4 color) {
+						ImGui::ColorButton(label, color, ImGuiColorEditFlags_NoTooltip, ImVec2(20, 20));
+						ImGui::SameLine();
+						ImGui::Text("%s", label);
+					};
+
+					//color(0.4f, g, 1.0f - g) 
+					//g = depth * 0.15f
+					colorLabel("Level 0 (Root)", ImVec4(0.4f, 0.00f, 1.00f, 1.0f)); // g = 0.00
+					colorLabel("Level 2 (Branch)", ImVec4(0.4f, 0.30f, 0.70f, 1.0f)); // g = 0.30
+					colorLabel("Level 4 (Mid)", ImVec4(0.4f, 0.60f, 0.40f, 1.0f)); // g = 0.60
+					colorLabel("Level 6 (Deep)", ImVec4(0.4f, 0.90f, 0.10f, 1.0f)); // g = 0.90
+					colorLabel("Level 7+ (Leaf)", ImVec4(0.4f, 1.00f, 0.00f, 1.0f)); // g = 1.00 (max)
+
+					ImGui::TextDisabled("(Colors indicate node depth in hierarchy)");
 				}
 
 				ImGui::Spacing();
@@ -1082,7 +1157,6 @@ int main(int argc, char* argv[]) {
 					if (ImGui::IsItemDeactivatedAfterEdit()) {
 						engine_info.add_log("[Config] Auto Exposure target luminance finalized at %.2f", my_post.target_luminance);
 					}
-
 
 					//slider in "stops"(EV) units - (+2)lighten or (-2)darken
 					if (ImGui::SliderFloat("Exposure Compensation", &my_post.exposure_compensation_stops, -5.0f, 5.0f, "%.1f EV")) {
@@ -1446,6 +1520,17 @@ int main(int argc, char* argv[]) {
 			auto now = std::chrono::steady_clock::now();
 			auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(now - last_preview_update).count();
 			bool time_to_update = (elapsed > 150); // 150ms = 10 FPS
+
+			static bool last_bvh_flag = false;
+
+			if (my_post.debug.bvh != last_bvh_flag) {
+				//update global debug mode for BVH visualization in render thread
+				global_settings::bvh_debug_mode = my_post.debug.bvh;
+
+				cam.reset_accumulator(); //reset camera accumulator to update BVH
+				last_bvh_flag = my_post.debug.bvh;
+				engine_info.add_log("[System] BVH Mode changed: Accumulators cleared.");
+			}
 
 			if (just_finished || (rendering_active && time_to_update) || my_post.needs_update) {
 				//lock the size(thread-safe mindset)

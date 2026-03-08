@@ -15,7 +15,7 @@ public:
 	}
 
 	//sphere
-	bool hit(const ray& r, interval ray_t, hit_record& rec) const override {
+	bool hit(const ray& r, interval ray_t, hit_record& rec, int depth = 0, bool debug_wire = false) const override {
 		vec3 oc = center - r.origin();
 		//ray-sphere intersection logic
 		auto a = r.direction().length_squared();

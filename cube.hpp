@@ -41,7 +41,7 @@ public:
 	}
 
 	//cube
-	virtual bool hit(const ray& r, interval ray_t, hit_record& rec) const override {
+	virtual bool hit(const ray& r, interval ray_t, hit_record& rec, int depth = 0, bool debug_wire = false) const override {
 		point3 relative_origin = r.origin() - center; //translate ray origin to cube local space
 
 		double tmin = ray_t.min;

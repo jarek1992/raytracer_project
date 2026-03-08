@@ -9,7 +9,7 @@ public:
 		, new_material(mat)
 	{}
 
-	virtual bool hit(const ray& r, interval ray_t, hit_record& rec) const override {
+	virtual bool hit(const ray& r, interval ray_t, hit_record& rec, int depth = 0, bool debug_wire = false) const override {
 		//check collision with the underlying object
 		if (!object->hit(r, ray_t, rec)) {
 			return false;

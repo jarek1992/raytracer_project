@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 
 #include <algorithm>
 
@@ -43,15 +43,67 @@ public:
 		bbox = aabb(left->bounding_box(), right->bounding_box());
 	}
 
-	bool hit(const ray& r, interval ray_t, hit_record& rec) const override {
-		//if the ray doesn't hit the bounding box, return false
-		if (!bbox.hit(r, ray_t)) {
-			return false;
+	bool hit(const ray& r, interval ray_t, hit_record& rec, int depth = 0, bool debug_wire = false) const override {
+		//overwrite bool debug_wire = false
+		debug_wire = global_settings::bvh_debug_mode;
+
+		//copy interval only for tests AABB and frames 
+		interval bbox_t = ray_t;
+		if (!bbox.hit(r, bbox_t)) return false;
+
+		if (debug_wire) {
+			//entry point calculated basing on bbox_t.min
+			point3 p_entry = r.at(bbox_t.min);
+			bool is_leaf = (left == nullptr && right == nullptr);
+
+			//increased thickness for better visibility
+			float perspective_thickness = global_settings::bvh_thickness * (0.05f + bbox_t.min * 0.1f);
+			bool is_current_debug_level = (global_settings::debug_bvh_level == -1) 
+											? is_leaf 
+											: (depth == global_settings::debug_bvh_level);
+
+			//draw the frames
+			if (is_current_debug_level && bbox.is_on_edge(p_entry, perspective_thickness)) {
+				rec.t = bbox_t.min - 0.0001f;
+				rec.p = p_entry;
+				rec.normal = vec3(0, 0, 1);
+
+				float g = std::min(depth * 0.15f, 1.0f);
+				float brightness = 4.0f;
+
+				color base_color = color(0.4f, g, (1.0f - g));
+				color debug_color = base_color * brightness;
+				rec.mat = make_shared<diffuse_light>(debug_color);
+				return true;
+			}
+
+			//recursion
+			if (is_leaf) { 
+				return false; 
+			}
+
+			bool hit_left = left->hit(r, ray_t, rec, depth + 1, debug_wire);
+			if (hit_left) { 
+				ray_t.max = rec.t; 
+			}
+			bool hit_right = right->hit(r, ray_t, rec, depth + 1, debug_wire);
+
+			bool hit_anything = hit_left || hit_right;
+
+			//volumes
+			if (hit_anything && is_current_debug_level) {
+				float g = std::min(depth * 0.15f, 1.0f);
+				color volume_color = color(0.4f, g, (1.0f - g)) * 0.1f;
+				rec.mat = make_shared<diffuse_light>(volume_color);
+			}
+
+			return hit_anything;
 		}
-		//check left and right children
-		bool hit_left = left->hit(r, ray_t, rec);
-		//if we hit left, update t_max to the hit t
-		bool hit_right = right->hit(r, interval(ray_t.min, hit_left ? rec.t : ray_t.max), rec);
+
+		//standard path without debbuging
+		bool hit_left = left->hit(r, ray_t, rec, depth + 1, false);
+		if (hit_left) ray_t.max = rec.t;
+		bool hit_right = right->hit(r, ray_t, rec, depth + 1, false);
 		return hit_left || hit_right;
 	}
 
@@ -70,8 +122,8 @@ private:
 		const shared_ptr<hittable> b,
 		int axis_index) {
 		
-		auto a_axis_range = a->bounding_box().axis(axis_index);
-		auto b_axis_range = b->bounding_box().axis(axis_index);
+		const auto a_axis_range = a->bounding_box().axis(axis_index);
+		const auto b_axis_range = b->bounding_box().axis(axis_index);
 		return a_axis_range.min < b_axis_range.min;
 	}
 	static bool box_x_compare(const shared_ptr<hittable> a, const shared_ptr<hittable> b) {
