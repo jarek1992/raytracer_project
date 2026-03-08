@@ -1041,16 +1041,22 @@ int main(int argc, char* argv[]) {
 						cam.reset_accumulator();
 						should_restart = true;
 					}
+					if (ImGui::IsItemDeactivatedAfterEdit()) {
+						engine_info.add_log("[Config] BVH thickness finalized at %.3f", global_settings::bvh_thickness);
+					}
 
 					ImGui::SameLine();
 
 					//levels slidder
 					ImGui::SetNextItemWidth(120.0f);
+					const char* level_label = (global_settings::debug_bvh_level == -1) ? "Show: LEAVES" : "Level: %d";
 					//range -1 to 20
-					if (ImGui::SliderInt("Level", &global_settings::debug_bvh_level, -1, 20,
-						global_settings::debug_bvh_level == -1 ? "Show: LEAVES" : "Level: %d")) {
+					if (ImGui::SliderInt("Level", &global_settings::debug_bvh_level, -1, 20, level_label)) {
 						cam.reset_accumulator();
 						should_restart = true;
+					}
+					if (ImGui::IsItemDeactivatedAfterEdit()) {
+						engine_info.add_log("[Debug] BVH layer set to: %d", global_settings::debug_bvh_level);
 					}
 				}
 
