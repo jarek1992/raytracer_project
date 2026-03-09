@@ -63,6 +63,7 @@ void load_materials(MaterialLibrary& mat_lib) {
 	mat_lib.add("rough_gold", make_shared<metal>(color(1.0, 0.84, 0.0), 0.15));
 	mat_lib.add("light_blue_diffuse", make_shared<lambertian>(color(0.1, 0.4, 0.9)));
 	mat_lib.add("white_diffuse", make_shared<lambertian>(color(0.9, 0.9, 0.9)));
+	mat_lib.add("black_diffuse", make_shared<lambertian>(color(0.1, 0.1, 0.1)));
 	mat_lib.add("wood_texture", make_shared<lambertian>(make_shared<image_texture>("assets/textures/fine-wood.jpg")));
 	mat_lib.add("wood_bumpy_texture", make_shared<lambertian>(make_shared<image_texture>("assets/textures/fine-wood.jpg"), wood_bump, 8.0));
 	mat_lib.add("gold_mat", make_shared<metal>(color(1.0, 0.8, 0.4), 0.0));
@@ -80,9 +81,9 @@ void load_materials(MaterialLibrary& mat_lib) {
 	mat_lib.add("pure_mirror", make_shared<metal>(color(1.0, 1.0, 1.0), 0.0));
 	mat_lib.add("random_diffuse", make_shared<lambertian>(color::random() * color::random()));
 	mat_lib.add("random_neon_light", make_shared<diffuse_light>(color::random(0.1, 1.0) * 1.5));
-	mat_lib.add("neon_pink", make_shared<diffuse_light>(color(1.0, 0.0, 0.5) * 6.0));
-	mat_lib.add("neon_blue", make_shared<diffuse_light>(color(0.0, 0.5, 1.0) * 6.0));
-	mat_lib.add("neon_green", make_shared<diffuse_light>(color(0.1, 1.0, 0.1) * 6.0));
+	mat_lib.add("neon_pink", make_shared<diffuse_light>(color(1.0, 0.0, 0.5) * 3.0));
+	mat_lib.add("neon_blue", make_shared<diffuse_light>(color(0.0, 0.5, 1.0) * 4.0));
+	mat_lib.add("neon_green", make_shared<diffuse_light>(color(0.1, 1.0, 0.1) * 4.0));
 	mat_lib.add("neon_yellow", make_shared<diffuse_light>(color(1.0, 0.8, 0.0) * 6.0));
 	mat_lib.add("neon_white", make_shared<diffuse_light>(color(1.0, 1.0, 1.0) * 6.0));
 	mat_lib.add("neon_red", make_shared<diffuse_light>(color(1.0, 0.1, 0.1) * 6.0));
@@ -105,23 +106,49 @@ hittable_list build_geometry(MaterialLibrary& mat_lib, const sceneAssetsLoader& 
 
 	// - 1. FLOOR -
 	auto ground_geom = make_shared<sphere>(point3(0.0, -1000.0, 0.0), 1000.0, nullptr);
-	world.add(make_shared<material_instance>(ground_geom, mat_lib.get("checker_mat")));
+	world.add(make_shared<material_instance>(ground_geom, mat_lib.get("reflective_checker_mat")));
 
-	//cube
-	auto big_cube_geom = make_shared<cube>(point3(-5.0, -5.0, -5.0), point3(5.0, 5.0, 5.0), nullptr);
-	auto big_cube_instance = make_shared<material_instance>(big_cube_geom, mat_lib.get("white_diffuse"));
-	auto big_cube_scaled = make_shared<scale>(big_cube_instance, vec3(1.0, 1.0, 1.0));
-	world.add(make_shared<translate>(big_cube_scaled, point3(0.0, 1.0, 2.5)));
+	auto big_cube_geom = make_shared<cube>(point3(-4.0, -0.1, -4.0), point3(4.0, 0.1, 4.0), nullptr);
+	auto big_cube_instance = make_shared<material_instance>(big_cube_geom, mat_lib.get("black_diffuse"));
 
-	// - 4. LIGHT PLANE 
-	auto light_geom = make_shared<cube>(point3(-3.0, -0.05, -3.0), point3(3.0, 0.05, 3.0), nullptr);
-	auto light_instance = make_shared<material_instance>(light_geom, mat_lib.get("ceiling_emissive"));
-	world.add(make_shared<translate>(light_instance, point3(2.0, 5.0, 2.5)));
+	//// SUFIT I PODŁOGA (oś Y)
+	//world.add(make_shared<translate>(big_cube_instance, point3(0.0, 5.0, 2.5)));
 
-	auto torus_knot_instance = make_shared<material_instance>(assets.torus_knot, mat_lib.get("white_metal"));
-	auto torus_knot_scale = make_shared<scale>(torus_knot_instance, vec3(0.6, 0.6, 0.6));
-	auto torus_knot_final = make_shared<translate>(torus_knot_scale, point3(2.0, 0.0, 2.5));
+	//// ŚCIANY BOCZNE (oś X) - obrót Z
+	//auto wall_z_rot = make_shared<rotate_z>(big_cube_instance, 90.0);
+	//world.add(make_shared<translate>(wall_z_rot, point3(-4.0, 1.0, 2.5)));
+	//world.add(make_shared<translate>(wall_z_rot, point3(4.0, 1.0, 2.5)));
+
+	//// ŚCIANY PRZÓD/TYŁ (oś Z) - obrót X
+	//auto wall_x_rot = make_shared<rotate_x>(big_cube_instance, 90.0);
+	//world.add(make_shared<translate>(wall_x_rot, point3(0.0, 1.0, -1.5)));
+	//world.add(make_shared<translate>(wall_x_rot, point3(0.0, 1.0, 6.5)));
+
+	auto torus_knot_instance = make_shared<material_instance>(assets.torus_knot, mat_lib.get("wood_texture"));
+	auto torus_knot_scale = make_shared<scale>(torus_knot_instance, vec3(1.3, 1.3, 1.3));
+	auto torus_knot_final = make_shared<translate>(torus_knot_scale, point3(1.0, 0.0, 2.0));
 	world.add(torus_knot_final);
+
+	auto teapot_inst = make_shared<material_instance>(assets.teapot, mat_lib.get("glass"));
+	auto rot_teapot_x = make_shared<rotate_x>(teapot_inst, -90.0);
+	auto rot_teapot_y = make_shared<rotate_y>(rot_teapot_x, 30.0);
+	auto teapot_final = make_shared<translate>(rot_teapot_y, point3(0.0, 1.0, -2.0));
+	world.add(teapot_final);
+
+	//// - 4. LIGHT PLANE 
+	//auto light_geom = make_shared<cube>(point3(-0.5, -0.05, -0.5), point3(0.5, 0.05, 0.5), nullptr);
+
+	//auto light_instance = make_shared<material_instance>(light_geom, mat_lib.get("neon_pink"));
+	//world.add(make_shared<translate>(light_instance, point3(0.0, 3.0, 2.5)));
+
+	//auto light_instance1 = make_shared<material_instance>(light_geom, mat_lib.get("neon_green"));
+	//auto light_instance1_z_rot = make_shared<rotate_z>(light_instance1, 60.0);
+	//world.add(make_shared<translate>(light_instance1_z_rot, point3(-2.0, 3.0, 2.5)));
+
+	//auto light_instance2 = make_shared<material_instance>(light_geom, mat_lib.get("neon_blue"));
+	//auto light_instance2_z_rot = make_shared<rotate_z>(light_instance2, -60.0);
+	//world.add(make_shared<translate>(light_instance2_z_rot, point3(2.0, 3.0, 2.5)));
+
 
 	//int num_sphere = 64;
 	//for (int i = 0; i < num_sphere; i++) {
@@ -141,15 +168,6 @@ hittable_list build_geometry(MaterialLibrary& mat_lib, const sceneAssetsLoader& 
 	//	auto sphere_inst = make_shared<material_instance>(sphere_1, mat_lib.get("white_diffuse"));
 	//	world.add(sphere_inst);
 	//}
-
-	//// - 2. FREE STANDING GEOMETRIES (in the middle)
-	////
-	////teapot (loaded object .obj from the file)
-	//auto teapot_inst = make_shared<material_instance>(assets.teapot, mat_lib.get("glass"));
-	//auto rot_teapot_x = make_shared<rotate_x>(teapot_inst, -90.0);
-	//auto rot_teapot_y = make_shared<rotate_y>(rot_teapot_x, 30.0);
-	//auto teapot_final = make_shared<translate>(rot_teapot_y, point3(0.0, 1.0, -2.5));
-	//world.add(teapot_final);
 
 	////cube
 	//auto big_cube_geom = make_shared<cube>(point3(0.0, 0.0, 0.0), nullptr);
