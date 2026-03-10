@@ -178,7 +178,7 @@ if (ImGui::IsItemDeactivatedAfterEdit()) {
       <ul>
         <li><b>Auto-Exposure:</b><i> Note: Dynamically calculates scene luminance to adjust brightness.</li></i>
           <ul>
-			<>![Cinematic Post_exposure control_ HISTOGRAM LUMINANCE](https://github.com/user-attachments/assets/d3911510-309d-40c7-a735-5d93b2e26567)
+			![Image](https://github.com/user-attachments/assets/83e6f9cd-5c3a-4c76-8021-afb5171a4bab)
 			<p><code>IMAGE: HISTOGRAM LUMINANCE - mały zrzut ekranu samej konsoli/histogramu obok opisu Auto-Exposure. To pokaże, że "automatyka" opiera się na rzeczywistych danych statystycznych obrazu.</code></p>
           </ul>
         <li><b>EV Compensation:</b><i> Photographic control allowing for ±5.0 stops of brightness adjustment.</li></i>
