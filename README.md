@@ -177,9 +177,11 @@ if (ImGui::IsItemDeactivatedAfterEdit()) {
         <li><b>Exposure Control:</b>
       <ul>
         <li><b>Auto-Exposure:</b><i> Note: Dynamically calculates scene luminance to adjust brightness.</li></i>
-          <ul>
-			![Image](https://github.com/user-attachments/assets/83e6f9cd-5c3a-4c76-8021-afb5171a4bab)
-			<p><code>IMAGE: HISTOGRAM LUMINANCE - mały zrzut ekranu samej konsoli/histogramu obok opisu Auto-Exposure. To pokaże, że "automatyka" opiera się na rzeczywistych danych statystycznych obrazu.</code></p>
+			<ul>
+			<p></p>
+
+![Image](https://github.com/user-attachments/assets/83e6f9cd-5c3a-4c76-8021-afb5171a4bab)<br>
+<i>Luminance Histogram: auto-exposure is dynamically adjusted based on real image data</i>
           </ul>
         <li><b>EV Compensation:</b><i> Photographic control allowing for ±5.0 stops of brightness adjustment.</li></i>
       </ul>
@@ -300,7 +302,8 @@ if (use_fog) {
 | **Luminance** | *Brightness map* | *Analyze the input for the Auto-Exposure algorithm* |
 | **BVH Mode** | *Spatial Hierarchy* | *Audit tree health and node culling directly from the UI.* |
 
-<p><code>IMAGE: obrazek z rgb/albedo/normals/z-depth/luminance/BVH Wireframe (Level 3 lub Leaves)</code></p>
+<img width="1200" height="600" alt="Diagnostic G-Buffer_Modes" src="https://github.com/user-attachments/assets/416e2929-660a-489c-a632-d0a4b2508484" />
+<p><i>Render modes: RGB/Albedo/Normals/Z-depth/Luminance/BVH Wireframe</i></p>
   </ul>
   </details>
   </ul>
@@ -310,9 +313,8 @@ if (use_fog) {
     <summary><b>Real-Time Analytics & Control</b></summary>
     <p>Professional tools for lighting and exposure management.</p>
     
-    Live Histogram & Channel Isolation
-    GIF pokazujący, jak zmieniam ekspozycję suwakiem, a wykres histogramu „pływa” w czasie rzeczywistym.
-  <i>Monitor the brightness distribution in real-time. This allows you to prevent highlight clipping and ensure that the <b>ACES Tone Mapping</b> has enough dynamic range to work with.</i>
+![Real-Time Analytics   Control](https://github.com/user-attachments/assets/33dfa5b4-97e3-4d90-a068-307790f3da12)<br>
+<i>Monitor the brightness distribution in real-time. This allows you to prevent highlight clipping and ensure that the <b>ACES Tone Mapping</b> has enough dynamic range to work with.</i>
     
   <ul>
     <li><b>Luminance Histogram:</b> Visualize the impact of scene lights on the final exposure.</li>
@@ -328,7 +330,9 @@ if (use_fog) {
   <details>
     <summary><b>Fluid Interaction System</b></summary>
     <p>The engine features a deeply integrated communication layer between the Dear ImGui interface and the rendering core, focusing on a seamless user experience.</p>
-    <p><code>IMAGE: G-Buffer GIF, jak przełączasz się między Normals a Final Render</code></p>
+
+![Fluid Interaction System](https://github.com/user-attachments/assets/619d38ba-a8b2-41bd-832a-af8378d3b054)<br>
+<i>Smooth changes between render passes</i>
     <ul>
       <li><b>Smart Accumulator Sync:</b> To prevent constant frame flickering during UI interaction, the path-tracing accumulator only resets when a change is "finalized" (utilizing <code>IsItemDeactivatedAfterEdit</code>). This allows you to explore parameters smoothly, with the engine only committing to a full re-render once you release a slider.</li>
       <li><b>Non-Blocking Real-Time Updates:</b> Key parameters—including <b>Sun Position, Light Intensity,</b> and <b>Focus Distance</b>—provide immediate visual feedback, allowing for rapid look-dev and lighting adjustments without breaking the creative flow.</li>
@@ -491,9 +495,11 @@ cmake --build build --config Release
       <li><b>OpenMP-Powered Scanline Parallelism:</b> The engine partitions the image into horizontal blocks of rows, distributed across all logical CPU cores. This ensures maximum hardware utilization and linear performance scaling.</li>
       <li><b>Adaptive Auxiliary Sampling:</b> To optimize bandwidth and compute cycles, the engine uses a decoupled sampling strategy. While the <b>Beauty Pass</b> uses full <code>samples_per_pixel</code>, the auxiliary buffers (Albedo, Normals, Z-Depth) are computed using a clamped subset of samples, drastically reducing overhead without sacrificing denoising quality.</li>
       <li><b>Live Progress Feedback:</b> Real-time synchronization between the rendering threads and the UI layer provides immediate visual feedback on the render's progress via atomic line-counting.</li>
+<p></p>
+		
+![Multi-Threaded Rendering Core](https://github.com/user-attachments/assets/cd6e741a-f25f-4dba-81d9-e1c557551a8c)<br>
+<i>Progressive refinement with scanline rendering and progress bar</i>
 
-      1. IMAGE: "Scanline Rendering Visualization" Pokazujący, jak obraz "zapełnia się" poziomymi pasami
-      2. GIF: "Progressive Refinement" pasek postępu (Progress Bar) przesuwa się płynnie, a obraz staje się coraz wyraźniejszy(accumulator)
   </ul>
   </details>
   </ul>
@@ -506,9 +512,10 @@ cmake --build build --config Release
       <li><b>Sample Reduction:</b> Achieving noise-free results with <b>10x–50x fewer samples</b> per pixel compared to traditional path tracing.</li>
       <li><b>Pre-filter Pass:</b> The engine feeds Albedo and Normal buffers into the OIDN neural network, preserving sharp geometric edges while removing Monte Carlo variance.</li>
       <li><b>Performance Gain:</b> High-quality 1080p renders that would normally take minutes are usable in seconds.</li>
+		<p></p>
 
-      IMAGE: Split-screen(moze z suwakiem jak da rade). Po lewej zaszumiony obraz (np. 10 próbek na piksel), po prawej ten sam obraz po przejściu przez OIDN.
-      
+![AI-Accelerated Denosing (Intel OIDN)](https://github.com/user-attachments/assets/39da0343-6fda-4acb-85e3-eeaba9466825)<br>
+<i>RGB Denoiser before/after</i>     
   </ul>
   </details>
   </ul>
