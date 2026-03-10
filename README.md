@@ -1,7 +1,7 @@
 ## 🚀 Zenith | Modern C++20 Path Tracing Engine
 A high-performance, physically-based path tracing engine built with C++20. This project features a robust real-time diagnostic UI, sophisticated environmental lighting, and a professional post-processing pipeline. 
 
-<p><code>[Image: Główny render silnika – np. scena z efektownym oświetleniem, odbiciami i bloomem]</code></p>
+<img width="1200" height="675" alt="render_main" src="https://github.com/user-attachments/assets/10faae78-c023-4ff2-b227-0d4816d0408e" />
 
 ### 🌟 <b>Key Project Highlights:</b>
 - <b>Global Illumination Out-of-the-box:</b> Full Monte Carlo Path Tracing that naturally handles indirect lighting, soft shadows, and color bleeding.
@@ -47,7 +47,8 @@ inline color apply_aces(color x) {
   <li><b>Data Structures:</b> <b>BVH(Bounding Volume Hierarchy)</b> – optimizes ray-object intersection tests from <i>O(N)</i> to <i>O(logN)</i>.</li>
   <ul>
     <br>
-    <i>Spatial bounding volume hierarchy (BVH) reduces the complexity of collision tests from <b>O(N)</b> to <b>O(log N)</b> through recursive division of the scene into containers AABB.</i>
+	  <img width="609" height="263" alt="aabb_bvh_diagram" src="https://github.com/user-attachments/assets/688fd571-8e4a-47a6-af85-1574fe8f0a4d" />
+	  <p><i>Spatial bounding volume hierarchy (BVH) reduces the complexity of collision tests from <b>O(N)</b> to <b>O(log N)</b> through recursive division of the scene into containers AABB.</i></p>
   </ul>
   <br>
   <li>
@@ -81,6 +82,7 @@ if (ImGui::IsItemDeactivatedAfterEdit()) {
 | Dynamic FOV | *Full perspective control for architectural or macro shots* | *Vertical FOV (degrees)* |
 | Interactive Navigation | *Smooth 3D space movement and orientation* | *LookAt, LookFrom, Up Vector* |
 | Anti-aliasing(AA) | *<b>Sub-pixel jittering</b> eliminates jagged edges by slightly <br>offsetting rays within each pixel footprint, <br>resulting in smooth, film-like edges* | *Stratified Sampling (per pixel)* |
+
 
 <p><code>IMAGE: 3 images with different focus distances 3.0, 9.0, and 18.0.</code></p>
 
@@ -630,5 +632,5 @@ Where the project is headed. Contributions and suggestions are welcome!
 - [ ] Complexity: Full Wavefront Path Tracing architecture to better handle divergent rays.
 - [ ] Animation: Integrated timeline for keyframing camera paths and light transitions.
 
-#RayTracer
-<img width="1196" height="674" alt="Image" src="https://github.com/user-attachments/assets/f461abfb-13b8-4e8f-96cf-e87e6a77c402" />
+### Updates:
+<i>to be continued ... </i>
