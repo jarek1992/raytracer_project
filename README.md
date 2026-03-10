@@ -45,11 +45,9 @@ inline color apply_aces(color x) {
   }
 ```
   <li><b>Data Structures:</b> <b>BVH(Bounding Volume Hierarchy)</b> – optimizes ray-object intersection tests from <i>O(N)</i> to <i>O(logN)</i>.</li>
-  <ul>
-    <br>
-	  <img width="609" height="263" alt="aabb_bvh_diagram" src="https://github.com/user-attachments/assets/688fd571-8e4a-47a6-af85-1574fe8f0a4d" />
-	  <p><i>Spatial bounding volume hierarchy (BVH) reduces the complexity of collision tests from <b>O(N)</b> to <b>O(log N)</b> through recursive division of the scene into containers AABB.</i></p>
-  </ul>
+  <br>
+  <img width="913" height="263" alt="aabb_bvh_diagram" src="https://github.com/user-attachments/assets/e1ab5901-e8a3-436d-ae58-e038604373d2" />
+  <p><i>Spatial bounding volume hierarchy (BVH) reduces the complexity of collision tests from <b>O(N)</b> to <b>O(log N)</b> through recursive division of the scene into containers AABB.</i></p>
   <br>
   <li>
     <b>Memory Management:</b> Dirty Flag System (<code>needs_update</code>, <code>needs_ui_sync</code>) – intelligent buffer reloading triggered only upon parameter changes.
@@ -83,12 +81,11 @@ if (ImGui::IsItemDeactivatedAfterEdit()) {
 | Interactive Navigation | *Smooth 3D space movement and orientation* | *LookAt, LookFrom, Up Vector* |
 | Anti-aliasing(AA) | *<b>Sub-pixel jittering</b> eliminates jagged edges by slightly <br>offsetting rays within each pixel footprint, <br>resulting in smooth, film-like edges* | *Stratified Sampling (per pixel)* |
 
-
-<p><code>IMAGE: 3 images with different focus distances 3.0, 9.0, and 18.0.</code></p>
-
-  </ul>
-  </details>
-  </ul>
+<img width="1200" height="386" alt="CAMERA OPTICS - aperature=3 0 focus_distance=3 0, 9 0, 18 0" src="https://github.com/user-attachments/assets/a3e7ce46-552f-4037-bd15-76bc5a82f58d" />
+<p><i>Aperature 3.0, Focus_distance 3.0 &emsp;&emsp;&emsp;&emsp;&emsp; Aperature 3.0, Focus_distance 9.0 &emsp;&emsp;&emsp;&emsp;&emsp;&nbsp; Aperature 3.0, Focus_distance 18.0.</i></p>
+</ul>
+</details>
+</ul>
 
 <ul style="list-style-type: none;">
   <details>
@@ -98,7 +95,8 @@ if (ImGui::IsItemDeactivatedAfterEdit()) {
       <p><li><b>HDRI Maps(IBL):</b></li>
       <p>For photorealistic reflections and complex ambient lighting, the engine supports industry-standard High Dynamic Range images.</p>
       <ul>
-        <p><code>IMAGE: 2-3 obrazki obok siebie w roznych oswietleniach map HDR</code></p>
+		<img width="1200" height="386" alt="HDRI Maps(IBL)" src="https://github.com/user-attachments/assets/79dfb760-3dee-47d1-8ed1-dbfb4e566117" />
+        <p><i>Comparison of the same scene in 3 different HDR maps included in the engine library</i></p> 
         <li><b>Technology:</b><i> Native support for 32-bit .hdr files (IBL) providing a massive range of luminance data.</i></li>
         <li><b>3-Axis Transformation:</b><i> Full spherical orientation control using Yaw, Pitch, and Roll to align the environment with your scene geometry perfectly.</i></li>
         <li><b>Asset Management:</b><i> Integrated file observer allows for dynamic refreshing of the HDRI library. Add new maps to the directory and select them in-app without a restart.</i></li>
@@ -107,7 +105,8 @@ if (ImGui::IsItemDeactivatedAfterEdit()) {
       <li><b>Astronomical Daylight System:</b></li>
       <p>This module simulates the sun's position and color based on real-world celestial mechanics. It offers two distinct modes of operation:</p>
       <ul>
-        <p><code>IMAGE: 2-3 obrazki obok siebie w roznych oswietleniach przy uzycie astronomical sun(6am, 12pm, 8pm)</code></p>
+		<img width="1200" height="386" alt="ASTRONOMICAL DAYLIGHT SYSTEM_6am, 12pm, 6pm" src="https://github.com/user-attachments/assets/5a2ff9ac-6618-4766-b808-fd006383c28c" />
+		<p><i>Comparison of the same scene in 3 different hours of a day (from left: 6am / 12pm / 6pm) </i></p>
         <li><b>Astronomical Mode:</b><i> Calculates the sun's position automatically using geographical and temporal data.</i></li>
         <ul style="list-style-type: disc; margin-left: 20px;">
           <li><b>Parameters:</b><i> Latitude (coordinates), Day of the Year (1-365), and Time of Day (0-24h).</i></li>
@@ -115,7 +114,7 @@ if (ImGui::IsItemDeactivatedAfterEdit()) {
           <br>
         </ul>
         <li><b>Manual Mode:</b><i> Provides direct control over the sun's direction vector for artistic lighting setups.</i></li>
-        <li><b>Auto-Sun Color:</b><i>Dynamically adjusts the solar spectrum based on altitude.</i></li>
+        <li><b>Auto-Sun Color:</b><i> Dynamically adjusts the solar spectrum based on altitude.</i></li>
         <ul style="list-style-type: disc; margin-left: 20px;">
           <li><b>Atmospheric Simulation:</b><i> Implements a simplified Rayleigh Scattering model; as the sun nears the horizon, the increased optical path length through the atmosphere shifts the light toward warmer, reddish wavelengths, while high-altitude sun positions produce a crisp, cooler white.</i></li>
         </ul>
@@ -124,9 +123,10 @@ if (ImGui::IsItemDeactivatedAfterEdit()) {
       <li><b>Solid Background:</b></li>
       <p>Designed for product photography and clean architectural presentations.</p>
       <ul style="list-style-type: disc; margin-left: 20px;">
-        <p><code>IMAGE: 1 obrazek z solid background</code></p>
-        <li><b><i>Control:</b> Full RGB spectrum selection via a precision color picker.</i></li>
-        <li><b><i>Intensity:</b> Adjustable background radiance, allowing for neutral studio setups that don't overpower the scene's primary light sources.</i></li>
+		  <img height="290" alt="SOLID BACKGROUND" src="https://github.com/user-attachments/assets/55b78464-fa2f-4414-8004-f3aa8739ccfd" />
+		  <p><i>The same scene with solid background</i></p>
+		  <li><b><i>Control:</b> Full RGB spectrum selection via a precision color picker.</i></li>
+		<li><b><i>Intensity:</b> Adjustable background radiance, allowing for neutral studio setups that don't overpower the scene's primary light sources.</i></li>
       </ul>
         </ul>
   </details>
@@ -145,7 +145,8 @@ if (ImGui::IsItemDeactivatedAfterEdit()) {
 | Dielectric | *Refraction* | *Handles transparent materials like glass or water with <b>IOR</b> (Index of Refraction) and Total Internal Reflection.* | *✅ Color* | *✅ Yes* |
 | Emissive | *Light Emission* | *Turns any geometry into a physical light source (<b>Area Light</b>) with adjustable radiance.* | *✅ Color/Power* | *❌ No* |
 
-<p><code>IMAGE: kule obok siebie z roznymi materialami - diffused lambertian, bumped metal, glass(dielectric), emissive.</code></p>
+<img width="1000" height="562" alt="Material Library(PBR)" src="https://github.com/user-attachments/assets/ffa31789-9528-4330-9f4f-a0d80b559666" />
+<p><i>Material comparision - diffused lambertian, bumped metal, glass(dielectric) and emissive.</i></p>
 
 <p><li><b>Technical Highlights & Material System</b></li>
 <p>The engine's material system is built on physical principles, ensuring that every interaction between light and geometry behaves as it would in the real world.</p>
@@ -168,7 +169,8 @@ if (ImGui::IsItemDeactivatedAfterEdit()) {
   <details>
     <summary><b>Cinematic Post-Process Pipeline</b></summary>
     <p>Beyond path tracing, the engine includes a high-performance post-processing stack to achieve a production-ready look.</p>
-    <p><code> IMAGE: raw image/image with post-production: ACES + BLOOM + EXPOSURE FIXES</code></p>
+	  <img width="1200" height="337" alt="Cinematic Post-Process Pipeline_before after" src="https://github.com/user-attachments/assets/bffa55eb-9a8a-41d5-911a-3197f60de41a" />
+	  <p><i>Raw image | Image with post-production(Aces + Bloom  etc...)</i></p>
       <ul>     
         <li><b>ACES Tone Mapping:</b>Implementation of the Academy Color Encoding System to transform High Dynamic Range (HDR) data into cinematic Low Dynamic Range (LDR) output.</li>
         <li><b>Bloom Engine:</b> A physically-inspired glow effect that extracts highlights and bleeds them into surrounding pixels using a configurable threshold and blur radius.</li>
@@ -176,7 +178,8 @@ if (ImGui::IsItemDeactivatedAfterEdit()) {
       <ul>
         <li><b>Auto-Exposure:</b><i> Note: Dynamically calculates scene luminance to adjust brightness.</li></i>
           <ul>
-           <p><code>IMAGE: HISTOGRAM LUMINANCE - mały zrzut ekranu samej konsoli/histogramu obok opisu Auto-Exposure. To pokaże, że "automatyka" opiera się na rzeczywistych danych statystycznych obrazu.</code></p>
+			<>![Cinematic Post_exposure control_ HISTOGRAM LUMINANCE](https://github.com/user-attachments/assets/d3911510-309d-40c7-a735-5d93b2e26567)
+			<p><code>IMAGE: HISTOGRAM LUMINANCE - mały zrzut ekranu samej konsoli/histogramu obok opisu Auto-Exposure. To pokaże, że "automatyka" opiera się na rzeczywistych danych statystycznych obrazu.</code></p>
           </ul>
         <li><b>EV Compensation:</b><i> Photographic control allowing for ±5.0 stops of brightness adjustment.</li></i>
       </ul>
