@@ -1411,7 +1411,7 @@ int main(int argc, char* argv[]) {
 						engine_info.add_log("[Render] Finished! Total time: %.2f seconds", last_render_duration);
 						last_logged_percent = 100;
 					}
-					ImGui::TextColored(ImVec4(0.0f, 1.0f, 0.0f, 1.0f), "Render Finished (100%)");
+					ImGui::TextColored(ImVec4(0.0f, 1.0f, 0.0f, 1.0f), "Render Finished (100%%)");
 					ImGui::TextColored(ImVec4(0.0f, 1.0f, 0.0f, 1.0f), "Render Time: %.2f seconds", last_render_duration);
 				}
 			}
