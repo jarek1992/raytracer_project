@@ -44,10 +44,14 @@ screenshots/
 
 # OIDN structure preservation
 libs/oidn/**
+libs/oidn_linux/**
 
 !libs/oidn/bin/
 !libs/oidn/lib/
 !libs/oidn/include/
+!libs/oidn_linux/bin/
+!libs/oidn_linux/lib/
+!libs/oidn_linux/include/
 
 !**/.gitkeep
 
