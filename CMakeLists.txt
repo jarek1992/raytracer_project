@@ -21,11 +21,11 @@ if (WIN32)
     set(OIDN_LIB "${OIDN_DIR}/lib/OpenImageDenoise.lib")
     message(STATUS "Using local OIDN binaries for Windows")
 else()
-    find_package(OpenImageDenoise REQUIRED)
-    # Na Linux/macOS find_package definiuje OpenImageDenoise_INCLUDE_DIRS
-    set(OIDN_INCLUDE "${OpenImageDenoise_INCLUDE_DIRS}")
-    set(OIDN_LIB OpenImageDenoise)
-    message(STATUS "Using system OIDN via find_package")
+    set(OIDN_DIR "${CMAKE_CURRENT_SOURCE_DIR}/libs/oidn_linux")
+    set(OIDN_INCLUDE "${OIDN_DIR}/include")
+    #link directly to .so file
+    set(OIDN_LIB "${OIDN_DIR}/lib/libOpenImageDenoise.so")
+    message(STATUS "Using local OIDN binaries for Linux")
 endif()
 
 # Add sources 
@@ -40,6 +40,7 @@ target_include_directories(${PROJECT_NAME} PRIVATE
     ${OIDN_INCLUDE}
     "${CMAKE_CURRENT_SOURCE_DIR}/libs/stb"
     "${CMAKE_CURRENT_SOURCE_DIR}/libs/TinyObjLoader"
+    "${CMAKE_CURRENT_BINARY_DIR}/vcpkg_installed/x64-linux/include/imgui"
 )
 
 # Link libraries
@@ -50,7 +51,7 @@ target_link_libraries(${PROJECT_NAME} PRIVATE
    ${OIDN_LIB}
    OpenMP::OpenMP_CXX
    $<$<PLATFORM_ID:Windows>:opengl32>
-   $<$<PLATFORM_ID:Darwin>:"-framework OpenGL" "-framework Cocoa">
+#    $<$<PLATFORM_ID:Darwin>:-framework;OpenGL;-framework;Cocoa>
 )
 
 # Automatic DLLs copying for OIDN on Windows
