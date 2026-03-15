@@ -8,19 +8,20 @@ add_compile_definitions(_CRT_SECURE_NO_WARNINGS)
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-# Fix for OpenMP on macOS using AppleClang
+# OpenMP on MacOS
 if (APPLE)
-    # check if Homebrew is installed in standard location (M1/M2/M3)
-    if (EXISTS "/opt/homebrew/opt/libomp")
+    execute_process(COMMAND brew --prefix libomp
+                    OUTPUT_VARIABLE LIBOMP_PREFIX
+                    OUTPUT_STRIP_TRAILING_WHITESPACE
+                    ERROR_QUIET)
+    
+    if (LIBOMP_PREFIX)
         set(OpenMP_C_FLAGS "-Xpreprocessor -fopenmp")
-        set(OpenMP_C_LIB_NAMES "omp")
         set(OpenMP_CXX_FLAGS "-Xpreprocessor -fopenmp")
-        set(OpenMP_CXX_LIB_NAMES "omp")
-        set(OpenMP_omp_LIBRARY "/opt/homebrew/opt/libomp/lib/libomp.dylib")
+        set(OpenMP_omp_LIBRARY "${LIBOMP_PREFIX}/lib/libomp.dylib")
         
-        # Paths to headers and libs for compilator 
-        include_directories("/opt/homebrew/opt/libomp/include")
-        link_directories("/opt/homebrew/opt/libomp/lib")
+        include_directories("${LIBOMP_PREFIX}/include")
+        link_directories("${LIBOMP_PREFIX}/lib")
     endif()
 endif()
 
