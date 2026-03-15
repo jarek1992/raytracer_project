@@ -194,7 +194,7 @@ if (ImGui::IsItemDeactivatedAfterEdit()) {
 </ul>
 <ul style="list-style-type: none;">
   <details>
-    <summary><b></b>Assets Loader</b></summary>
+    <summary><b>Assets Loader</b></summary>
     <p>A dedicated struct <code>sceneAssetsLoader</code> for pre-loading heavy <code>.obj</code> models (like the included <code>teapot.obj</code> or <code>bowl.obj</code>) into memory once and stored as shared pointers to optimize RAM usage. Models can be placed <code>/assets/models/</code></p>
 
 ```cpp
@@ -254,7 +254,7 @@ world.add(make_shared<material_instance>(sphere_geom, mat_lib.get("gold_mat")));
 
 <ul style="list-style-type: none;">
   <details>
-    <summary><b></b>Scene geometry</b></summary>
+    <summary><b>Scene geometry</b></summary>
     <p>Place a geometry inside <code>build_geometry()</code> to compose your world. Use <code>material_instance</code> to apply shared materials to different shapes.</p>
     <ul>
       <li><b>Transformations:</b> Easily wrap objects in <code>translate, rotate_x/y/z</code>, and <code>scale</code> instances.</li>
