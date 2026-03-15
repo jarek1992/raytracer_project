@@ -10,7 +10,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 # Fix for OpenMP on macOS using AppleClang
 if (APPLE)
-    # Sprawdź czy Homebrew jest zainstalowany w standardowej lokalizacji (M1/M2/M3)
+    # check if Homebrew is installed in standard location (M1/M2/M3)
     if (EXISTS "/opt/homebrew/opt/libomp")
         set(OpenMP_C_FLAGS "-Xpreprocessor -fopenmp")
         set(OpenMP_C_LIB_NAMES "omp")
@@ -18,7 +18,7 @@ if (APPLE)
         set(OpenMP_CXX_LIB_NAMES "omp")
         set(OpenMP_omp_LIBRARY "/opt/homebrew/opt/libomp/lib/libomp.dylib")
         
-        # Ścieżki do nagłówków i bibliotek dla kompilatora
+        # Paths to headers and libs for compilator 
         include_directories("/opt/homebrew/opt/libomp/include")
         link_directories("/opt/homebrew/opt/libomp/lib")
     endif()
@@ -80,7 +80,6 @@ target_include_directories(${PROJECT_NAME} PRIVATE
 
 # Link libraries
 if(APPLE)
-    # Na Macu definiujemy to jako listę obiektów, nie jako tekst z myślnikami
     set(MAC_FRAMEWORKS "-framework OpenGL" "-framework Cocoa" "-framework IOKit" "-framework CoreVideo")
 endif()
 
@@ -115,9 +114,3 @@ endif()
 
 # Diagnostic messages
 message(STATUS "Build configured for: SDL3, ImGui, Glad, OIDN")
-
-
-# potrzeba 
-# 1 brew install cmake ninja
-# 2 brew install pkg-config ninja
-# 3 brew install libomp

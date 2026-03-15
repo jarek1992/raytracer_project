@@ -45,6 +45,7 @@ screenshots/
 # OIDN structure preservation
 libs/oidn/**
 libs/oidn_linux/**
+libs/oidn_mac/**
 
 !libs/oidn/bin/
 !libs/oidn/lib/
@@ -52,6 +53,9 @@ libs/oidn_linux/**
 !libs/oidn_linux/bin/
 !libs/oidn_linux/lib/
 !libs/oidn_linux/include/
+!libs/oidn_mac/bin/
+!libs/oidn_mac/lib/
+!libs/oidn_mac/include/
 
 !**/.gitkeep
 
