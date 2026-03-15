@@ -405,7 +405,9 @@ if (use_fog) {
 			<summary><b>MacOS</b></summary>
 			<p>Install via <a href="https://brew.sh/" target="_blank" rel="noopener noreferrer">Homebrew</a>:</p>
 
-	brew install cmake ninja pkg-config libomp
+	brew install cmake ninja 
+	brew install pkg-config ninja
+	brew install libomp
 <ul>
 				<li><b>Managed via vcpkg:</b> SDL3, Dear ImGui, Glad.</li>
 				<li><b>External (Manual):</b> Intel Open Image Denoise (OIDN).</li>
