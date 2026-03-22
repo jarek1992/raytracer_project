@@ -96,8 +96,17 @@ target_link_libraries(${PROJECT_NAME} PRIVATE
 )
 
 # RPATH for macOS/Linux
-if(UNIX)
-    set_target_properties(${PROJECT_NAME} PROPERTIES INSTALL_RPATH "@executable_path/../lib;@loader_path/.")
+if(APPLE)
+    set_target_properties(${PROJECT_NAME} PROPERTIES 
+        MACOSX_RPATH ON
+        # @loader_path oznacza: szukaj względem miejsca, gdzie leży binarka
+        INSTALL_RPATH "@loader_path/libs/oidn_mac/lib;@loader_path"
+        BUILD_WITH_INSTALL_RPATH TRUE
+    )
+elseif(UNIX)
+    set_target_properties(${PROJECT_NAME} PROPERTIES 
+        INSTALL_RPATH "$ORIGIN/../lib;$ORIGIN/libs/oidn_linux/lib"
+    )
 endif()
 
 # Automatic DLLs copying for OIDN on Windows
