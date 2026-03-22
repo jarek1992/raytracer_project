@@ -472,9 +472,9 @@ if (use_fog) {
 			a. <b>Download</b> <code>oidn-2.x.x.arm64.macos.tar.gz</code> for <b>Apple Silicon</b> processor or <code>oidn-2.x.x.x86_64.macos.tar.gz</code> for <b>Intel</b> processor from <a href="https://github.com/RenderKit/oidn/releases" target="_blank" rel="noopener noreferrer">Intel OIDN Releases</a><br>
 			b. <b>Extract</b> the contents so the structure looks like this:
 			<ul style="margin-top: 0; padding-top: 0;">
-				<li><code>libs/oidn/bin/</code> (contains executable utilities)</li>
-				<li><code>libs/oidn/include/</code> (contains headers)</li>
-				<li><code>libs/oidn/lib/</code> (contains <code>.dylib</code> files)</li>
+				<li><code>libs/oidn_mac/bin/</code> (contains executable utilities)</li>
+				<li><code>libs/oidn_mac/include/</code> (contains headers)</li>
+				<li><code>libs/oidn_mac/lib/</code> (contains <code>.dylib</code> files)</li>
 			</ul>
 		</div>
 	</details>
