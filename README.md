@@ -1,5 +1,5 @@
 ## 🚀 Zenith | Modern C++20 Path Tracing Engine
-A high-performance, physically-based path tracing engine built with C++20. This project features a robust real-time diagnostic UI, sophisticated environmental lighting, and a professional post-processing pipeline. 
+A high-performance path tracing engine built with C++20, based on the implementation of the ray-tracer by Peter Shirley and developed further by me. This project features a robust real-time diagnostic UI, sophisticated environmental lighting, and a professional post-processing pipeline. 
 
 <img width="1200" height="675" alt="render_main" src="https://github.com/user-attachments/assets/10faae78-c023-4ff2-b227-0d4816d0408e" />
 
@@ -404,6 +404,7 @@ if (use_fog) {
 			<p>Install via <a href="https://brew.sh/" target="_blank" rel="noopener noreferrer">Homebrew</a>:</p>
 
 	brew install cmake ninja pkg-config libomp
+	export OpenMP_ROOT=$(brew --prefix)/opt/libomp
 <ul>
 	<li><b>Managed via vcpkg:</b> <code>SDL3</code>, <code>Dear ImGui</code>, <code>Glad</code>.</li>
 	<li><b>External (Manual):</b> Intel Open Image Denoise (OIDN).</li>
